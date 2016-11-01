@@ -1,0 +1,118 @@
+# Literals
+Num             Done        Tested
+Str             Done        Tested
+Bytes           Done        ******
+List            Done        Tested
+Tuple           Done        Tested
+Set             Done        ******
+Dict            Done        Tested
+Ellipsis        ****        ******
+NameConstant    Done        Tested
+  True                      Tested
+  False                     Tested
+  None                      Tested
+
+# Variables
+Name            Done        Tested
+Starred         Done        Tested
+
+# Expressions
+Expr            Done        Tested
+
+UnaryOp         Done        Tested
+UAdd            Done        Tested
+USub            Done        Tested
+Not             Done        Tested
+Invert          Done        Tested
+
+BinOp           Done        Tested
+Add             Done        Tested
+Sub             Done        Tested
+Mult            Done        Tested
+Div             Done        Tested
+FloorDiv        Done        Tested
+Mod             Done        Tested
+Pow             Done        Tested
+LShift          Done        Tested
+RShift          Done        Tested
+BitOr           Done        Tested
+BitXor          Done        Tested
+BitAnd          Done        Tested
+MatMult         Done        Tested
+
+BoolOp          Done        Tested
+And             Done        Tested
+Or              Done        Tested
+
+Compare         Done        Tested
+Eq              Done        Tested
+NotEq           Done        Tested
+Lt              Done        Tested
+LtE             Done        Tested
+Gt              Done        Tested
+GtE             Done        Tested
+Is              Done        Tested
+IsNot           Done        Tested
+In              Done        Tested
+NotIn           Done        Tested
+
+Call            Done        Tested
+keyword         Done        Tested
+
+IfExp           Done    
+
+Attribute       Done        Tested
+
+# need change, Index type and Slice type
+Subscript       Done        Tested
+Index           Done        Tested
+Slice           Done        Tested
+ExtSlice        Done        Tested
+
+ListComp        Done        Tested
+SetComp         Done        Tested
+GeneratorExp    Done        Tested
+DictComp
+comprehension   Done        Tested
+
+Assign          Done        Tested
+AugAssign       Done        Tested
+
+Print           ****        ******       
+Raise           Done
+Assert          Done
+Delete          ****        ******
+Pass            Done
+
+Import          Done
+ImportFrom      Done
+alias           Done
+
+If              Done        Tested
+For             Done        Tested
+While           Done        Tested
+Break
+Continue
+
+Try             Done        Tested
+TryFinally      ****        ****** 
+TryExcept       ****        ******
+ExceptHandler   Done        Tested
+
+With            Done        Tested
+withitem        Done        Tested
+
+FunctionDef     Done        Tested
+Lambda          Done 
+arguments       Done        Tested
+Return          Done        Tested
+
+Yield           Done        
+YieldFrom       ****        ******
+Global          ****        ******
+Nonlocal        ****        ******
+ClassDef        Done
+AsyncFunctionDef****        ******
+Await           ****        ******
+AsyncFor        ****        ******
+AsyncWith       ****        ******

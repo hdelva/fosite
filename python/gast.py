@@ -1,0 +1,413 @@
+import constants as constants
+
+from abc import ABCMeta, abstractmethod
+import constants
+
+class GastNode(object, metaclass=ABCMeta):
+  @abstractmethod
+  def kind(self):
+    pass 
+
+  def items(self):
+    return self.__dict__.items()
+
+  def str(self):
+    result = 'Kind: ' + self.kind() + '\n'
+
+    for attr, value in self.items():
+      if type(value) is list:
+        subresult = []
+        for count, nested_value in enumerate(value):
+          sub = nested_value.str().strip()
+        
+          indented = []
+          for line in sub.splitlines():
+            if len(line) < 1:
+              continue
+            indented.append('  ' + line)
+
+          indented = '\n'.join(indented)
+
+          subresult.append('-' + indented[1:])
+
+        subresult = '\n'.join(subresult)
+        result += '{}: \n{}\n'.format(attr, subresult)
+
+      elif isinstance(value, GastNode):
+        sub = value.str().strip()
+      
+        indented = ''
+        split = sub.splitlines()
+        for line in split:
+          if len(line) < 1:
+            continue
+          if len(split) == 1:
+            indented += line + '\n'
+          else:
+            indented += '  ' + line + '\n'
+
+        if len(split) > 1:
+          result += '{}: \n{}\n'.format(attr, indented)
+        else:
+          result += '{}: {}\n'.format(attr, indented)
+      else:
+        result += '{}: {}\n'.format(attr, str(value))
+
+    return result.strip()
+      
+
+class Named(GastNode, object):
+  def __init__(self, name: 'str'):
+    self.name = name
+
+class Control(GastNode):
+  def __init__(self, before: 'Block', test: 'BoolOp', body: 'Block', orElse: 'Block', after: 'Block'):
+    self.before = before
+    self.test = test
+    self.body = body
+    self.orElse = orElse
+    self.after = after
+
+class If(Control):
+  def __init__(self, test: 'BoolOp', body:'Block', orElse:'Block'):
+    super().__init__(None, test, body, orElse, None)
+
+  def kind(self):
+    return constants.IF
+
+class ForEach(Control):
+  def __init__(self, before: 'Generator', body: 'Block', orElse: 'Block'):
+    super().__init__(before, None, body, orElse, None)
+
+  def kind(self):
+    return constants.FOREACH
+
+class While(Control):
+  def __init__(self, test: 'BoolOp', body: 'Block', orElse: 'Block'):
+    super().__init__(None, test, body, orElse, None)
+
+  def kind(self):
+    return constants.WHILE
+
+class Try(Control):
+  def __init__(self, test: '[Case]', body: 'Block', orElse: 'Block', after: 'Block'):
+    super().__init__(None, test, body, orElse, after)
+
+  def kind(self):
+    return constants.TRY
+    
+class Case(GastNode):
+  def __init__(self, type: '?', name: 'Identifier', body: 'Block'):
+    self.type = type
+    self.name = name
+    self.body = body
+
+  def kind(self):
+    return constants.CASE
+
+class With(Control):
+  def __init__(self, before: '[Expression]', body: 'Block', after: '[Expression]'):
+    super().__init__(before, None, body, None, after)
+
+  def kind(self):
+    return constants.WITH
+
+class Block(GastNode):
+  def __init__(self, namespace: 'Namespace', content: '[GastNode]'):
+    self.namespace = namespace
+    self.content = content
+
+  def kind(self):
+    return constants.BLOCK
+
+class Namespace(Named, object):
+  def __init__(self, name: 'str', parent: 'Namespace'):
+    super().__init__(name)
+    self.parent = parent
+
+  def kind(self):
+    return constants.NAMESPACE
+
+  def str(self):
+    return self.name
+
+class Index(GastNode):
+  def __init__(self, target: 'Expression', index: 'Number'):
+    self.target = target
+    self.index = index
+
+  def kind(self):
+    return constants.INDEX
+
+class Attribute(GastNode):
+  def __init__(self, target: 'Expression', attribute: 'Named'):
+    self.of = target
+    self.attribute = attribute
+
+  def kind(self):
+    return constants.ATTRIBUTE
+
+class Identifier(Named):
+  def __init__(self, namespace: 'Namespace', name: 'str', generation: 'int'):
+    super().__init__(name)
+    self.namespace = namespace
+    self.generation = generation
+
+  def kind(self):
+    return constants.IDENTIFIER
+
+  def str(self):
+    return '{} | {} in {}'.format(self.name, self.generation, self.namespace.str())
+
+class Number(GastNode):
+  def __init__(self, value):
+    self.value = value
+
+  def kind(self):
+    return constants.NUMBER
+ 
+  def str(self):
+    return str(self.value)
+
+class String(GastNode):
+  def __init__(self, value):
+    self.value = value
+
+  def kind(self):
+    return constants.STRING
+
+  def str(self):
+    return "'" + self.value + "'"
+
+class Byte(GastNode):
+  def __init__(self, value):
+    self.value = value
+
+  def kind(self):
+    return constants.BYTE
+
+# fixed length
+class Sequence(GastNode):
+  def __init__(self, content: 'iterable'):
+    self.content = content
+
+  def kind(self):
+    return constants.SEQUENCE
+
+# variable length
+class List(GastNode):
+  def __init__(self, content: 'iterable'):
+    self.content = content
+
+  def kind(self):
+    return constants.LIST
+
+# special kind of sequence
+class Pair(GastNode):
+  def __init__(self, first, second):
+    self.first = first
+    self.second = second
+
+  def kind(self):
+    return constants.PAIR
+
+class Dictionary(GastNode):
+  def __init__(self, content: 'list[Pair]'):
+    self.content = content
+ 
+  def kind(self):
+    return constants.DICTIONARY
+
+class Set(GastNode):
+  def __init__(self, content: 'iterable'):
+    self.content = content
+
+  def kind(self):
+    return constants.SET
+
+class Boolean(GastNode):
+  def __init__(self, value:'boolean'):
+    self.value = value
+
+  def kind(self):
+    return constants.BOOLEAN
+
+class Nil(GastNode):
+  def kind(self):
+    return constants.NIL
+
+class Argument(Named):
+  def __init__(self, name: 'Identifier', value: 'literal'):
+    super().__init__(name)
+    self.value = value
+
+  def kind(self):
+    return constants.ARGUMENT
+
+class Function(Named):
+  def __init__(self, name: 'Identifier', pos_args: 'list[Argument]', kw_args, body: 'Block'):
+    super().__init__(name)
+    self.positional_args = pos_args
+    self.keyword_args = kw_args
+    self.body = body
+
+  def kind(self):
+    return constants.FUNCTION
+
+class ClassDef(Named):
+  def __init__(self, name: 'Identifier', bases: '[Identifier]', body: 'Block'):
+    super().__init__(name)
+    self.bases = bases
+    self.body = body
+
+  def kind(self):
+    return constants.CLASS
+
+class Call(Named):
+  def __init__(self, name: 'Name', pos_args: 'list[Expression]', kw_args: 'list[Argument]'=[]):
+    super().__init__(name)
+    self.positional_args = pos_args
+    self.keyword_args = kw_args
+
+  def kind(self):
+    return constants.CALL
+
+class Assign(GastNode):
+  def __init__(self, targets: 'list', value: 'Expression'):
+    self.targets = targets
+    self.value = value
+
+  def kind(self):
+    return constants.ASSIGN
+
+class Negate(GastNode):
+  def __init__(self, value: 'Expression'):
+    self.value = value
+  
+  def kind(self):
+    return constants.NEGATE
+
+class BinOp(GastNode):
+  def __init__(self, left: 'Expression', op: 'str', right, associative=False):
+    self.left = left
+    self.right = right
+    self.op = op
+    self.associative = associative
+    
+  def items(self):
+    return [('left', self.left), ('op', self.op), ('right', self.right)]
+
+  def kind(self):
+    return constants.BINOP
+
+class BoolOp(GastNode):
+  def __init__(self, left: 'Expression', op: 'str', right, reverse: 'str'=None, negate=None):
+    self.left = left
+    self.op = op
+    self.right = right
+    self.reverse = reverse
+    self.negate = negate
+
+  def kind(self):
+    return constants.BOOLOP
+
+  def items(self):
+    return [('left', self.left), ('op', self.op), ('right', self.right)]
+
+class UnOp(GastNode):
+  def __init__(self, operation: 'str', value: 'Expression'):
+    self.operation = operation
+    self.value = value
+   
+  def kind(self):
+    return constants.UNOP
+
+class Return(GastNode):
+  def __init__(self, value: 'Expression'):
+    self.value = value
+
+  def kind(self):
+    return constants.RETURN
+
+class Yield(GastNode):
+  def __init__(self, value: 'Expression'):
+    self.value = value
+
+  def kind(self):
+    return constants.RETURN
+
+class Raise(GastNode):
+  def __init__(self, value: 'Expression'):
+    self.value = value
+
+  def kind(self):
+    return constants.RAISE
+
+class Assert(GastNode):
+  def __init__(self, test: 'Expression', message: 'Expression'):
+    self.test = test
+    self.message = message
+
+  def kind(self):
+    return constants.ASSERT
+
+class Import(GastNode):
+  def __init__(self, module: 'str', aliases: '[Pair]'):
+    self.module = module
+    self.aliases = aliases
+
+  def kind(self):
+    return constants.Import
+
+class AnonymousFunction(GastNode):
+  def __init__(self, args: '[Argument]', body: 'Block'):
+    self.args = args
+    self.body = body
+
+  def kind(self):
+    return constants.ANONYMOUS_FUNCTION
+
+def Starred(value: 'Expression'):
+  return UnOp('*', value)
+
+def Slice(target: 'Expression', lower, upper, step):
+  return Call(constants.SLICE, [lower, upper, step])
+
+def ExtSlice(target: 'Expression', dims):
+  return Call(constants.EXTSLICE, dims)
+
+class Stream(GastNode):
+  # wat do here
+  pass
+
+class Generator(Stream):
+  def __init__(self, source: 'Iterable', target: 'Named'):
+    self.source = source
+    self.target = target
+
+  def kind(self):
+    return constants.GENERATOR
+
+class Filter(Stream):
+  def __init__(self, source: 'Iterable', condition: 'BoolOp'):
+    self.source = source
+    self.condition = condition
+
+  def kind(self):
+    return constants.FILTER
+
+class Map(Stream):
+  def __init__(self, source: 'Iterable', op: 'Expression'):
+    self.source = source
+    self.op = op
+
+  def kind(self):
+    return constants.MAP
+
+class AndThen(Stream):
+  def __init__(self, first: 'Stream', second: 'Stream'):
+    self.first = first
+    self.second = second
+    
+  def kind(self):
+    return constants.ANDTHEN 
