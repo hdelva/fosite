@@ -49,10 +49,11 @@ trait Namespace {
 
 // Object is composed of several properties it may or may not have
 struct Object<'a> {
-    type_property: Option<TypedObject>,
+    //todo, maybe merge iterable and indexable into a collection property
+    type_property: Option<TypedObject>,                 // types
     iterable_property: Option<IterableObject<'a>>,
     indexable_property: Option<IndexableObject<'a>>,
-    composite_property: Option<CompositeObject<'a>>,
+    composite_property: Option<CompositeObject<'a>>,    // attributes
 }
 
 impl<'a> Object<'a> {
@@ -66,6 +67,7 @@ impl<'a> Object<'a> {
     }
 
     fn get_types(&self, kb: &'a KnowledgeBase) -> &HashSet<Type> {
+        // an object without any type information can be any type for all we know
         match self.type_property {
             None => return kb.all_types(),
             Some(ref property) => return property.get_types()
@@ -73,6 +75,7 @@ impl<'a> Object<'a> {
     }
 
     fn limit_types(&mut self, kb: &'a KnowledgeBase, limits: &HashSet<Type>) {
+        // the more information we have about an object, the further we can limit the possible types
         match self.type_property {
             None => {
                 let all = kb.all_types();
@@ -87,6 +90,8 @@ impl<'a> Object<'a> {
     }
 
     fn iterate(&mut self, kb: &'a KnowledgeBase) -> &'a Object {
+        // limit the possible types to iterable types
+        // return a reference to the object representing its kind of elements
         match self.iterable_property {
             None => {
                 self.limit_types(kb, kb.iterable_types());
@@ -104,6 +109,8 @@ impl<'a> Object<'a> {
     }
 
     fn index(&mut self, kb: &'a KnowledgeBase) -> &'a Object {
+        // limit the possible types to indexable types
+        // return a reference to the object representing its kind of elements
         match self.indexable_property {
             None => {
                 self.limit_types(kb, kb.indexable_types());
@@ -121,12 +128,17 @@ impl<'a> Object<'a> {
     }
 
     fn reference_attribute(&mut self, kb: &'a KnowledgeBase, name: &String) -> &'a Object {
+        // if the referenced attribute came from a previous assignment
+        //   we get no new type information
+        // if not we can limit the possible types to types that have this attribute
         match self.composite_property {
             None => {
                 self.composite_property = Some(CompositeObject::new());
             },
             Some(ref property) => {
                 match property.attributes.get(name){
+                    // the referenced property was part of a previous assignment
+                    // just return it
                     Some(attribute) => return attribute,
                     _ => (),
                 }
@@ -139,6 +151,7 @@ impl<'a> Object<'a> {
     }
 
     fn assign_attribute(&mut self, name: &String, value: &'a Object) {
+        // sets the attribute reference
         match self.composite_property {
             None => {
                 let mut property = CompositeObject::new();
@@ -152,10 +165,13 @@ impl<'a> Object<'a> {
     }
 
     fn method(&mut self, kb: &'a KnowledgeBase, name: &String) -> Vec<&CallableObject> {
-        //todo limit types to callables?
-        
-        let mut result = Vec::new();
+        //todo should probably also reference the attribute first
+        //todo limit types of attribute to callables?
 
+        // ask the knowledge base which methods exists for all the current types
+        //todo if the knowledge base says the given type does not have a method of this name
+        //  we can then eliminate this type as a possible type
+        let mut result = Vec::new();
         for t in self.get_types(kb) {
             let mut partial = kb.methods(t, name);
             result.append(&mut partial);
@@ -164,6 +180,8 @@ impl<'a> Object<'a> {
         return result;
     }
 
+    // objects with no possible types are invalid
+    // code might still function by pure luck, but bad style regardless
     fn is_valid(&self) -> bool {
         match self.type_property {
             None => true,
