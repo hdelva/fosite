@@ -6,18 +6,28 @@ use std::collections::HashMap;
 /// type aliases
 
 type Type = i16;
+type Pointer = i16;
 
 /// Placeholders
 
 trait KnowledgeBase {
+    fn link_objects(&mut self, parent: &Pointer, child: &Pointer);
+
+    fn limit_types(&mut self, address: &Pointer, limits: &HashSet<Type>);
+
+    fn function_definition(&self, address: &Pointer) -> &FunctionDefinition;
+
+    fn builtin_function(&self, address: &Pointer) -> &BuiltinFunction;
+
+    fn dereference(&self, address: &Pointer) -> &Object;
+
+    fn allocate(&self) -> Pointer;
+
     // function belong to a namespace
-    fn functions(&self, namespace: Namespace, name: &String) -> Vec<&CallableObject>;
+    fn function(&self, namespace: Namespace, name: &String) -> Option<Callable>;
 
     // methods belong to a type (~class)
-    fn methods(&self, class: &Type, name: &String) -> Vec<&CallableObject>;
-
-    // take ownership of the Object
-    fn hold_this(&self, Object) -> &Object;
+    fn method(&self, class: &Type, name: &String) -> Option<Callable>;
 
     // all known types
     fn all_types(&self) -> &HashSet<Type>;
@@ -48,17 +58,21 @@ trait Namespace {
 /// objects
 
 // Object is composed of several properties it may or may not have
-struct Object<'a> {
+struct Object {
+    address: Pointer,
+    parent: Option<Pointer>,
     //todo, maybe merge iterable and indexable into a collection property
     type_property: Option<TypedObject>,                 // types
-    iterable_property: Option<IterableObject<'a>>,
-    indexable_property: Option<IndexableObject<'a>>,
-    composite_property: Option<CompositeObject<'a>>,    // attributes
+    iterable_property: Option<IterableObject>,
+    indexable_property: Option<IndexableObject>,
+    composite_property: Option<CompositeObject>,    // attributes
 }
 
-impl<'a> Object<'a> {
-    fn new<'b>() -> Object<'b> {
+impl Object {
+    fn new(address: Pointer) -> Object {
         Object {
+            address: address,
+            parent: None,
             type_property: None,
             iterable_property: None,
             indexable_property: None,
@@ -66,15 +80,19 @@ impl<'a> Object<'a> {
         }
     }
 
-    fn get_types(&self, kb: &'a KnowledgeBase) -> &HashSet<Type> {
+    fn set_parent(&mut self, address: Pointer) {
+        self.parent = Some(address);
+    }
+
+    fn get_types(&self) -> Option<&HashSet<Type>> {
         // an object without any type information can be any type for all we know
         match self.type_property {
-            None => return kb.all_types(),
-            Some(ref property) => return property.get_types()
+            None => return None,
+            Some(ref property) => return Some(property.get_types())
         }
     }
 
-    fn limit_types(&mut self, kb: &'a KnowledgeBase, limits: &HashSet<Type>) {
+    fn limit_types(&mut self, kb: &KnowledgeBase, limits: &HashSet<Type>) {
         // the more information we have about an object, the further we can limit the possible types
         match self.type_property {
             None => {
@@ -89,45 +107,43 @@ impl<'a> Object<'a> {
         }
     }
 
-    fn iterate(&mut self, kb: &'a KnowledgeBase) -> &'a Object {
+    fn iterate(&mut self, kb: &KnowledgeBase) -> Pointer {
         // limit the possible types to iterable types
         // return a reference to the object representing its kind of elements
         match self.iterable_property {
             None => {
                 self.limit_types(kb, kb.iterable_types());
 
-                let element = Object::new();
-                let reference = kb.hold_this(element);
-                let property = IterableObject::new(reference);
+                let address = kb.allocate();
+                let property = IterableObject::new(address);
                 self.iterable_property = Some(property);
-                return reference
+                return address.clone();
             },
             Some(ref property) => {
-                return property.element;
+                return property.element.clone();
             }
         }
     }
 
-    fn index(&mut self, kb: &'a KnowledgeBase) -> &'a Object {
+    fn index(&mut self, kb: &KnowledgeBase) -> Pointer {
         // limit the possible types to indexable types
         // return a reference to the object representing its kind of elements
         match self.indexable_property {
             None => {
                 self.limit_types(kb, kb.indexable_types());
 
-                let element = Object::new();
-                let reference = kb.hold_this(element);
-                let property = IndexableObject::new(reference);
+                let address = kb.allocate();
+                let property = IndexableObject::new(address);
                 self.indexable_property = Some(property);
-                return reference
+                return address.clone()
             },
             Some(ref property) => {
-                return property.element;
+                return property.element.clone();
             }
         }
     }
 
-    fn reference_attribute(&mut self, kb: &'a KnowledgeBase, name: &String) -> &'a Object {
+    fn reference_attribute(&mut self, kb: &mut KnowledgeBase, name: &String) -> Pointer {
         // if the referenced attribute came from a previous assignment
         //   we get no new type information
         // if not we can limit the possible types to types that have this attribute
@@ -139,18 +155,18 @@ impl<'a> Object<'a> {
                 match property.attributes.get(name){
                     // the referenced property was part of a previous assignment
                     // just return it
-                    Some(attribute) => return attribute,
+                    Some(attribute) => return attribute.clone(),
                     _ => (),
                 }
             },
-        }
+        };
 
         self.limit_types(kb, kb.types_with_attribute(name));
 
-        return self.composite_property.as_mut().unwrap().add_attribute(kb, name);
+        return self.composite_property.as_mut().unwrap().add_attribute(kb, name, self.address.clone());
     }
 
-    fn assign_attribute(&mut self, name: &String, value: &'a Object) {
+    fn assign_attribute(&mut self, name: &String, value: Pointer) {
         // sets the attribute reference
         match self.composite_property {
             None => {
@@ -164,17 +180,34 @@ impl<'a> Object<'a> {
         }
     }
 
-    fn method(&mut self, kb: &'a KnowledgeBase, name: &String) -> Vec<&CallableObject> {
-        //todo should probably also reference the attribute first
-        //todo limit types of attribute to callables?
-
+    fn call(&mut self, kb: &mut KnowledgeBase, name: &String) -> Vec<Callable> {
         // ask the knowledge base which methods exists for all the current types
-        //todo if the knowledge base says the given type does not have a method of this name
-        //  we can then eliminate this type as a possible type
         let mut result = Vec::new();
-        for t in self.get_types(kb) {
-            let mut partial = kb.methods(t, name);
-            result.append(&mut partial);
+
+        match self.parent {
+            Some(parent_address) => {
+                let mut possible_types = HashSet::new();
+
+                // parent needs to go out of scope
+                {
+                    let parent = kb.dereference(&parent_address);
+                    for t in parent.get_types().unwrap_or(kb.all_types()) {
+                        match kb.method(t, name) {
+                            None => {},
+                            Some(method) => {
+                                result.push(method);
+                                possible_types.insert(t.clone());
+                            },
+                        }
+                    }
+                }
+
+                kb.limit_types(&parent_address, &possible_types);
+            },
+            None => {
+                //todo when we have namespaces
+                // match kb.function
+            }
         }
 
         return result;
@@ -212,61 +245,88 @@ impl TypedObject {
     }
 }
 
-struct CompositeObject<'a> {
-    attributes: HashMap<String, &'a Object<'a>>,
+struct CompositeObject {
+    attributes: HashMap<String, Pointer>,
 }
 
-impl<'a> CompositeObject<'a> {
-    fn new() -> CompositeObject<'a> {
+impl CompositeObject {
+    fn new() -> CompositeObject {
         CompositeObject {
             attributes: HashMap::new(),
         }
     }
 
-    fn add_attribute(&mut self, kb: &'a KnowledgeBase, name: &String) -> &'a Object {
-        let attribute = Object::new();
-        let reference = kb.hold_this(attribute);
-        self.attributes.insert(name.clone(), reference);
-        return reference;
+    fn add_attribute(&mut self, kb: &mut KnowledgeBase, name: &String, parent: Pointer) -> Pointer {
+        let address = kb.allocate();
+        kb.link_objects(&parent, &address);
+        self.attributes.insert(name.clone(), address);
+        return address.clone();
     }
 
-    fn assign_attribute(&mut self, name: &String, value: &'a Object) {
+    fn assign_attribute(&mut self, name: &String, value: Pointer) {
         self.attributes.insert(name.clone(), value);
     }
 }
 
-struct IterableObject<'a>  {
-    element: &'a Object<'a>,
+struct IterableObject  {
+    element: Pointer,
 }
 
-impl<'a> IterableObject<'a> {
-    fn new(element: &'a Object) -> IterableObject<'a> {
+impl IterableObject {
+    fn new(element: Pointer) -> IterableObject {
         IterableObject {
             element: element
         }
     }
 }
 
-struct IndexableObject<'a>  {
-    element: &'a Object<'a>,
+struct IndexableObject  {
+    element: Pointer,
 }
 
-impl<'a> IndexableObject<'a> {
-    fn new(element: &'a Object) -> IndexableObject<'a> {
+impl IndexableObject {
+    fn new(element: Pointer) -> IndexableObject {
         IndexableObject {
             element: element
         }
     }
 }
 
-enum CallableObject<'a> {
-    Builtin {semantics: &'a BuiltinFunction},
-    Custom {definition: &'a FunctionDefinition},
+struct CallableObject {
+    possibilities: HashMap<Type, Callable>,
+}
+
+impl CallableObject {
+    fn new(possibilities: HashMap<Type, Callable>) -> CallableObject {
+        CallableObject {
+            possibilities: possibilities,
+        }
+    }
+
+    fn get_possibilities(&self) -> &HashMap<Type, Callable> {
+        return &self.possibilities;
+    }
+
+    fn limit_possibilities(&mut self, limits: &HashSet<Type>) {
+        let mut new = HashMap::new();
+
+        for (key, value) in self.possibilities.drain() {
+            if limits.contains(&key) {
+                new.insert(key, value);
+            }
+        }
+
+        self.possibilities = new;
+    }
+}
+
+enum Callable {
+    Builtin {semantics: Pointer},
+    Custom {definition: Pointer},
 }
 
 // Giving the compiler something to do
 fn main() {
     println!("Hello, world!");
 
-    let x = Object::new();
 }
