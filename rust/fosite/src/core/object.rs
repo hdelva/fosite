@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use super::types::*;
 use super::Pointer;
 
 /// objects
 // Object is composed of several properties it may or may not have
 pub struct Object {
-    extension_property: Option<Type>,               // python-style inheritance
+    extension_property: Option<Pointer>,            // python-style inheritance
     parent_property: Option<Pointer>,               // for method objects
     iterable_property: Option<IterableObject>,      // for ... in x
     indexable_property: Option<IndexableObject>,    // x[...]
@@ -32,15 +31,15 @@ impl Object {
         self.parent_property = Some(parent);
     }
 
-    pub fn extends(&mut self, tpe: Type) {
+    pub fn extends(&mut self, tpe: Pointer) {
         self.extension_property = Some(tpe);
     }
 
-    pub fn get_extension(&self) -> &Option<Type> {
+    pub fn get_extension(&self) -> &Option<Pointer> {
         return &self.extension_property
     }
 
-    pub fn get_extension_mut(&mut self) -> &mut Option<Type> {
+    pub fn get_extension_mut(&mut self) -> &mut Option<Pointer> {
         return &mut self.extension_property
     }
 

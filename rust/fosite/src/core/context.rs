@@ -6,10 +6,19 @@ pub struct Context {
     private_scope: Scope,
     protected_scope: Scope,
     public_scope: Scope,
-    context_type: Pointer,
+    context_type: Option<Pointer>,
 }
 
 impl Context {
+    pub fn new() -> Context {
+        Context {
+            private_scope: Scope::new(),
+            protected_scope: Scope::new(),
+            public_scope: Scope::new(),
+            context_type: None,
+        }
+    }
+
     pub fn assign_public(&mut self, name: &String, mapping: Mapping) {
         self.public_scope.add_mapping(name, mapping);
     }

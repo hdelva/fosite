@@ -8,7 +8,6 @@ use std::collections::HashSet;
 
 pub mod core;
 use core::Memory;
-use core::types;
 use core::KnowledgeBase;
 use core::result::*;
 use core::Context;
@@ -68,8 +67,8 @@ type TypePointer = i16;
 enum GastNode {
     Identifier {name: String},
     Declaration {id: String, kind: String},
-    Assignment {targets: Vec<Box<GastNode>>, value: Box<GastNode>},
-    Number {value: f32},
+    Assignment {targets: Vec<GastNode>, value: Box<GastNode>},
+    Number {value: i32},
     String {value: String},
     List {content: Vec<Box<GastNode>>},
     Sequence {content: Vec<Box<GastNode>>},
@@ -101,13 +100,13 @@ impl VirtualMachine {
         let second_object = self.memory.get_object(second);
     }*/
 
-    fn execute(&mut self, node: &GastNode) -> ExecutionResult {
+    pub fn execute(&mut self, node: &GastNode) -> ExecutionResult {
         match node {
             &GastNode::Number {ref value} => self.number(),
             &GastNode::Identifier {ref name} => self.load_identifier(name),
             &GastNode::String {ref value} => self.string(),
             &GastNode::Declaration {ref id, ref kind} => self.declaration(id, kind),
-            //&GastNode::Assignment {ref targets, ref value} => self.assignment(targets, value),
+            &GastNode::Assignment {ref targets, ref value} => self.assign(targets, value),
             _ => panic!("Unsupported Operation"),
         }
     }
@@ -120,8 +119,7 @@ impl VirtualMachine {
 
         match type_pointer {
             Some(address) => {
-                let tpe = types::make_concrete_type(address.clone());
-                object.extends(tpe);
+                object.extends(address.clone());
             },
             _ => panic!("system isn't properly initialized")
         }
@@ -134,7 +132,7 @@ impl VirtualMachine {
         let execution_result = ExecutionResult::Success {
             flow: FlowControl::Continue,
             dependencies: vec!(),
-            invalidations: vec!(),
+            changes: vec!(),
             results: vec!(result),
         };
 
@@ -148,8 +146,7 @@ impl VirtualMachine {
 
         match type_pointer {
             Some(address) => {
-                let tpe = types::make_concrete_type(address.clone());
-                object.extends(tpe);
+                object.extends(address.clone());
             },
             _ => panic!("declaration type does not exist")
         }
@@ -175,7 +172,7 @@ impl VirtualMachine {
         let execution_result = ExecutionResult::Success {
             flow: FlowControl::Continue,
             dependencies: vec!(),
-            invalidations: vec!(name.clone()),
+            changes: vec!(Change::Identifier {name: name.clone()} ),
             results: vec!(result),
         };
 
@@ -190,8 +187,7 @@ impl VirtualMachine {
 
         match type_pointer {
             Some(address) => {
-                let tpe = types::make_concrete_type(address.clone());
-                object.extends(tpe);
+                object.extends(address.clone());
             },
             _ => panic!("system isn't properly initialized")
         }
@@ -204,7 +200,7 @@ impl VirtualMachine {
         let execution_result = ExecutionResult::Success {
             flow: FlowControl::Continue,
             dependencies: vec!(),
-            invalidations: vec!(),
+            changes: vec!(),
             results: vec!(result),
         };
 
@@ -236,7 +232,7 @@ impl VirtualMachine {
                 let execution_result = ExecutionResult::Success {
                     flow: FlowControl::Continue,
                     dependencies: vec!(name.clone()),
-                    invalidations: vec!(),
+                    changes: vec!(),
                     results: results,
                 };
 
@@ -251,7 +247,7 @@ impl VirtualMachine {
         let value_execution = self.execute(value);
 
         match value_execution {
-            ExecutionResult::Success{flow, dependencies, mut invalidations, results} => {
+            ExecutionResult::Success{flow, dependencies, mut changes, results} => {
                 let mut mappings = Vec::new();
 
                 for result in results {
@@ -265,8 +261,8 @@ impl VirtualMachine {
                         ExecutionResult::Success {
                             flow: t_flow,
                             dependencies: t_dependencies,
-                            invalidations: mut t_invalidations,
-                            results: t_results} => invalidations.append(&mut t_invalidations),
+                            changes: mut t_changes,
+                            results: t_results} => changes.append(&mut t_changes),
                         _ => panic!("bad shit")
                     }
                 }
@@ -279,7 +275,7 @@ impl VirtualMachine {
                 return ExecutionResult::Success {
                     flow: FlowControl::Continue,
                     dependencies: dependencies,
-                    invalidations: invalidations,
+                    changes: changes,
                     results: values,
                 }
 
@@ -321,7 +317,7 @@ impl VirtualMachine {
         return ExecutionResult::Success {
             flow: FlowControl::Continue,
             dependencies: vec!(),
-            invalidations: vec!(target.clone()),
+            changes: vec!(Change::Identifier {name: target.clone()} ),
             results: values,
         }
     }
@@ -331,11 +327,75 @@ impl VirtualMachine {
         return Mapping { assumption: Assumption::None, address: value }
     }
 
+    pub fn inspect_identifier(&self, name: &String) {
+        let mut candidate = None;
+
+        for context in self.contexts.iter().rev() {
+            candidate = context.get_public_scope().resolve_identifier(&name);
+
+            if candidate.is_some() {
+                break;
+            }
+        }
+
+        match candidate {
+            Some(mappings) => {
+                for ref mapping in mappings {
+                    self.print_mapping_info(name, &mapping);
+                }
+            },
+            None => panic!("resolving unknown identifier"),
+        }
+    }
+
+    fn print_mapping_info(&self, name: &String, mapping: &Mapping) {
+        match mapping {
+            &Mapping {ref assumption, ref address} => {
+                let object = self.memory.get_object(address);
+                let tpe = object.get_extension();
+
+                match tpe {
+                    &Some(ref type_pointer) => {
+                        let type_name = self.knowledge_base.get_type_name(type_pointer);
+                        println!("Object {:?} has type {:?} in {:?}", name, type_name.unwrap(), mapping);
+                    },
+                    _ => println!("{:?} is a type in {:?}", name, mapping),
+                }
+            }
+        }
+
+    }
+
+    pub fn declare_simple_type(&mut self, name: &String) {
+        let pointer = self.memory.new_object();
+        self.knowledge_base.add_type(name.clone(), pointer.clone());
+        self.assign_to_identifier(name, &vec!(Mapping::new(Assumption::None, pointer)));
+    }
+
+    pub fn new_context(&mut self) {
+        self.contexts.push(Context::new());
+    }
 
 }
 
 // Giving the compiler something to do
 fn main() {
-    println!("Hello, world!");
+    let mut vm = VirtualMachine::new();
 
+    vm.new_context();
+
+    vm.declare_simple_type(&"number".to_owned());
+
+    let x = GastNode::Identifier { name: "x".to_owned(), };
+    let value = Box::new(GastNode::Number { value: 5, });
+    let assignment = GastNode::Assignment{
+        targets: vec!(x),
+        value: value,
+    };
+    let result = vm.execute(&assignment);
+
+    println!("{:?}", result);
+
+    vm.inspect_identifier(&"number".to_owned());
+    vm.inspect_identifier(&"x".to_owned());
 }

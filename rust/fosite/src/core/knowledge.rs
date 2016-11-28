@@ -58,6 +58,10 @@ impl KnowledgeBase {
         self.types.insert(name, address);
     }
 
+    pub fn add_type(&mut self, name: String, address: Pointer) {
+        self.types.insert(name, address);
+    }
+
     pub fn get_type(&self, name: &String) -> Option<&Pointer> {
         return self.types.get_by_first(name)
     }
@@ -65,5 +69,9 @@ impl KnowledgeBase {
 
     pub fn get_types_with_attribute(&self, name: &String) -> Option<&HashSet<Pointer>> {
         return self.types_with_attribute.get(name)
+    }
+
+    pub fn get_type_name(&self, pointer: &Pointer) -> Option<&String> {
+        return self.types.get_by_second(pointer);
     }
 }

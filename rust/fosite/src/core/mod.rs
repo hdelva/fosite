@@ -1,4 +1,3 @@
-pub mod types;
 mod object;
 mod memory;
 mod knowledge;
@@ -12,7 +11,6 @@ pub use super::FunctionDefinition;
 pub use super::BuiltinFunction;
 pub use super::GastID;
 
-pub use self::types::*;
 pub use self::object::*;
 pub use self::memory::*;
 pub use self::knowledge::*;
