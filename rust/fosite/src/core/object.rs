@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::Pointer;
+use super::Mapping;
 
 /// objects
 // Object is composed of several properties it may or may not have
@@ -73,29 +74,15 @@ impl Object {
         self.indexable_property = Some(address);
     }
 
-    pub fn reference_attribute(&mut self, name: &String) -> Option<Pointer> {
-        match self.composite_property {
-            Some(ref property) => {
-                match property.attributes.get(name){
-                    // the referenced property was part of a previous assignment
-                    // just return it
-                    Some(attribute) => Some(attribute.clone()),
-                    _ => None,
-                }
-            },
-            _ => None,
-        }
-    }
-
-    pub fn assign_attribute(&mut self, name: &String, value: Pointer) {
+    pub fn assign_attribute(&mut self, name: String, mapping: Mapping) {
         // sets the attribute reference
         match self.composite_property {
             Some(ref mut property) => {
-                property.assign_attribute(name, value);
+                property.assign_attribute(name, mapping);
             },
             _ => {
                 let mut property = CompositeObject::new();
-                property.assign_attribute(name, value);
+                property.assign_attribute(name, mapping);
                 self.composite_property = Some(property);
             },
         }
@@ -106,7 +93,7 @@ impl Object {
 
 struct CompositeObject {
     //todo split in private/public/(protected)
-    attributes: HashMap<String, Pointer>,
+    attributes: HashMap<String, Mapping>,
 }
 
 impl CompositeObject {
@@ -116,12 +103,8 @@ impl CompositeObject {
         }
     }
 
-    fn add_attribute(&mut self, name: &String, address: Pointer)  {
-        self.attributes.insert(name.clone(), address);
-    }
-
-    fn assign_attribute(&mut self, name: &String, value: Pointer) {
-        self.attributes.insert(name.clone(), value);
+    fn assign_attribute(&mut self, name: String, mapping: Mapping) {
+        self.attributes.insert(name, mapping);
     }
 }
 

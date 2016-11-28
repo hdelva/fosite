@@ -7,7 +7,7 @@ pub enum Assumption {
         source: GastID,
         negated: bool
     },
-    Multiple {
-        assumptions: Vec<Assumption>
-    },
+    Multiple (
+        Vec<Assumption>
+    ),
 }

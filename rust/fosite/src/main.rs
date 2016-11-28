@@ -67,6 +67,7 @@ type TypePointer = i16;
 #[derive(Debug)]
 enum GastNode {
     Identifier {name: String},
+    Attribute {parent: Box<GastNode>, attribute: String},
     Declaration {id: String, kind: String},
     Assignment {targets: Vec<GastNode>, value: Box<GastNode>},
     Number {value: i32},
@@ -103,9 +104,9 @@ impl VirtualMachine {
 
     pub fn execute(&mut self, node: &GastNode) -> ExecutionResult {
         match node {
-            &GastNode::Number {ref value} => self.number(),
+            &GastNode::Number {..} => self.number(),
             &GastNode::Identifier {ref name} => self.load_identifier(name),
-            &GastNode::String {ref value} => self.string(),
+            &GastNode::String {..} => self.string(),
             &GastNode::Declaration {ref id, ref kind} => self.declaration(id, kind),
             &GastNode::Assignment {ref targets, ref value} => self.assign(targets, value),
             _ => panic!("Unsupported Operation"),
@@ -248,7 +249,7 @@ impl VirtualMachine {
         let value_execution = self.execute(value);
 
         match value_execution {
-            ExecutionResult::Success{flow, dependencies, mut changes, results} => {
+            ExecutionResult::Success{dependencies, mut changes, results, ..} => {
                 let mut mappings = Vec::new();
 
                 for result in results {
@@ -260,10 +261,8 @@ impl VirtualMachine {
 
                     match partial_result {
                         ExecutionResult::Success {
-                            flow: t_flow,
-                            dependencies: t_dependencies,
                             changes: mut t_changes,
-                            results: t_results} => changes.append(&mut t_changes),
+                            .. } => changes.append(&mut t_changes),
                         _ => panic!("bad shit")
                     }
                 }
@@ -286,50 +285,116 @@ impl VirtualMachine {
         }
     }
 
-    fn assign_to_target(&mut self, target: &GastNode, mappings: &Vec<Mapping>) -> ExecutionResult {
-        match target {
-            &GastNode::Identifier {ref name} => {
-                self.assign_to_identifier(name, mappings)
-            },
-            &GastNode::List {ref content} => {
-                let mut new_mappings = Vec::new();
-                for mapping in mappings {
-                    let ref assumption = mapping.assumption;
-                    let ref address = mapping.address;
-                    let object = self.memory.get_object(&address);
+    fn assign_to_attribute(&mut self, parent: &GastNode, attribute: &String, mappings: &Vec<Mapping>) -> ExecutionResult {
+        let parent_result = self.execute(parent);
+        match parent_result {
+            ExecutionResult::Success {results, ..} => {
+                let mut changes = Vec::new();
+                changes.push(Change::Identifier{name: attribute.clone()}); //todo how to model attribute changes
 
-                    match object.iterate() {
-                        Some(sub_address) => {
-                            new_mappings.push(Mapping::new(assumption.clone(), sub_address));
-                        },
-                        _ => panic!("object isn't iterable")
-                    }
-                }
+                for parent_mapping in results {
+                    let ref parent_assumption = parent_mapping.assumption;
+                    let address = parent_mapping.value;
+                    changes.push(Change::Object {address: address});
 
-                let mut new_changes = Vec::new();
+                    let mut object = self.memory.get_object_mut(&address);
 
-                for sub_target in content {
-                    let mut sub_result = self.assign_to_target(sub_target, &new_mappings);
+                    for value_mapping in mappings {
+                        let ref value_assumption = value_mapping.assumption;
+                        let ref value_address = value_mapping.address;
 
-                    match sub_result {
-                        ExecutionResult::Success {flow, dependencies, mut changes, results} => {
-                            new_changes.append(&mut changes);
-                        },
-                        _ => ()
+                        let new_assumption = VirtualMachine::merge_assumptions(parent_assumption, value_assumption);
+                        let new_mapping = Mapping::new(new_assumption, value_address.clone());
+
+                        object.assign_attribute(attribute.clone(), new_mapping);
                     }
                 }
 
                 return ExecutionResult::Success {
                     flow: FlowControl::Continue,
                     dependencies: vec!(),
-                    changes: new_changes,
+                    changes: changes,
                     results: vec!(),
                 }
+            },
+            _ => panic!("invalid attribute parent"),
+        }
+    }
+
+    fn merge_assumptions<'a>(ass1: &'a Assumption, ass2: &'a Assumption) -> Assumption {
+        match (ass1, ass2) {
+            (&Assumption::None, other) |
+            (other, &Assumption::None) => other.clone(),
+            (&Assumption::Multiple(ref assumptions),
+                &Assumption::ConditionAssumption {source, negated}) |
+            (&Assumption::ConditionAssumption {source, negated},
+                &Assumption::Multiple(ref assumptions) ) => {
+                let mut new_assumptions = assumptions.clone();
+                new_assumptions.push(Assumption::ConditionAssumption {source: source, negated: negated});
+                return Assumption::Multiple(new_assumptions)
+            },
+            (&Assumption::Multiple(ref first), &Assumption::Multiple(ref second)) => {
+                let mut new_assumptions = first.clone();
+                let mut pls = second.clone();
+                new_assumptions.append(&mut pls);
+                return Assumption::Multiple(new_assumptions);
+            },
+            (first, second) => {
+                return Assumption::Multiple(vec!(first.clone(), second.clone()));
             }
-            // list
-            // sequence
+
+        }
+    }
+
+    fn assign_to_target(&mut self, target: &GastNode, mappings: &Vec<Mapping>) -> ExecutionResult {
+        match target {
+            &GastNode::Identifier {ref name} => {
+                self.assign_to_identifier(name, mappings)
+            },
+            &GastNode::List {ref content} | &GastNode::Sequence {ref content} => {
+                self.assign_to_iterable(content, mappings)
+            },
+            &GastNode::Attribute {ref parent, ref attribute} => {
+                self.assign_to_attribute(parent, attribute, mappings)
+            },
             // attribute
             _ => panic!("unimplemented"),
+        }
+    }
+
+    fn assign_to_iterable(&mut self, target: &Vec<GastNode>, mappings: &Vec<Mapping>) -> ExecutionResult {
+        let mut new_mappings = Vec::new();
+        for mapping in mappings {
+            let ref assumption = mapping.assumption;
+            let ref address = mapping.address;
+            let object = self.memory.get_object(&address);
+
+            match object.iterate() {
+                Some(sub_address) => {
+                    new_mappings.push(Mapping::new(assumption.clone(), sub_address));
+                },
+                _ => panic!("object isn't iterable")
+            }
+        }
+
+        let mut new_changes = Vec::new();
+
+        for sub_target in target {
+            let sub_result = self.assign_to_target(sub_target, &new_mappings);
+
+            match sub_result {
+                ExecutionResult::Success {mut changes, ..} => {
+                    new_changes.append(&mut changes);
+                },
+                _ => ()
+            }
+        }
+
+        return ExecutionResult::Success {
+            flow: FlowControl::Continue,
+            dependencies: vec!(),
+            changes: new_changes,
+            results: vec!(),
         }
     }
 
@@ -358,7 +423,6 @@ impl VirtualMachine {
         }
     }
 
-
     fn create_simple_mapping(value: Pointer) -> Mapping {
         return Mapping { assumption: Assumption::None, address: value }
     }
@@ -386,7 +450,7 @@ impl VirtualMachine {
 
     fn print_mapping_info(&self, name: &String, mapping: &Mapping) {
         match mapping {
-            &Mapping {ref assumption, ref address} => {
+            &Mapping {ref address, ..} => {
                 let object = self.memory.get_object(address);
                 let tpe = object.get_extension();
 
@@ -437,8 +501,9 @@ fn main() {
     println!("");
 
     test2(&mut vm);
+    println!("");
 
-
+    test3(&mut vm);
 }
 
 fn test1(vm: &mut VirtualMachine) {
@@ -449,8 +514,8 @@ fn test1(vm: &mut VirtualMachine) {
         value: value,
     };
 
-    // executing x = 1
-    println!("Executing \"x = 1\"");
+    // executing x = 5
+    println!("Executing \"x = 5\"");
     let result = vm.execute(&assignment);
     println!("{:?}", result);
 
@@ -487,4 +552,21 @@ fn test2(vm: &mut VirtualMachine) {
 
     vm.inspect_identifier(&"x".to_owned());
     vm.inspect_identifier(&"y".to_owned());
+}
+
+fn test3(vm: &mut VirtualMachine) {
+    let parent = GastNode::Identifier {name: "x".to_owned()};
+    let attribute = GastNode::Attribute {parent: Box::new(parent), attribute: "attribute".to_owned()};
+
+    let value = Box::new(GastNode::Number { value: 5, });
+    let assignment = GastNode::Assignment{
+        targets: vec!(attribute),
+        value: value,
+    };
+
+    // executing x.attribute = 5
+    println!("Executing \"x.attribute = 5\"");
+    let result = vm.execute(&assignment);
+    println!("{:?}", result);
+
 }
