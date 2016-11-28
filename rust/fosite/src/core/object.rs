@@ -5,22 +5,32 @@ use super::Pointer;
 /// objects
 // Object is composed of several properties it may or may not have
 pub struct Object {
+    type_property: bool,
     extension_property: Option<Pointer>,            // python-style inheritance
     parent_property: Option<Pointer>,               // for method objects
-    iterable_property: Option<IterableObject>,      // for ... in x
-    indexable_property: Option<IndexableObject>,    // x[...]
+    iterable_property: Option<Pointer>,             // for ... in x
+    indexable_property: Option<Pointer>,            // x[...]
     composite_property: Option<CompositeObject>,    // x.attrbitue
 }
 
 impl Object {
     pub fn new() -> Object {
         Object {
+            type_property: false,
             extension_property: None,
             parent_property: None,
             iterable_property: None,
             indexable_property: None,
             composite_property: None,
         }
+    }
+
+    pub fn set_type(&mut self, new: bool) {
+        self.type_property = new;
+    }
+
+    pub fn is_type(&self) -> bool {
+        return self.type_property;
     }
 
     pub fn get_parent(&self) -> &Option<Pointer> {
@@ -43,22 +53,24 @@ impl Object {
         return &mut self.extension_property
     }
 
-    pub fn iterate(&mut self) -> Option<Pointer> {
+    pub fn iterate(&self) -> Option<Pointer> {
         // limit the possible types to iterable types
         // return a reference to the object representing its kind of elements
-        match self.iterable_property {
-            Some(ref property) => Some(property.element.clone()),
-            _ => None,
-        }
+        return self.iterable_property;
     }
 
-    pub fn index(&mut self) -> Option<Pointer> {
+    pub fn enable_iteration(&mut self, address: Pointer) {
+        self.iterable_property = Some(address);
+    }
+
+    pub fn index(&self) -> Option<Pointer> {
         // limit the possible types to indexable types
         // return a reference to the object representing its kind of elements
-        match self.indexable_property {
-            Some(ref property) => Some(property.element.clone()),
-            _ => None,
-        }
+        return self.indexable_property;
+    }
+
+    pub fn enable_indexing(&mut self, address: Pointer) {
+        self.indexable_property = Some(address);
     }
 
     pub fn reference_attribute(&mut self, name: &String) -> Option<Pointer> {
@@ -110,18 +122,6 @@ impl CompositeObject {
 
     fn assign_attribute(&mut self, name: &String, value: Pointer) {
         self.attributes.insert(name.clone(), value);
-    }
-}
-
-struct IterableObject  {
-    element: Pointer,
-}
-
-impl IterableObject {
-    fn new(element: Pointer) -> IterableObject {
-        IterableObject {
-            element: element
-        }
     }
 }
 

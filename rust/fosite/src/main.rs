@@ -64,14 +64,15 @@ pub type Pointer = i16;
 type TypePointer = i16;
 
 /// structs
+#[derive(Debug)]
 enum GastNode {
     Identifier {name: String},
     Declaration {id: String, kind: String},
     Assignment {targets: Vec<GastNode>, value: Box<GastNode>},
     Number {value: i32},
     String {value: String},
-    List {content: Vec<Box<GastNode>>},
-    Sequence {content: Vec<Box<GastNode>>},
+    List {content: Vec<GastNode>},
+    Sequence {content: Vec<GastNode>},
 }
 
 struct VirtualMachine {
@@ -290,6 +291,41 @@ impl VirtualMachine {
             &GastNode::Identifier {ref name} => {
                 self.assign_to_identifier(name, mappings)
             },
+            &GastNode::List {ref content} => {
+                let mut new_mappings = Vec::new();
+                for mapping in mappings {
+                    let ref assumption = mapping.assumption;
+                    let ref address = mapping.address;
+                    let object = self.memory.get_object(&address);
+
+                    match object.iterate() {
+                        Some(sub_address) => {
+                            new_mappings.push(Mapping::new(assumption.clone(), sub_address));
+                        },
+                        _ => panic!("object isn't iterable")
+                    }
+                }
+
+                let mut new_changes = Vec::new();
+
+                for sub_target in content {
+                    let mut sub_result = self.assign_to_target(sub_target, &new_mappings);
+
+                    match sub_result {
+                        ExecutionResult::Success {flow, dependencies, mut changes, results} => {
+                            new_changes.append(&mut changes);
+                        },
+                        _ => ()
+                    }
+                }
+
+                return ExecutionResult::Success {
+                    flow: FlowControl::Continue,
+                    dependencies: vec!(),
+                    changes: new_changes,
+                    results: vec!(),
+                }
+            }
             // list
             // sequence
             // attribute
@@ -359,7 +395,13 @@ impl VirtualMachine {
                         let type_name = self.knowledge_base.get_type_name(type_pointer);
                         println!("Object {:?} has type {:?} in {:?}", name, type_name.unwrap(), mapping);
                     },
-                    _ => println!("{:?} is a type in {:?}", name, mapping),
+                    _ => {
+                        if object.is_type() {
+                            println!("{:?} is a type in {:?}", name, mapping)
+                        } else {
+                            println!("{:?} is an object of unknown type in {:?}", name, mapping)
+                        }
+                    },
                 }
             }
         }
@@ -368,6 +410,10 @@ impl VirtualMachine {
 
     pub fn declare_simple_type(&mut self, name: &String) {
         let pointer = self.memory.new_object();
+        {
+            let mut object = self.memory.get_object_mut(&pointer);
+            object.set_type(true);
+        }
         self.knowledge_base.add_type(name.clone(), pointer.clone());
         self.assign_to_identifier(name, &vec!(Mapping::new(Assumption::None, pointer)));
     }
@@ -385,17 +431,60 @@ fn main() {
     vm.new_context();
 
     vm.declare_simple_type(&"number".to_owned());
+    vm.declare_simple_type(&"Stub".to_owned());
 
+    test1(&mut vm);
+    println!("");
+
+    test2(&mut vm);
+
+
+}
+
+fn test1(vm: &mut VirtualMachine) {
     let x = GastNode::Identifier { name: "x".to_owned(), };
     let value = Box::new(GastNode::Number { value: 5, });
     let assignment = GastNode::Assignment{
         targets: vec!(x),
         value: value,
     };
-    let result = vm.execute(&assignment);
 
+    // executing x = 1
+    println!("Executing \"x = 1\"");
+    let result = vm.execute(&assignment);
     println!("{:?}", result);
 
     vm.inspect_identifier(&"number".to_owned());
     vm.inspect_identifier(&"x".to_owned());
+}
+
+
+fn test2(vm: &mut VirtualMachine) {
+    let declaration = GastNode::Declaration {
+        id: "z".to_owned(),
+        kind: "Stub".to_owned(),
+    };
+    vm.execute(&declaration);
+
+    // jam a placeholder in there
+    let address = 3;
+    let child_address = vm.memory.new_object();
+    {
+        let mut object = vm.memory.get_object_mut(&address);
+        object.enable_iteration(child_address);
+    }
+
+    let x = GastNode::Identifier { name: "x".to_owned(), };
+    let y = GastNode::Identifier { name: "y".to_owned(), };
+    let z = GastNode::Identifier { name: "z".to_owned(), };
+
+    let target = GastNode::List { content: vec!(x, y), };
+    let assignment = GastNode::Assignment { targets: vec!(target), value: Box::new(z)};
+
+    println!("Executing \"x, y = z\"");
+    let result = vm.execute(&assignment);
+    println!("{:?}", result);
+
+    vm.inspect_identifier(&"x".to_owned());
+    vm.inspect_identifier(&"y".to_owned());
 }
