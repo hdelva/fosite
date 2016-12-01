@@ -26,20 +26,20 @@ impl KnowledgeBase {
     }
 
     pub fn add_type_with_attribute(&mut self, attr: String, address: Pointer) {
-        if !self.types.contains_second_key(&address){
+        if !self.types.contains_second_key(&address) {
             panic!("Referring to non-existing type")
         }
 
-        match self.types_with_attribute.entry(attr.clone()){
+        match self.types_with_attribute.entry(attr.clone()) {
             Occupied(mut entry) => {
                 let mut set = entry.get_mut();
                 set.insert(address.clone());
-            },
+            }
             Vacant(entry) => {
                 let mut set = HashSet::new();
                 set.insert(address.clone());
                 entry.insert(set);
-            },
+            }
         };
     }
 
@@ -63,12 +63,12 @@ impl KnowledgeBase {
     }
 
     pub fn get_type(&self, name: &String) -> Option<&Pointer> {
-        return self.types.get_by_first(name)
+        return self.types.get_by_first(name);
     }
 
 
     pub fn get_types_with_attribute(&self, name: &String) -> Option<&HashSet<Pointer>> {
-        return self.types_with_attribute.get(name)
+        return self.types_with_attribute.get(name);
     }
 
     pub fn get_type_name(&self, pointer: &Pointer) -> Option<&String> {

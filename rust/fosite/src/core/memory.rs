@@ -36,7 +36,7 @@ impl Memory {
         let object = Object::new();
         self.objects.insert(index, object);
 
-        return index
+        return index;
     }
 
     pub fn follow_pointer_chain<'a>(&'a self, address: &'a Pointer) -> &'a Pointer {
@@ -50,8 +50,8 @@ impl Memory {
                     }
 
                     current = next;
-                },
-                None => return current
+                }
+                None => return current,
             }
         }
     }
@@ -94,7 +94,7 @@ impl Memory {
     pub fn get_object(&self, address: &Pointer) -> &Object {
         match self.objects.get(address) {
             Some(value) => return value,
-            None => panic!("Invalid Pointer Value")
+            None => panic!("Invalid Pointer Value"),
         }
     }
 
@@ -102,7 +102,7 @@ impl Memory {
     pub fn get_object_mut(&mut self, address: &Pointer) -> &mut Object {
         match self.objects.get_mut(address) {
             Some(mut value) => return value,
-            None => panic!("Invalid Pointer Value")
+            None => panic!("Invalid Pointer Value"),
         }
     }
 
@@ -111,8 +111,8 @@ impl Memory {
         match self.function_definitions.get(address) {
             Some(def) => {
                 return def;
-            },
-            None => panic!("Invalid Pointer Value")
+            }
+            None => panic!("Invalid Pointer Value"),
         }
     }
 
@@ -120,8 +120,8 @@ impl Memory {
         match self.builtin_functions.get(address) {
             Some(def) => {
                 return def;
-            },
-            None => panic!("Invalid Pointer Value")
+            }
+            None => panic!("Invalid Pointer Value"),
         }
     }
 }

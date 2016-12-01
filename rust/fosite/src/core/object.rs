@@ -7,11 +7,11 @@ use super::Mapping;
 // Object is composed of several properties it may or may not have
 pub struct Object {
     type_property: bool,
-    extension_property: Option<Pointer>,            // python-style inheritance
-    parent_property: Option<Pointer>,               // for method objects
-    iterable_property: Option<Pointer>,             // for ... in x
-    indexable_property: Option<Pointer>,            // x[...]
-    composite_property: Option<CompositeObject>,    // x.attrbitue
+    extension_property: Option<Pointer>, // python-style inheritance
+    parent_property: Option<Pointer>, // for method objects
+    iterable_property: Option<Pointer>, // for ... in x
+    indexable_property: Option<Pointer>, // x[...]
+    composite_property: Option<CompositeObject>, // x.attrbitue
 }
 
 impl Object {
@@ -35,7 +35,7 @@ impl Object {
     }
 
     pub fn get_parent(&self) -> &Option<Pointer> {
-        return &self.parent_property
+        return &self.parent_property;
     }
 
     pub fn set_parent(&mut self, parent: Pointer) {
@@ -47,11 +47,11 @@ impl Object {
     }
 
     pub fn get_extension(&self) -> &Option<Pointer> {
-        return &self.extension_property
+        return &self.extension_property;
     }
 
     pub fn get_extension_mut(&mut self) -> &mut Option<Pointer> {
-        return &mut self.extension_property
+        return &mut self.extension_property;
     }
 
     pub fn iterate(&self) -> Option<Pointer> {
@@ -79,12 +79,12 @@ impl Object {
         match self.composite_property {
             Some(ref mut property) => {
                 property.assign_attribute(name, mapping);
-            },
+            }
             _ => {
                 let mut property = CompositeObject::new();
                 property.assign_attribute(name, mapping);
                 self.composite_property = Some(property);
-            },
+            }
         }
     }
 }
@@ -92,15 +92,13 @@ impl Object {
 /// Object Properties
 
 struct CompositeObject {
-    //todo split in private/public/(protected)
+    // todo split in private/public/(protected)
     attributes: HashMap<String, Mapping>,
 }
 
 impl CompositeObject {
     fn new() -> CompositeObject {
-        CompositeObject {
-            attributes: HashMap::new(),
-        }
+        CompositeObject { attributes: HashMap::new() }
     }
 
     fn assign_attribute(&mut self, name: String, mapping: Mapping) {
@@ -108,14 +106,12 @@ impl CompositeObject {
     }
 }
 
-struct IndexableObject  {
+struct IndexableObject {
     element: Pointer,
 }
 
 impl IndexableObject {
     fn new(element: Pointer) -> IndexableObject {
-        IndexableObject {
-            element: element
-        }
+        IndexableObject { element: element }
     }
 }

@@ -16,7 +16,7 @@ pub enum ExecutionResult {
         dependencies: Vec<String>,
         changes: Vec<Change>,
         results: Vec<Result>,
-    }
+    },
 }
 
 #[derive(Debug)]
@@ -27,6 +27,6 @@ pub struct Result {
 
 #[derive(Debug)]
 pub enum Change {
-    Identifier {name: String},
-    Object {address: Pointer},
+    Identifier { name: String },
+    Object { address: Pointer },
 }
