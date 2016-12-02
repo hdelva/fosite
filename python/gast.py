@@ -1,7 +1,14 @@
 import constants as constants
 
+from json import JSONEncoder
 from abc import ABCMeta, abstractmethod
 import constants
+
+class GastEncoder(JSONEncoder):
+    def default(self, o):
+        temp =  {k:v for k, v in o.items()}
+        temp['kind'] = o.kind()
+        return temp
 
 class GastNode(object, metaclass=ABCMeta):
   @abstractmethod
@@ -54,11 +61,16 @@ class GastNode(object, metaclass=ABCMeta):
         result += '{}: {}\n'.format(attr, str(value))
 
     return result.strip()
-      
+
+global count
+count = 0
 
 class Named(GastNode, object):
   def __init__(self, name: 'str'):
     self.name = name
+    global count
+    self.id = count
+    count += 1
 
 class Control(GastNode):
   def __init__(self, before: 'Block', test: 'BoolOp', body: 'Block', orElse: 'Block', after: 'Block'):
@@ -67,6 +79,9 @@ class Control(GastNode):
     self.body = body
     self.orElse = orElse
     self.after = after
+    global count
+    self.id = count
+    count += 1
 
 class If(Control):
   def __init__(self, test: 'BoolOp', body:'Block', orElse:'Block'):
@@ -101,6 +116,9 @@ class Case(GastNode):
     self.type = type
     self.name = name
     self.body = body
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.CASE
@@ -113,28 +131,22 @@ class With(Control):
     return constants.WITH
 
 class Block(GastNode):
-  def __init__(self, namespace: 'Namespace', content: '[GastNode]'):
-    self.namespace = namespace
+  def __init__(self, content: '[GastNode]'):
     self.content = content
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.BLOCK
-
-class Namespace(Named, object):
-  def __init__(self, name: 'str', parent: 'Namespace'):
-    super().__init__(name)
-    self.parent = parent
-
-  def kind(self):
-    return constants.NAMESPACE
-
-  def str(self):
-    return self.name
 
 class Index(GastNode):
   def __init__(self, target: 'Expression', index: 'Number'):
     self.target = target
     self.index = index
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.INDEX
@@ -143,25 +155,32 @@ class Attribute(GastNode):
   def __init__(self, target: 'Expression', attribute: 'Named'):
     self.of = target
     self.attribute = attribute
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.ATTRIBUTE
 
 class Identifier(Named):
-  def __init__(self, namespace: 'Namespace', name: 'str', generation: 'int'):
+  def __init__(self, name: 'str'):
     super().__init__(name)
-    self.namespace = namespace
-    self.generation = generation
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.IDENTIFIER
 
   def str(self):
-    return '{} | {} in {}'.format(self.name, self.generation, self.namespace.str())
+    return '{}'.format(self.name)
 
 class Number(GastNode):
   def __init__(self, value):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.NUMBER
@@ -172,6 +191,9 @@ class Number(GastNode):
 class String(GastNode):
   def __init__(self, value):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.STRING
@@ -182,6 +204,9 @@ class String(GastNode):
 class Byte(GastNode):
   def __init__(self, value):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.BYTE
@@ -190,6 +215,9 @@ class Byte(GastNode):
 class Sequence(GastNode):
   def __init__(self, content: 'iterable'):
     self.content = content
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.SEQUENCE
@@ -198,6 +226,9 @@ class Sequence(GastNode):
 class List(GastNode):
   def __init__(self, content: 'iterable'):
     self.content = content
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.LIST
@@ -207,6 +238,9 @@ class Pair(GastNode):
   def __init__(self, first, second):
     self.first = first
     self.second = second
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.PAIR
@@ -214,6 +248,9 @@ class Pair(GastNode):
 class Dictionary(GastNode):
   def __init__(self, content: 'list[Pair]'):
     self.content = content
+    global count
+    self.id = count
+    count += 1
  
   def kind(self):
     return constants.DICTIONARY
@@ -221,6 +258,9 @@ class Dictionary(GastNode):
 class Set(GastNode):
   def __init__(self, content: 'iterable'):
     self.content = content
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.SET
@@ -228,11 +268,19 @@ class Set(GastNode):
 class Boolean(GastNode):
   def __init__(self, value:'boolean'):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.BOOLEAN
 
 class Nil(GastNode):
+  def __init__(self):
+    global count
+    self.id = count
+    count += 1
+
   def kind(self):
     return constants.NIL
 
@@ -276,6 +324,9 @@ class Assign(GastNode):
   def __init__(self, targets: 'list', value: 'Expression'):
     self.targets = targets
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.ASSIGN
@@ -283,6 +334,9 @@ class Assign(GastNode):
 class Negate(GastNode):
   def __init__(self, value: 'Expression'):
     self.value = value
+    global count
+    self.id = count
+    count += 1
   
   def kind(self):
     return constants.NEGATE
@@ -293,6 +347,9 @@ class BinOp(GastNode):
     self.right = right
     self.op = op
     self.associative = associative
+    global count
+    self.id = count
+    count += 1
     
   def items(self):
     return [('left', self.left), ('op', self.op), ('right', self.right)]
@@ -307,6 +364,9 @@ class BoolOp(GastNode):
     self.right = right
     self.reverse = reverse
     self.negate = negate
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.BOOLOP
@@ -318,6 +378,9 @@ class UnOp(GastNode):
   def __init__(self, operation: 'str', value: 'Expression'):
     self.operation = operation
     self.value = value
+    global count
+    self.id = count
+    count += 1
    
   def kind(self):
     return constants.UNOP
@@ -325,6 +388,9 @@ class UnOp(GastNode):
 class Return(GastNode):
   def __init__(self, value: 'Expression'):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.RETURN
@@ -332,6 +398,9 @@ class Return(GastNode):
 class Yield(GastNode):
   def __init__(self, value: 'Expression'):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.RETURN
@@ -339,6 +408,9 @@ class Yield(GastNode):
 class Raise(GastNode):
   def __init__(self, value: 'Expression'):
     self.value = value
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.RAISE
@@ -347,6 +419,9 @@ class Assert(GastNode):
   def __init__(self, test: 'Expression', message: 'Expression'):
     self.test = test
     self.message = message
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.ASSERT
@@ -355,6 +430,9 @@ class Import(GastNode):
   def __init__(self, module: 'str', aliases: '[Pair]'):
     self.module = module
     self.aliases = aliases
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.Import
@@ -363,6 +441,9 @@ class AnonymousFunction(GastNode):
   def __init__(self, args: '[Argument]', body: 'Block'):
     self.args = args
     self.body = body
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.ANONYMOUS_FUNCTION
@@ -384,6 +465,9 @@ class Generator(Stream):
   def __init__(self, source: 'Iterable', target: 'Named'):
     self.source = source
     self.target = target
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.GENERATOR
@@ -392,6 +476,9 @@ class Filter(Stream):
   def __init__(self, source: 'Iterable', condition: 'BoolOp'):
     self.source = source
     self.condition = condition
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.FILTER
@@ -400,6 +487,9 @@ class Map(Stream):
   def __init__(self, source: 'Iterable', op: 'Expression'):
     self.source = source
     self.op = op
+    global count
+    self.id = count
+    count += 1
 
   def kind(self):
     return constants.MAP
@@ -408,6 +498,9 @@ class AndThen(Stream):
   def __init__(self, first: 'Stream', second: 'Stream'):
     self.first = first
     self.second = second
+    global count
+    self.id = count
+    count += 1
     
   def kind(self):
     return constants.ANDTHEN 
