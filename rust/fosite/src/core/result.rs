@@ -1,14 +1,14 @@
 use super::Pointer;
 use super::Assumption;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FlowControl {
     Continue,
     TerminateLoop,
     TerminateCall,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExecutionResult {
     Failure,
     Success {
@@ -19,13 +19,13 @@ pub enum ExecutionResult {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Result {
     pub assumption: Assumption,
     pub value: Pointer,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Change {
     Identifier { name: String },
     Object { address: Pointer },

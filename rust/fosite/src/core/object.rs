@@ -105,13 +105,3 @@ impl CompositeObject {
         self.attributes.insert(name, mapping);
     }
 }
-
-struct IndexableObject {
-    element: Pointer,
-}
-
-impl IndexableObject {
-    fn new(element: Pointer) -> IndexableObject {
-        IndexableObject { element: element }
-    }
-}
