@@ -9,11 +9,11 @@ pub struct VirtualMachine {
     contexts: Vec<Context>,
     pub memory: Memory, //todo make private
     knowledge_base: KnowledgeBase,
-    stream: Sink<ExecutionResult>,
+    stream: Sink<Message>,
 }
 
 impl VirtualMachine {
-    pub fn new(stream: Sink<ExecutionResult>) -> VirtualMachine {
+    pub fn new(stream: Sink<Message>) -> VirtualMachine {
         let memory = Memory::new();
         let knowledge = KnowledgeBase::new();
         VirtualMachine {
@@ -25,19 +25,21 @@ impl VirtualMachine {
     }
 
     pub fn execute(&mut self, node: &GastNode) -> ExecutionResult {
-        let result = match node {
-            &GastNode::Number { .. } => self.number(),
-            &GastNode::Identifier { ref name } => self.load_identifier(name),
-            &GastNode::String { .. } => self.string(),
-            &GastNode::Declaration { ref id, ref kind } => self.declaration(id, kind),
-            &GastNode::Assignment { ref targets, ref value } => self.assign(targets, value),
+        let ref id = node.id;
+        let ref kind = node.kind;
+
+        let result = match kind {
+            &NodeType::Number { .. } => self.number(),
+            &NodeType::Identifier { ref name } => self.load_identifier(name),
+            &NodeType::String { .. } => self.string(),
+            &NodeType::Declaration { ref id, ref kind } => self.declaration(id, kind),
+            &NodeType::Assignment { ref targets, ref value } => self.assign(targets, value),
             _ => panic!("Unsupported Operation"),
         };
 
-        self.stream.send(result.clone());
+        let message = Message::Notification{source: id.clone(), content: format!("{:?}", result)};
+        self.stream.send(message);
         return result;
-
-
     }
 
     fn string(&mut self) -> ExecutionResult {
@@ -289,11 +291,11 @@ impl VirtualMachine {
     }
 
     fn assign_to_target(&mut self, target: &GastNode, mappings: &Vec<Mapping>) -> ExecutionResult {
-        match target {
-            &GastNode::Identifier { ref name } => self.assign_to_identifier(name, mappings),
-            &GastNode::List { ref content } |
-            &GastNode::Sequence { ref content } => self.assign_to_iterable(content, mappings),
-            &GastNode::Attribute { ref parent, ref attribute } => {
+        match &target.kind {
+            &NodeType::Identifier { ref name } => self.assign_to_identifier(name, mappings),
+            &NodeType::List { ref content } |
+            &NodeType::Sequence { ref content } => self.assign_to_iterable(content, mappings),
+            &NodeType::Attribute { ref parent, ref attribute } => {
                 self.assign_to_attribute(parent, attribute, mappings)
             }
             // attribute

@@ -7,11 +7,11 @@ mod context;
 mod assumption;
 mod vm;
 mod gast;
+mod message;
 
 pub use super::Pointer;
 pub use super::FunctionDefinition;
 pub use super::BuiltinFunction;
-pub use super::GastID;
 
 pub use self::object::*;
 pub use self::memory::*;
@@ -22,3 +22,4 @@ pub use self::context::*;
 pub use self::assumption::*;
 pub use self::vm::*;
 pub use self::gast::*;
+pub use self::message::*;

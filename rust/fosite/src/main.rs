@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![feature(box_syntax)]
 
 extern crate bidir_map;
 extern crate carboxyl;
@@ -7,11 +6,14 @@ extern crate carboxyl;
 pub mod core;
 use core::VirtualMachine;
 use core::GastNode;
+use core::NodeType;
 
 use std::thread;
 use std::time::Duration;
 
-pub type GastID = i16;
+use std::io::prelude::*;
+use std::fs::File;
+
 
 // todo implement for each builtin function
 pub struct BuiltinFunction {
@@ -33,28 +35,20 @@ type Type = i16;
 pub type Pointer = i16;
 type TypePointer = i16;
 
-struct Slave {
-    events: carboxyl::stream::Events,
-}
-
-impl Slave {
-    fn new(events: carboxyl::stream::Events) -> Slave {
-        Slave {
-            events: events,
-        }
-    }
-
-    fn work(&mut self, events:carboxyl::stream::Events) {
-
-    }
-}
-
-
 // Giving the compiler something to do
 fn main() {
+	let mut s = String::new();
+	
+	match File::open("output.json") {
+		Ok(mut file) => file.read_to_string(&mut s),
+		Err(why) => panic!("{:?}", why),
+	};
+	
+	println!("{}", s);
+	
     let sink = carboxyl::Sink::new();
     let stream = sink.stream();
-    let mut events = stream.events();
+    let events = stream.events();
     thread::spawn ( move || {
             for event in events {
                 println!("{:?}", event);
@@ -63,8 +57,6 @@ fn main() {
 
 
     {
-
-
         let mut vm = VirtualMachine::new(sink.clone());
 
         vm.new_context();
@@ -81,20 +73,16 @@ fn main() {
         test3(&mut vm);
 
         thread::sleep(Duration::from_millis(4000))
-
-
-
     }
-
 }
 
 fn test1(vm: &mut VirtualMachine) {
-    let x = GastNode::Identifier { name: "x".to_owned() };
-    let value = Box::new(GastNode::Number { value: 5 });
-    let assignment = GastNode::Assignment {
+    let x = GastNode::new(0, NodeType::Identifier { name: "x".to_owned() });
+    let value = Box::new(GastNode::new(1, NodeType::Number { value: 5 }));
+    let assignment = GastNode::new(2, NodeType::Assignment {
         targets: vec![x],
         value: value,
-    };
+    });
 
     // executing x = 5
     //println!("Executing \"x = 5\"");
@@ -107,10 +95,10 @@ fn test1(vm: &mut VirtualMachine) {
 
 
 fn test2(vm: &mut VirtualMachine) {
-    let declaration = GastNode::Declaration {
+    let declaration = GastNode::new(3, NodeType::Declaration {
         id: "z".to_owned(),
         kind: "Stub".to_owned(),
-    };
+    });
     vm.execute(&declaration);
 
     // jam a placeholder in there
@@ -121,15 +109,15 @@ fn test2(vm: &mut VirtualMachine) {
         object.enable_iteration(child_address);
     }
 
-    let x = GastNode::Identifier { name: "x".to_owned() };
-    let y = GastNode::Identifier { name: "y".to_owned() };
-    let z = GastNode::Identifier { name: "z".to_owned() };
+    let x = GastNode::new(4, NodeType::Identifier { name: "x".to_owned()});
+    let y = GastNode::new(5, NodeType::Identifier { name: "y".to_owned()});
+    let z = GastNode::new(6, NodeType::Identifier { name: "z".to_owned()});
 
-    let target = GastNode::List { content: vec![x, y] };
-    let assignment = GastNode::Assignment {
+    let target = GastNode::new(7, NodeType::List { content: vec![x, y]});
+    let assignment = GastNode::new(8, NodeType::Assignment {
         targets: vec![target],
         value: Box::new(z),
-    };
+    });
 
     //println!("Executing \"x, y = z\"");
     let result = vm.execute(&assignment);
@@ -140,17 +128,17 @@ fn test2(vm: &mut VirtualMachine) {
 }
 
 fn test3(vm: &mut VirtualMachine) {
-    let parent = GastNode::Identifier { name: "x".to_owned() };
-    let attribute = GastNode::Attribute {
+    let parent = GastNode::new(9, NodeType::Identifier { name: "x".to_owned()});
+    let attribute = GastNode::new(10, NodeType::Attribute {
         parent: Box::new(parent),
         attribute: "attribute".to_owned(),
-    };
+    });
 
-    let value = Box::new(GastNode::Number { value: 5 });
-    let assignment = GastNode::Assignment {
+    let value = Box::new(GastNode::new(11, NodeType::Number { value: 5 }));
+    let assignment = GastNode::new( 12, NodeType::Assignment {
         targets: vec![attribute],
         value: value,
-    };
+    });
 
     // executing x.attribute = 5
     //println!("Executing \"x.attribute = 5\"");

@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["harm.delva@ugent.be"]
 
 [dependencies]
+bidir-map = "0.3.0"
+carboxyl = "0.2.1"

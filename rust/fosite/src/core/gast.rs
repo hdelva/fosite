@@ -1,5 +1,22 @@
+pub type GastID = i16;
+
 #[derive(Debug)]
-pub enum GastNode {
+pub struct GastNode {
+    pub id: GastID,
+    pub kind: NodeType,
+}
+
+impl GastNode {
+    pub fn new(id: GastID, kind: NodeType) -> GastNode {
+        GastNode {
+            id: id,
+            kind: kind,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum NodeType {
     Identifier { name: String },
     Attribute {
         parent: Box<GastNode>,
