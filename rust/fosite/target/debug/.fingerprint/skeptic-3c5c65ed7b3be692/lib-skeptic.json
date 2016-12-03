@@ -1,1 +1,0 @@
-{"rustc":2227135370671807109,"target":11210667810463921453,"profile":11154289914177168617,"local":{"variant":"Precalculated","fields":["0.6.1"]},"features":"None","deps":[["pulldown-cmark v0.0.3",5846297188031187372],["tempdir v0.3.5",6383703015138776036]],"rustflags":["--error-format=json"]}
