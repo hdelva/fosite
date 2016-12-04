@@ -16,6 +16,7 @@ use std::thread;
 
 use std::io::prelude::*;
 use std::fs::File;
+use core::Worker;
 
 
 // todo implement for each builtin function
@@ -40,25 +41,19 @@ type TypePointer = i16;
 
 // Giving the compiler something to do
 fn main() {
-	let mut s = String::new();
-	
-	match File::open("output.json") {
-		Ok(mut file) => file.read_to_string(&mut s),
-		Err(why) => panic!("{:?}", why),
-	};
-	
-	let json = Json::from_str(&s).unwrap();
-	let stuff = build(&json);
-	println!("{:?}", stuff);
-		
+    let mut s = String::new();
+
+    match File::open("output.json") {
+        Ok(mut file) => file.read_to_string(&mut s),
+        Err(why) => panic!("{:?}", why),
+    };
+
+    let json = Json::from_str(&s).unwrap();
+    let stuff = build(&json);
+    println!("{:?}", stuff);
+
     let sink = carboxyl::Sink::new();
-    let stream = sink.stream();
-    let events = stream.events();
-    thread::spawn ( move || {
-            for event in events {
-                println!("{:?}", event);
-            }
-        });
+    let worker = Worker::new(sink.clone());
 
 
     {
@@ -77,15 +72,18 @@ fn main() {
 
         test3(&mut vm);
     }
+
+    worker.finalize();
 }
 
 fn test1(vm: &mut VirtualMachine) {
     let x = GastNode::new(0, NodeType::Identifier { name: "x".to_owned() });
     let value = Box::new(GastNode::new(1, NodeType::Number { value: 5 }));
-    let assignment = GastNode::new(2, NodeType::Assignment {
-        targets: vec![x],
-        value: value,
-    });
+    let assignment = GastNode::new(2,
+                                   NodeType::Assignment {
+                                       targets: vec![x],
+                                       value: value,
+                                   });
 
     // executing x = 5
     vm.execute(&assignment);
@@ -96,10 +94,11 @@ fn test1(vm: &mut VirtualMachine) {
 
 
 fn test2(vm: &mut VirtualMachine) {
-    let declaration = GastNode::new(3, NodeType::Declaration {
-        id: "z".to_owned(),
-        kind: "Stub".to_owned(),
-    });
+    let declaration = GastNode::new(3,
+                                    NodeType::Declaration {
+                                        id: "z".to_owned(),
+                                        kind: "Stub".to_owned(),
+                                    });
     vm.execute(&declaration);
 
     // jam a placeholder in there
@@ -110,15 +109,16 @@ fn test2(vm: &mut VirtualMachine) {
         object.enable_iteration(child_address);
     }
 
-    let x = GastNode::new(4, NodeType::Identifier { name: "x".to_owned()});
-    let y = GastNode::new(5, NodeType::Identifier { name: "y".to_owned()});
-    let z = GastNode::new(6, NodeType::Identifier { name: "z".to_owned()});
+    let x = GastNode::new(4, NodeType::Identifier { name: "x".to_owned() });
+    let y = GastNode::new(5, NodeType::Identifier { name: "y".to_owned() });
+    let z = GastNode::new(6, NodeType::Identifier { name: "z".to_owned() });
 
-    let target = GastNode::new(7, NodeType::List { content: vec![x, y]});
-    let assignment = GastNode::new(8, NodeType::Assignment {
-        targets: vec![target],
-        value: Box::new(z),
-    });
+    let target = GastNode::new(7, NodeType::List { content: vec![x, y] });
+    let assignment = GastNode::new(8,
+                                   NodeType::Assignment {
+                                       targets: vec![target],
+                                       value: Box::new(z),
+                                   });
 
     let result = vm.execute(&assignment);
 
@@ -127,17 +127,19 @@ fn test2(vm: &mut VirtualMachine) {
 }
 
 fn test3(vm: &mut VirtualMachine) {
-    let parent = GastNode::new(9, NodeType::Identifier { name: "x".to_owned()});
-    let attribute = GastNode::new(10, NodeType::Attribute {
-        parent: Box::new(parent),
-        attribute: "attribute".to_owned(),
-    });
+    let parent = GastNode::new(9, NodeType::Identifier { name: "x".to_owned() });
+    let attribute = GastNode::new(10,
+                                  NodeType::Attribute {
+                                      parent: Box::new(parent),
+                                      attribute: "attribute".to_owned(),
+                                  });
 
     let value = Box::new(GastNode::new(11, NodeType::Number { value: 5 }));
-    let assignment = GastNode::new( 12, NodeType::Assignment {
-        targets: vec![attribute],
-        value: value,
-    });
+    let assignment = GastNode::new(12,
+                                   NodeType::Assignment {
+                                       targets: vec![attribute],
+                                       value: value,
+                                   });
 
     // executing x.attribute = 5
     let result = vm.execute(&assignment);

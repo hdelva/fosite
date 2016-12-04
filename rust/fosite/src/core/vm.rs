@@ -7,7 +7,7 @@ pub struct VirtualMachine {
     // instruction queue
     // call stack
     contexts: Vec<Context>,
-    pub memory: Memory, //todo make private
+    pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
     stream: Sink<Message>,
 }
@@ -37,7 +37,10 @@ impl VirtualMachine {
             _ => panic!("Unsupported Operation"),
         };
 
-        let message = Message::Notification{source: id.clone(), content: format!("{:?}", result)};
+        let message = Message::Notification {
+            source: id.clone(),
+            content: format!("{:?}", result),
+        };
         self.stream.send(message);
         return result;
     }
@@ -203,9 +206,9 @@ impl VirtualMachine {
                 }
 
                 let values = vec![Result {
-                    assumption: Assumption::None,
-                    value: -1, // todo change to 'python' None
-                }];
+                                      assumption: Assumption::None,
+                                      value: -1, // todo change to 'python' None
+                                  }];
 
                 return ExecutionResult::Success {
                     flow: FlowControl::Continue,
@@ -267,9 +270,9 @@ impl VirtualMachine {
             (&Assumption::None, other) |
             (other, &Assumption::None) => other.clone(),
             (&Assumption::Multiple(ref assumptions),
-                &Assumption::ConditionAssumption { source, negated }) |
+             &Assumption::ConditionAssumption { source, negated }) |
             (&Assumption::ConditionAssumption { source, negated },
-                &Assumption::Multiple(ref assumptions)) => {
+             &Assumption::Multiple(ref assumptions)) => {
                 let mut new_assumptions = assumptions.clone();
                 new_assumptions.push(Assumption::ConditionAssumption {
                     source: source,
@@ -358,9 +361,9 @@ impl VirtualMachine {
         }
 
         let values = vec![Result {
-            assumption: Assumption::None,
-            value: -1, // todo change to 'python' None
-        }];
+                              assumption: Assumption::None,
+                              value: -1, // todo change to 'python' None
+                          }];
 
         return ExecutionResult::Success {
             flow: FlowControl::Continue,

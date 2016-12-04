@@ -8,6 +8,7 @@ mod assumption;
 mod vm;
 mod gast;
 mod message;
+mod worker;
 
 pub use super::Pointer;
 pub use super::FunctionDefinition;
@@ -23,3 +24,4 @@ pub use self::assumption::*;
 pub use self::vm::*;
 pub use self::gast::*;
 pub use self::message::*;
+pub use self::worker::*;
