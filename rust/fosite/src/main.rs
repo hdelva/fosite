@@ -3,13 +3,16 @@
 extern crate bidir_map;
 extern crate carboxyl;
 
+extern crate rustc_serialize;
+use rustc_serialize::json::Json;
+
 pub mod core;
 use core::VirtualMachine;
 use core::GastNode;
 use core::NodeType;
+use core::build;
 
 use std::thread;
-use std::time::Duration;
 
 use std::io::prelude::*;
 use std::fs::File;
@@ -44,8 +47,10 @@ fn main() {
 		Err(why) => panic!("{:?}", why),
 	};
 	
-	println!("{}", s);
-	
+	let json = Json::from_str(&s).unwrap();
+	let stuff = build(&json);
+	println!("{:?}", stuff);
+		
     let sink = carboxyl::Sink::new();
     let stream = sink.stream();
     let events = stream.events();
@@ -71,8 +76,6 @@ fn main() {
         println!("");
 
         test3(&mut vm);
-
-        thread::sleep(Duration::from_millis(4000))
     }
 }
 
@@ -85,9 +88,7 @@ fn test1(vm: &mut VirtualMachine) {
     });
 
     // executing x = 5
-    //println!("Executing \"x = 5\"");
-    let result = vm.execute(&assignment);
-    //println!("{:?}", result);
+    vm.execute(&assignment);
 
     vm.inspect_identifier(&"number".to_owned());
     vm.inspect_identifier(&"x".to_owned());
@@ -119,9 +120,7 @@ fn test2(vm: &mut VirtualMachine) {
         value: Box::new(z),
     });
 
-    //println!("Executing \"x, y = z\"");
     let result = vm.execute(&assignment);
-    //println!("{:?}", result);
 
     vm.inspect_identifier(&"x".to_owned());
     vm.inspect_identifier(&"y".to_owned());
@@ -141,8 +140,6 @@ fn test3(vm: &mut VirtualMachine) {
     });
 
     // executing x.attribute = 5
-    //println!("Executing \"x.attribute = 5\"");
     let result = vm.execute(&assignment);
-    //println!("{:?}", result);
 
 }
