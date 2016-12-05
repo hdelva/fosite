@@ -12,8 +12,6 @@ use core::GastNode;
 use core::NodeType;
 use core::build;
 
-use std::thread;
-
 use std::io::prelude::*;
 use std::fs::File;
 use core::Worker;
@@ -57,7 +55,7 @@ fn main() {
 
 
     {
-        let mut vm = VirtualMachine::new(sink.clone());
+        let mut vm = VirtualMachine::new(sink);
 
         vm.new_context();
 
@@ -65,10 +63,10 @@ fn main() {
         vm.declare_simple_type(&"Stub".to_owned());
 
         test1(&mut vm);
-        println!("");
+        //println!("");
 
         test2(&mut vm);
-        println!("");
+        //println!("");
 
         test3(&mut vm);
     }
@@ -88,8 +86,8 @@ fn test1(vm: &mut VirtualMachine) {
     // executing x = 5
     vm.execute(&assignment);
 
-    vm.inspect_identifier(&"number".to_owned());
-    vm.inspect_identifier(&"x".to_owned());
+    //vm.inspect_identifier(&"number".to_owned());
+    //vm.inspect_identifier(&"x".to_owned());
 }
 
 
@@ -120,10 +118,10 @@ fn test2(vm: &mut VirtualMachine) {
                                        value: Box::new(z),
                                    });
 
-    let result = vm.execute(&assignment);
+    vm.execute(&assignment);
 
-    vm.inspect_identifier(&"x".to_owned());
-    vm.inspect_identifier(&"y".to_owned());
+    //vm.inspect_identifier(&"x".to_owned());
+    //vm.inspect_identifier(&"y".to_owned());
 }
 
 fn test3(vm: &mut VirtualMachine) {
@@ -142,6 +140,6 @@ fn test3(vm: &mut VirtualMachine) {
                                    });
 
     // executing x.attribute = 5
-    let result = vm.execute(&assignment);
+    vm.execute(&assignment);
 
 }

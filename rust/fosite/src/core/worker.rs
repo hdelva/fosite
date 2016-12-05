@@ -1,5 +1,5 @@
 use super::Message;
-use carboxyl::{Sink, Stream};
+use carboxyl::{Sink};
 use std::thread::*;
 
 pub struct Worker {
@@ -10,10 +10,19 @@ pub struct Worker {
 impl Worker {
     pub fn new(sink: Sink<Message>) -> Worker {
         let thread = {
-            let sink_clone = sink.clone();
-            spawn(move || {
-                Worker::process(sink_clone.stream());
-            })
+            let stream = sink.stream();
+            let events = stream.events();
+            
+            spawn(move || for message in events {
+	            match message {
+	                Message::Notification { ref source, ref content } => {
+	                    println!("Message from {}: {}", source, content)
+	                },
+	                Message::Terminate => {
+	                	break
+	                },
+	            }
+	        })
         };
 
         let worker = Worker {
@@ -22,17 +31,6 @@ impl Worker {
         };
 
         return worker;
-    }
-
-    fn process(stream: Stream<Message>) {
-        for message in stream.events() {
-            match message {
-                Message::Notification { ref source, ref content } => {
-                    println!("Message from {}: {}", source, content)
-                }
-                Message::Terminate => break,
-            }
-        }
     }
 
     pub fn finalize(self) -> Result<()> {
