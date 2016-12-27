@@ -1,28 +1,35 @@
 use std::collections::HashMap;
 
 use super::Pointer;
-use super::Mapping;
+use super::OptionalMapping;
+use super::Assumption;
+use super::Collection;
+use super::Representant;
+use super::Scope;
 
 /// objects
 // Object is composed of several properties it may or may not have
 pub struct Object {
     type_property: bool,
-    extension_property: Option<Pointer>, // python-style inheritance
+    
+    //todo remove, deprecated
     parent_property: Option<Pointer>, // for method objects
-    iterable_property: Option<Pointer>, // for ... in x
-    indexable_property: Option<Pointer>, // x[...]
-    composite_property: Option<CompositeObject>, // x.attrbitue
+    
+    //todo, keep optional?
+    collection_property: Option<CollectionProperty>, // for ... in x
+    
+    composite_property: CompositeProperty, // x.attrbitue
+    extension_property: Vec<Pointer>, // python-style inheritance
 }
 
 impl Object {
     pub fn new() -> Object {
         Object {
             type_property: false,
-            extension_property: None,
+            extension_property: Vec::new(),
             parent_property: None,
-            iterable_property: None,
-            indexable_property: None,
-            composite_property: None,
+            collection_property: None,
+            composite_property: CompositeProperty::new(),
         }
     }
 
@@ -43,65 +50,91 @@ impl Object {
     }
 
     pub fn extends(&mut self, tpe: Pointer) {
-        self.extension_property = Some(tpe);
+        self.extension_property.push(tpe);
     }
 
-    pub fn get_extension(&self) -> &Option<Pointer> {
+    pub fn get_extension(&self) -> &Vec<Pointer> {
         return &self.extension_property;
     }
 
-    pub fn get_extension_mut(&mut self) -> &mut Option<Pointer> {
+    pub fn get_extension_mut(&mut self) -> &mut Vec<Pointer> {
         return &mut self.extension_property;
     }
 
     pub fn iterate(&self) -> Option<Pointer> {
-        // limit the possible types to iterable types
-        // return a reference to the object representing its kind of elements
-        return self.iterable_property;
+        // todo
+        return None
     }
 
-    pub fn enable_iteration(&mut self, address: Pointer) {
-        self.iterable_property = Some(address);
+    pub fn make_collection(&mut self) {
+        self.collection_property = Some(CollectionProperty::new());
     }
 
-    pub fn index(&self) -> Option<Pointer> {
-        // limit the possible types to indexable types
-        // return a reference to the object representing its kind of elements
-        return self.indexable_property;
+    pub fn assign_attribute(&mut self, name: String, ass: Assumption, address: Pointer) {
+        self.composite_property.assign_attribute(name, ass, address);
     }
-
-    pub fn enable_indexing(&mut self, address: Pointer) {
-        self.indexable_property = Some(address);
-    }
-
-    pub fn assign_attribute(&mut self, name: String, mapping: Mapping) {
-        // sets the attribute reference
-        match self.composite_property {
-            Some(ref mut property) => {
-                property.assign_attribute(name, mapping);
-            }
-            _ => {
-                let mut property = CompositeObject::new();
-                property.assign_attribute(name, mapping);
-                self.composite_property = Some(property);
-            }
-        }
+    
+    pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
+    	return self.composite_property.get_attribute(name)
     }
 }
 
 /// Object Properties
 
-struct CompositeObject {
-    // todo split in private/public/(protected)
-    attributes: HashMap<String, Mapping>,
+struct CollectionProperty {
+	collections: HashMap<Assumption, Collection>
 }
 
-impl CompositeObject {
-    fn new() -> CompositeObject {
-        CompositeObject { attributes: HashMap::new() }
+impl CollectionProperty {
+	fn new() -> CollectionProperty {
+		CollectionProperty {
+			collections: HashMap::new(),
+		}
+	}
+	
+	fn define(&mut self, content: Vec<Representant>) {
+		let mut collection = Collection::empty();
+		collection.define(content);
+		self.collections.insert(Assumption::empty(), collection);
+	}
+	
+	fn expand_collections_(&mut self, assumption: &Assumption) {
+    	let mut new_collections = HashMap::new();
+	    
+	    for opposite in Assumption::opposites(assumption) {
+	    	for (old_assumption, collection) in self.collections.iter() {
+	    		let optional_assumption = old_assumption.merge(&opposite);
+	    		
+	    		match optional_assumption {
+	    			Some(new_assumption) => {
+	    				new_collections.insert(new_assumption, collection.clone());
+	    			},
+	    			None => {
+	    				new_collections.insert(old_assumption.clone(), collection.clone());
+	    			}
+	    		}		
+	    	} 
+	    }
+	    
+	    self.collections = new_collections;
+    }
+}
+
+struct CompositeProperty {
+    // todo split in private/public/(protected)
+    namespace: Scope,
+}
+
+impl CompositeProperty {
+    fn new() -> CompositeProperty {
+        CompositeProperty { namespace: Scope::new() }
     }
 
-    fn assign_attribute(&mut self, name: String, mapping: Mapping) {
-        self.attributes.insert(name, mapping);
+    fn assign_attribute(&mut self, name: String, assumption: Assumption, address: Pointer) {
+        self.namespace.add_mapping(name, assumption, address);
+    }
+    
+    fn get_attribute(&self, name: &String) -> &OptionalMapping {
+    	self.namespace.resolve_identifier(name)
     }
 }

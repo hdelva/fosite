@@ -1,56 +1,56 @@
 use super::Pointer;
 use super::Assumption;
+use super::OptionalMapping;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-#[derive(Debug, Clone)]
-pub struct Mapping {
-    pub assumption: Assumption,
-    pub address: Pointer,
-}
-
-impl Mapping {
-    pub fn new(assumption: Assumption, address: Pointer) -> Mapping {
-        Mapping {
-            assumption: assumption,
-            address: address,
-        }
-    }
+struct Frame {
+	content: HashMap<Assumption, Option<Pointer>>,
+	assumption: Assumption,
+	positive: bool,
 }
 
 pub struct Scope {
-    // depending on the execution path, a variable name can refer to multiple things
-    identifiers: HashMap<String, Vec<Mapping>>,
+    identifiers: HashMap<String, OptionalMapping>,
+    default: OptionalMapping,
 }
 
 impl Scope {
     pub fn new() -> Scope {
-        Scope { identifiers: HashMap::new() }
+    	let mut mapping = OptionalMapping::new();
+    	let assumption = Assumption::empty();
+    	mapping.expand_possibilities(&assumption);
+        
+                
+        Scope { 
+        	identifiers: HashMap::new(),
+        	default: mapping, 
+        }
     }
 
+	//todo; why is this is a thing again?
     pub fn invalidate_mappings(&mut self, name: &String) {
         self.identifiers.remove(name);
     }
 
-    pub fn add_mapping(&mut self, name: &String, mapping: Mapping) {
-        match self.identifiers.entry(name.clone()) {
+    pub fn add_mapping(&mut self, name: String, assumption: Assumption, address: Pointer) {
+        match self.identifiers.entry(name) {
             Vacant(entry) => {
-                let list = entry.insert(Vec::new());
-                list.push(mapping);
+            	let mut mapping = OptionalMapping::new();
+            	mapping.add_possibility(assumption, address);
+                entry.insert(mapping);
             }
             Occupied(mut entry) => {
-                let list = entry.get_mut();
-                list.push(mapping);
+                let mut mapping = entry.get_mut();
+                mapping.expand_possibilities(&assumption);
+            	mapping.add_possibility(assumption, address);
             }
         }
     }
 
-    pub fn resolve_identifier(&self, name: &String) -> Option<&Vec<Mapping>> {
-        match self.identifiers.get(name) {
-            Some(mappings) => return Some(mappings),
-            None => None,
-        }
+    pub fn resolve_identifier(&self, name: &String) -> &OptionalMapping {
+    	return self.identifiers.get(name).unwrap_or(&self.default)
     }
 
     // legacy code

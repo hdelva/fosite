@@ -10,6 +10,8 @@ pub struct VirtualMachine {
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
     stream: Sink<Message>,
+    
+    assumption: Assumption,
 }
 
 impl VirtualMachine {
@@ -21,6 +23,8 @@ impl VirtualMachine {
             memory: memory,
             knowledge_base: knowledge,
             stream: stream,
+            
+            assumption: Assumption::empty(),
         }
     }
 
@@ -59,7 +63,7 @@ impl VirtualMachine {
         }
 
         let result = Result {
-            assumption: Assumption::None,
+            assumption: Assumption::empty(),
             value: pointer.clone(),
         };
 
@@ -73,6 +77,7 @@ impl VirtualMachine {
         return execution_result;
     }
 
+	//todo, add assumption merging
     fn declaration(&mut self, name: &String, type_name: &String) -> ExecutionResult {
         let pointer = self.memory.new_object();
         let object = self.memory.get_object_mut(&pointer);
@@ -92,14 +97,13 @@ impl VirtualMachine {
             Some(mut last) => {
                 let scope = last.get_public_scope_mut();
                 scope.invalidate_mappings(name);
-                let mapping = VirtualMachine::create_simple_mapping(pointer);
-                scope.add_mapping(name, mapping);
+                scope.add_mapping(name.clone(), Assumption::empty(), pointer.clone());
             }
             _ => panic!("No Execution Contexts"),
         }
 
         let result = Result {
-            assumption: Assumption::None,
+            assumption: Assumption::empty(),
             value: -1, // todo change to 'python' None
         };
 
@@ -127,7 +131,7 @@ impl VirtualMachine {
         }
 
         let result = Result {
-            assumption: Assumption::None,
+            assumption: Assumption::empty(),
             value: pointer.clone(),
         };
 
@@ -141,42 +145,32 @@ impl VirtualMachine {
         return execution_result;
     }
 
+	//todo, rewrite
     fn load_identifier(&mut self, name: &String) -> ExecutionResult {
-        let mut candidate = None;
+        let context = self.contexts.last().unwrap();
+		let candidate = context.get_public_scope().resolve_identifier(&name);
 
-        for context in self.contexts.iter().rev() {
-            candidate = context.get_public_scope().resolve_identifier(&name);
 
-            if candidate.is_some() {
-                break;
-            }
+        let mut results = Vec::new();
+
+        for (assumption, opt_address) in candidate.get_possibilities().iter() {
+        	if let &Some(address) = opt_address {
+	            results.push(Result {
+	                assumption: assumption.clone(),
+	                value: address.clone(),
+	            })
+        	}
         }
 
-        match candidate {
-            Some(mappings) => {
-                let mut results = Vec::new();
+        let execution_result = ExecutionResult::Success {
+            flow: FlowControl::Continue,
+            dependencies: vec![name.clone()],
+            changes: vec![],
+            results: results,
+        };
 
-                for mapping in mappings {
-                    let assumption = mapping.assumption.clone();
-                    let address = mapping.address;
+        return execution_result;
 
-                    results.push(Result {
-                        assumption: assumption,
-                        value: address,
-                    })
-                }
-
-                let execution_result = ExecutionResult::Success {
-                    flow: FlowControl::Continue,
-                    dependencies: vec![name.clone()],
-                    changes: vec![],
-                    results: results,
-                };
-
-                return execution_result;
-            }
-            _ => panic!("Invalid Identifier"),
-        }
     }
 
 
@@ -206,7 +200,7 @@ impl VirtualMachine {
                 }
 
                 let values = vec![Result {
-                                      assumption: Assumption::None,
+                                      assumption: Assumption::empty(),
                                       value: -1, // todo change to 'python' None
                                   }];
 
@@ -222,13 +216,28 @@ impl VirtualMachine {
 
         }
     }
+    
+    fn assign_to_target(&mut self, target: &GastNode, mappings: &Vec<Mapping>) -> ExecutionResult {
+        match &target.kind {
+            &NodeType::Identifier { ref name } => self.assign_to_identifier(name, mappings),
+            &NodeType::List { ref content } |
+            &NodeType::Sequence { ref content } => self.assign_to_iterable(content, mappings),
+            &NodeType::Attribute { ref parent, ref attribute } => {
+                self.assign_to_attribute(parent, attribute, mappings)
+            }
+            // attribute
+            _ => panic!("unimplemented"),
+        }
+    }
 
     fn assign_to_attribute(&mut self,
                            parent: &GastNode,
                            attribute: &String,
                            mappings: &Vec<Mapping>)
                            -> ExecutionResult {
+                           	
         let parent_result = self.execute(parent);
+        
         match parent_result {
             ExecutionResult::Success { results, .. } => {
                 let mut changes = Vec::new();
@@ -237,20 +246,23 @@ impl VirtualMachine {
 
                 for parent_mapping in results {
                     let ref parent_assumption = parent_mapping.assumption;
-                    let address = parent_mapping.value;
-                    changes.push(Change::Object { address: address });
-
-                    let mut object = self.memory.get_object_mut(&address);
-
-                    for value_mapping in mappings {
-                        let ref value_assumption = value_mapping.assumption;
-                        let ref value_address = value_mapping.address;
-
-                        let new_assumption = VirtualMachine::merge_assumptions(parent_assumption,
-                                                                               value_assumption);
-                        let new_mapping = Mapping::new(new_assumption, value_address.clone());
-
-                        object.assign_attribute(attribute.clone(), new_mapping);
+                    
+                    let optional_assumption = parent_assumption.merge(&self.assumption);
+                    
+                    if let Some(merged_assumption) = optional_assumption {
+                    	let address = parent_mapping.value;
+                    	let mut object = self.memory.get_object_mut(&address);
+	                    
+						for new_mapping in mappings {
+							let optional_assumption = merged_assumption.merge(&new_mapping.assumption);
+							
+							if let Some(merged_assumption) = optional_assumption {
+								let new_address = new_mapping.address.clone();
+							
+								object.assign_attribute(attribute.clone(), merged_assumption, new_address);
+								changes.push(Change::Object { address: address });
+							}
+						}
                     }
                 }
 
@@ -265,47 +277,8 @@ impl VirtualMachine {
         }
     }
 
-    fn merge_assumptions<'a>(ass1: &'a Assumption, ass2: &'a Assumption) -> Assumption {
-        match (ass1, ass2) {
-            (&Assumption::None, other) |
-            (other, &Assumption::None) => other.clone(),
-            (&Assumption::Multiple(ref assumptions),
-             &Assumption::ConditionAssumption { source, negated }) |
-            (&Assumption::ConditionAssumption { source, negated },
-             &Assumption::Multiple(ref assumptions)) => {
-                let mut new_assumptions = assumptions.clone();
-                new_assumptions.push(Assumption::ConditionAssumption {
-                    source: source,
-                    negated: negated,
-                });
-                return Assumption::Multiple(new_assumptions);
-            }
-            (&Assumption::Multiple(ref first), &Assumption::Multiple(ref second)) => {
-                let mut new_assumptions = first.clone();
-                let mut pls = second.clone();
-                new_assumptions.append(&mut pls);
-                return Assumption::Multiple(new_assumptions);
-            }
-            (first, second) => {
-                return Assumption::Multiple(vec![first.clone(), second.clone()]);
-            }
-
-        }
-    }
-
-    fn assign_to_target(&mut self, target: &GastNode, mappings: &Vec<Mapping>) -> ExecutionResult {
-        match &target.kind {
-            &NodeType::Identifier { ref name } => self.assign_to_identifier(name, mappings),
-            &NodeType::List { ref content } |
-            &NodeType::Sequence { ref content } => self.assign_to_iterable(content, mappings),
-            &NodeType::Attribute { ref parent, ref attribute } => {
-                self.assign_to_attribute(parent, attribute, mappings)
-            }
-            // attribute
-            _ => panic!("unimplemented"),
-        }
-    }
-
+	//todo rewrite
+	// don't forget merging current assumption
     fn assign_to_iterable(&mut self,
                           target: &Vec<GastNode>,
                           mappings: &Vec<Mapping>)
@@ -354,14 +327,21 @@ impl VirtualMachine {
                 let scope = last.get_public_scope_mut();
                 scope.invalidate_mappings(target);
                 for mapping in mappings {
-                    scope.add_mapping(target, mapping.clone());
+                	let ass = mapping.assumption.clone();
+                	let add = mapping.address.clone();
+                	
+                	let optional_assumption = ass.merge(&self.assumption);
+                	
+                	if let Some(merged_assumption) = optional_assumption {
+                		scope.add_mapping(target.clone(), merged_assumption, add)
+                	} 
                 }
             }
             _ => panic!("No Execution Contexts"),
         }
 
         let values = vec![Result {
-                              assumption: Assumption::None,
+                              assumption: Assumption::empty(),
                               value: -1, // todo change to 'python' None
                           }];
 
@@ -373,59 +353,43 @@ impl VirtualMachine {
         };
     }
 
-    fn create_simple_mapping(value: Pointer) -> Mapping {
-        return Mapping {
-            assumption: Assumption::None,
-            address: value,
-        };
-    }
+    pub fn inspect_identifier(&self, name: &String) {        
+        let context = self.contexts.last().unwrap();
 
-    pub fn inspect_identifier(&self, name: &String) {
-        let mut candidate = None;
-
-        for context in self.contexts.iter().rev() {
-            candidate = context.get_public_scope().resolve_identifier(&name);
-
-            if candidate.is_some() {
-                break;
-            }
-        }
-
-        match candidate {
-            Some(mappings) => {
-                for ref mapping in mappings {
-                    self.print_mapping_info(name, &mapping);
-                }
-            }
-            None => panic!("resolving unknown identifier"),
+        let candidate = context.get_public_scope().resolve_identifier(&name);
+        
+        for (assumption, opt_address) in candidate.get_possibilities().iter() {
+        	self.print_mapping_info(name, assumption, opt_address)
         }
     }
 
-    fn print_mapping_info(&self, name: &String, mapping: &Mapping) {
-        match mapping {
-            &Mapping { ref address, .. } => {
-                let object = self.memory.get_object(address);
-                let tpe = object.get_extension();
+    fn print_mapping_info(&self, name: &String, ass: &Assumption, address: &Option<Pointer>) {
+        let object = self.memory.get_object(&address.unwrap());
+        let tpe = object.get_extension().first();
 
-                match tpe {
-                    &Some(ref type_pointer) => {
-                        let type_name = self.knowledge_base.get_type_name(type_pointer);
-                        println!("Object {:?} has type {:?} in {:?}",
-                                 name,
-                                 type_name.unwrap(),
-                                 mapping);
-                    }
-                    _ => {
-                        if object.is_type() {
-                            println!("{:?} is a type in {:?}", name, mapping)
-                        } else {
-                            println!("{:?} is an object of unknown type in {:?}", name, mapping)
-                        }
-                    }
+        match tpe {
+            Some(ref type_pointer) => {
+                let type_name = self.knowledge_base.get_type_name(type_pointer);
+                println!("Assuming {:?}, the Object named {:?} at address {:?} has type {:?}",
+                         ass,
+                         name,
+                         address.unwrap(),
+                         type_name.unwrap());
+            }
+            _ => {
+                if object.is_type() {
+                    println!("Assuming {:?}, {:?} is a type in defined at {:?}", 
+                    	ass, 
+                    	name,
+                    	address.unwrap())
+                } else {
+                    println!("Assuming {:?}, {:?} is an object of unknown type at address {:?}", 
+                    	ass,
+                    	name, 
+	                    address.unwrap())
                 }
             }
         }
-
     }
 
     pub fn declare_simple_type(&mut self, name: &String) {
@@ -435,10 +399,19 @@ impl VirtualMachine {
             object.set_type(true);
         }
         self.knowledge_base.add_type(name.clone(), pointer.clone());
-        self.assign_to_identifier(name, &vec![Mapping::new(Assumption::None, pointer)]);
+        self.assign_to_identifier(name, &vec![Mapping::new(Assumption::empty(), pointer)]);
     }
 
     pub fn new_context(&mut self) {
         self.contexts.push(Context::new());
     }
+    
+    /*
+    fn resolve_attribute(&mut self, parent: &Pointer, name: &String) -> ExecutionResult {
+    	let object = self.memory.get_object(parent);
+    	let locals = object.get_attribute(name);
+    	
+    	
+    }
+    */
 }

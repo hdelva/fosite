@@ -1,6 +1,6 @@
 use super::Pointer;
 use super::Scope;
-use super::Mapping;
+use super::Assumption;
 
 pub struct Context {
     private_scope: Scope,
@@ -19,8 +19,8 @@ impl Context {
         }
     }
 
-    pub fn assign_public(&mut self, name: &String, mapping: Mapping) {
-        self.public_scope.add_mapping(name, mapping);
+    pub fn assign_public(&mut self, name: String, ass: Assumption, add: Pointer) {
+        self.public_scope.add_mapping(name, ass, add);
     }
 
     pub fn get_public_scope(&self) -> &Scope {
