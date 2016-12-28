@@ -1,5 +1,5 @@
 use super::Pointer;
-use super::Assumption;
+use super::Mapping;
 
 #[derive(Debug, Clone)]
 pub enum FlowControl {
@@ -15,14 +15,8 @@ pub enum ExecutionResult {
         flow: FlowControl,
         dependencies: Vec<String>,
         changes: Vec<Change>,
-        results: Vec<Result>,
+        result: Mapping,
     },
-}
-
-#[derive(Debug, Clone)]
-pub struct Result {
-    pub assumption: Assumption,
-    pub value: Pointer,
 }
 
 #[derive(Debug, Clone)]

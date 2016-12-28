@@ -172,8 +172,8 @@ impl VirtualMachine {
                     }
                 }
 
-                // todo change to python None
-                let mapping = Mapping::simple(Assumption::empty(), -1);
+				// todo change to python None
+                let mapping = Mapping::simple(Assumption::empty(), -1); 
 
                 return ExecutionResult::Success {
                     flow: FlowControl::Continue,

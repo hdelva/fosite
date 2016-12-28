@@ -4,15 +4,13 @@ use std::hash::{Hash, Hasher};
 
 #[derive(Clone)]
 struct Branch {
-	content: Vec<Chunk>,
+    content: Vec<Chunk>,
 }
 
 impl Branch {
-	fn new(original: Vec<Chunk>) -> Branch {
-		Branch {
-			content: original.clone(),
-		}
-	}
+    fn new(original: Vec<Chunk>) -> Branch {
+        Branch { content: original.clone() }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,7 +52,7 @@ pub struct Collection {
 }
 
 impl Hash for Collection {
-	fn hash<H: Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_i32(self.id)
     }
 }
@@ -69,74 +67,70 @@ impl Eq for Collection {}
 
 
 impl Collection {
-	pub fn empty() -> Collection {
-        Collection { 
-        	branches: vec!(Branch::new(vec!())),
-        	id : 1, 
+    pub fn empty() -> Collection {
+        Collection {
+            branches: vec![Branch::new(vec![])],
+            id: 1,
         }
     }
-	
-	pub fn swap(&mut self) {
-		let last = self.branches.pop().unwrap();
-		let first = self.branches.pop().unwrap();
-		self.branches.push(last);
-		self.branches.push(first);
-	}
-	
-	pub fn merge(&mut self) {
-		let last = self.branches.pop().unwrap().content;
-		let first = self.branches.pop().unwrap().content;
-		let mut new_content = vec!();
-		
-		let mut last_id = 0;
-		let mut first_id = 0;
-		
-		while last_id < last.len() && first_id < first.len() {
-			let current_last = last[last_id].clone();
-			let current_first = first[first_id].clone();
-			
-			if current_last == current_first {
-				new_content.push(current_last);
-				last_id += 1;
-				first_id += 1;
-			} else if last_id < first_id {
-				new_content.push(current_last);
-				last_id += 1;
-			} else if first_id < last_id {
-				new_content.push(current_first);
-				first_id += 1;
-			} 
-		}
-	}
-	
-	pub fn get_content(&self) -> &Vec<Chunk> {
-		match self.branches.last() {
-			Some(branch) => {
-				&branch.content
-			},
-			_ => panic!("collection object has no content anymore")
-		}
-	}
-	
-	pub fn get_content_mut(&mut self) -> &mut Vec<Chunk> {
-		match self.branches.last_mut() {
-			Some(branch) => {
-				&mut branch.content
-			},
-			_ => panic!("collection object has no content anymore")
-		}
-	}
+
+    pub fn swap(&mut self) {
+        let last = self.branches.pop().unwrap();
+        let first = self.branches.pop().unwrap();
+        self.branches.push(last);
+        self.branches.push(first);
+    }
+
+    pub fn merge(&mut self) {
+        let last = self.branches.pop().unwrap().content;
+        let first = self.branches.pop().unwrap().content;
+        let mut new_content = vec![];
+
+        let mut last_id = 0;
+        let mut first_id = 0;
+
+        while last_id < last.len() && first_id < first.len() {
+            let current_last = last[last_id].clone();
+            let current_first = first[first_id].clone();
+
+            if current_last == current_first {
+                new_content.push(current_last);
+                last_id += 1;
+                first_id += 1;
+            } else if last_id < first_id {
+                new_content.push(current_last);
+                last_id += 1;
+            } else if first_id < last_id {
+                new_content.push(current_first);
+                first_id += 1;
+            }
+        }
+    }
+
+    pub fn get_content(&self) -> &Vec<Chunk> {
+        match self.branches.last() {
+            Some(branch) => &branch.content,
+            _ => panic!("collection object has no content anymore"),
+        }
+    }
+
+    pub fn get_content_mut(&mut self) -> &mut Vec<Chunk> {
+        match self.branches.last_mut() {
+            Some(branch) => &mut branch.content,
+            _ => panic!("collection object has no content anymore"),
+        }
+    }
 
     pub fn define(&mut self, definition: Vec<Representant>) {
-    	let mut content = self.get_content_mut();
-    	
+        let mut content = self.get_content_mut();
+
         for object in definition {
             content.push(Chunk::new(1, 1, object))
         }
     }
 
     pub fn append(&mut self, definition: Representant, min: i16, max: i16) {
-    	let mut content = self.get_content_mut();
+        let mut content = self.get_content_mut();
         {
             let last = content.last_mut();
 
@@ -157,7 +151,7 @@ impl Collection {
     }
 
     pub fn prepend(&mut self, definition: Representant, min: i16, max: i16) {
-    	let mut content = self.get_content_mut();
+        let mut content = self.get_content_mut();
         {
             let first = content.first_mut();
 
@@ -192,8 +186,7 @@ impl Collection {
 
     // todo
     fn get_exact_n(&self, n: i16) {
-        let first = self.get_first_n(n);
-        let last = self.get_last_n(n);
+
         // return intersect
     }
 
@@ -230,8 +223,8 @@ impl Collection {
         let tail = self.get_last_n(end);
         let mut end_positions = Vec::new();
 
-		let content = self.get_content();
-		
+        let content = self.get_content();
+
         if tail.len() == 0 {
             end_positions.push(content.len())
         }

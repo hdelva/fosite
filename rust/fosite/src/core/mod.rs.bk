@@ -10,6 +10,7 @@ mod gast;
 mod message;
 mod worker;
 mod collection;
+mod mapping;
 
 pub use super::Pointer;
 pub use super::FunctionDefinition;
@@ -27,3 +28,4 @@ pub use self::gast::*;
 pub use self::message::*;
 pub use self::worker::*;
 pub use self::collection::*;
+pub use self::mapping::*;

@@ -1,5 +1,7 @@
 #![allow(dead_code)]
+#[macro_use]
 
+extern crate lazy_static;
 extern crate bidir_map;
 extern crate carboxyl;
 
@@ -17,6 +19,14 @@ use std::fs::File;
 use core::Worker;
 use core::Collection;
 use core::Representant;
+
+
+lazy_static! {
+    static ref PLS: carboxyl::Sink<i32> = carboxyl::Sink::new();
+}
+
+
+
 
 // todo implement for each builtin function
 pub struct BuiltinFunction {
@@ -42,7 +52,7 @@ type TypePointer = i16;
 fn main() {
     // test_json();
     test_vm();
-    //test_collection();
+    // test_collection();
 }
 
 fn test_collection() {
@@ -53,25 +63,28 @@ fn test_collection() {
     definition.push(Representant::new(3, 0));
     collection.define(definition);
 
+    PLS.send(1);
+
     println!("{:?}", collection.get_first_n(1));
     println!("{:?}", collection.get_last_n(1));
     println!("{:?}", collection.get_first_n(2));
     println!("{:?}", collection.get_last_n(2));
-    
+
     println!("");
 
     collection.prepend(Representant::new(4, 4), 0, 2);
     println!("{:?}", collection.get_first_n(3));
 
-	println!("");
+    println!("");
 
     println!("{:?}", collection.slice(1, 1));
 }
 
+
 fn test_json() {
     let mut s = String::new();
 
-    match File::open("output.json") {
+    let _ = match File::open("output.json") {
         Ok(mut file) => file.read_to_string(&mut s),
         Err(why) => panic!("{:?}", why),
     };
@@ -97,13 +110,13 @@ fn test_vm() {
         test1(&mut vm);
         // println!("");
 
-        //test2(&mut vm);
+        // test2(&mut vm);
         // println!("");
 
         test3(&mut vm);
     }
 
-    worker.finalize();
+    let _ = worker.finalize();
 }
 
 fn test1(vm: &mut VirtualMachine) {
@@ -123,39 +136,38 @@ fn test1(vm: &mut VirtualMachine) {
 }
 
 
-/*
-fn test2(vm: &mut VirtualMachine) {
-    let declaration = GastNode::new(3,
-                                    NodeType::Declaration {
-                                        id: "z".to_owned(),
-                                        kind: "Stub".to_owned(),
-                                    });
-    vm.execute(&declaration);
-
-    // jam a placeholder in there
-    let address = 3;
-    let child_address = vm.memory.new_object();
-    {
-        let mut object = vm.memory.get_object_mut(&address);
-        object.enable_iteration(child_address);
-    }
-
-    let x = GastNode::new(4, NodeType::Identifier { name: "x".to_owned() });
-    let y = GastNode::new(5, NodeType::Identifier { name: "y".to_owned() });
-    let z = GastNode::new(6, NodeType::Identifier { name: "z".to_owned() });
-
-    let target = GastNode::new(7, NodeType::List { content: vec![x, y] });
-    let assignment = GastNode::new(8,
-                                   NodeType::Assignment {
-                                       targets: vec![target],
-                                       value: Box::new(z),
-                                   });
-
-    vm.execute(&assignment);
-
-    // vm.inspect_identifier(&"x".to_owned());
-    // vm.inspect_identifier(&"y".to_owned());
-}*/
+// fn test2(vm: &mut VirtualMachine) {
+// let declaration = GastNode::new(3,
+// NodeType::Declaration {
+// id: "z".to_owned(),
+// kind: "Stub".to_owned(),
+// });
+// vm.execute(&declaration);
+//
+// jam a placeholder in there
+// let address = 3;
+// let child_address = vm.memory.new_object();
+// {
+// let mut object = vm.memory.get_object_mut(&address);
+// object.enable_iteration(child_address);
+// }
+//
+// let x = GastNode::new(4, NodeType::Identifier { name: "x".to_owned() });
+// let y = GastNode::new(5, NodeType::Identifier { name: "y".to_owned() });
+// let z = GastNode::new(6, NodeType::Identifier { name: "z".to_owned() });
+//
+// let target = GastNode::new(7, NodeType::List { content: vec![x, y] });
+// let assignment = GastNode::new(8,
+// NodeType::Assignment {
+// targets: vec![target],
+// value: Box::new(z),
+// });
+//
+// vm.execute(&assignment);
+//
+// vm.inspect_identifier(&"x".to_owned());
+// vm.inspect_identifier(&"y".to_owned());
+// }
 
 fn test3(vm: &mut VirtualMachine) {
     let parent = GastNode::new(9, NodeType::Identifier { name: "x".to_owned() });

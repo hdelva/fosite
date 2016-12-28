@@ -12,13 +12,13 @@ use super::Mapping;
 // Object is composed of several properties it may or may not have
 pub struct Object {
     type_property: bool,
-
-    // todo remove, deprecated
+    
+    //todo remove, deprecated
     parent_property: Option<Pointer>, // for method objects
-
-    // todo, keep optional?
+    
+    //todo, keep optional?
     collection_property: Option<CollectionProperty>, // for ... in x
-
+    
     composite_property: CompositeProperty, // x.attrbitue
     extension_property: Vec<Pointer>, // python-style inheritance
 }
@@ -64,7 +64,7 @@ impl Object {
 
     pub fn iterate(&self) -> Option<Pointer> {
         // todo
-        return None;
+        return None
     }
 
     pub fn make_collection(&mut self) {
@@ -74,50 +74,53 @@ impl Object {
     pub fn assign_attribute(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
         self.composite_property.assign_attribute(name, assumption, mapping);
     }
-
+    
     pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
-        return self.composite_property.get_attribute(name);
+    	return self.composite_property.get_attribute(name)
     }
 }
 
 /// Object Properties
 
 struct CollectionProperty {
-    collections: HashMap<Assumption, Collection>,
+	collections: HashMap<Assumption, Collection>
 }
 
 impl CollectionProperty {
-    fn new() -> CollectionProperty {
-        CollectionProperty { collections: HashMap::new() }
+	fn new() -> CollectionProperty {
+		CollectionProperty {
+			collections: HashMap::new(),
+		}
+	}
+	
+	fn define(&mut self, content: Vec<Representant>) {
+		let mut collection = Collection::empty();
+		collection.define(content);
+		self.collections.insert(Assumption::empty(), collection);
+	}
+	
+	/*
+	fn expand_collections_(&mut self, assumption: &Assumption) {
+    	let mut new_collections = HashMap::new();
+	    
+	    for opposite in Assumption::opposites(assumption) {
+	    	for (old_assumption, collection) in self.collections.iter() {
+	    		let optional_assumption = old_assumption.merge(&opposite);
+	    		
+	    		match optional_assumption {
+	    			Some(new_assumption) => {
+	    				new_collections.insert(new_assumption, collection.clone());
+	    			},
+	    			None => {
+	    				new_collections.insert(old_assumption.clone(), collection.clone());
+	    			}
+	    		}		
+	    	} 
+	    }
+	    
+	    self.collections = new_collections;
     }
-
-    fn define(&mut self, content: Vec<Representant>) {
-        let mut collection = Collection::empty();
-        collection.define(content);
-        self.collections.insert(Assumption::empty(), collection);
-    }
-
-    // fn expand_collections_(&mut self, assumption: &Assumption) {
-    // let mut new_collections = HashMap::new();
-    //
-    // for opposite in Assumption::opposites(assumption) {
-    // for (old_assumption, collection) in self.collections.iter() {
-    // let optional_assumption = old_assumption.merge(&opposite);
-    //
-    // match optional_assumption {
-    // Some(new_assumption) => {
-    // new_collections.insert(new_assumption, collection.clone());
-    // },
-    // None => {
-    // new_collections.insert(old_assumption.clone(), collection.clone());
-    // }
-    // }
-    // }
-    // }
-    //
-    // self.collections = new_collections;
-    // }
-    //
+    */
 }
 
 struct CompositeProperty {
@@ -133,8 +136,8 @@ impl CompositeProperty {
     fn assign_attribute(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
         self.namespace.set_mapping(name, assumption, mapping);
     }
-
+    
     fn get_attribute(&self, name: &String) -> &OptionalMapping {
-        self.namespace.resolve_optional_identifier(name)
+    	self.namespace.resolve_optional_identifier(name)
     }
 }
