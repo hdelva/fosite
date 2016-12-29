@@ -134,20 +134,20 @@ class Scan:
 
   def ret(self, code):
     value = self.expression(code.value)
-    return gast.Return(value)
+    return gast.Return(value, code.lineno, code.col_offset)
 
   def ret_yield(self, code):
     value = self.expression(code.value)
-    return gast.Yield(value)
+    return gast.Yield(value, code.lineno, code.col_offset)
 
   def ret_raise(self, code):
     value = self.expression(code.exc)
-    return gast.Raise(value)
+    return gast.Raise(value, code.lineno, code.col_offset)
 
   def _assert(self, code):
     test = self.expression(code.test)
     msg = self.expression(code.msg)
-    return gast.Assert(test, msg)
+    return gast.Assert(test, msg, code.lineno, code.col_offset)
 
   def bool_operator(self, code):
     values = [self.expression(value) for value in code.values]
@@ -156,7 +156,7 @@ class Scan:
     acc = values[0]
 
     for i in range(1, len(values)):
-      acc = self._bool_operator(acc, operator, values[i])
+      acc = self._bool_operator(acc, operator, values[i], code.lineno, code.col_offset)
 
     return acc
 
@@ -166,57 +166,57 @@ class Scan:
 
     for i in range(0, len(code.comparators)):
       right = self.expression(code.comparators[i])
-      part = self._bool_operator(left, code.ops[i], right)
+      part = self._bool_operator(left, code.ops[i], right, code.lineno, code.col_offset)
       parts.append(part)
       left = right
 
     acc = parts[0]
 
     for i in range(1, len(parts)):
-      acc = gast.BoolOp(acc, 'and', parts[i])
+      acc = gast.BoolOp(acc, 'and', parts[i], code.lineno, code.col_offset)
 
     return acc
 
-  def _bool_operator(self, left, op, right):
+  def _bool_operator(self, left, op, right, line, col):
     if type(op) is And:
-      return gast.BoolOp(left, 'and', right, reverse='and')
+      return gast.BoolOp(left, 'and', right, line, col, reverse='and')
     elif type(op) is Or:
-      return gast.BoolOp(left, 'or', right, reverse='or')
+      return gast.BoolOp(left, 'or', right, line, col, reverse='or')
     elif type(op) is Eq:
-      return gast.BoolOp(left, '==', right, negate='!=', reverse='==')
+      return gast.BoolOp(left, '==', right, line, col, negate='!=', reverse='==')
     elif type(op) is NotEq:
-      return gast.BoolOp(left, '!=', right, negate='==', reverse='!=')
+      return gast.BoolOp(left, '!=', right, line, col, negate='==', reverse='!=')
     elif type(op) is Lt:
-      return gast.BoolOp(left, '<', right, negate='>=', reverse='>')
+      return gast.BoolOp(left, '<', right, line, col, negate='>=', reverse='>')
     elif type(op) is LtE:
-      return gast.BoolOp(left, '<=', right, negate='>', reverse='>=')
+      return gast.BoolOp(left, '<=', right, line, col, negate='>', reverse='>=')
     elif type(op) is Gt:
-      return gast.BoolOp(left, '>', right, negate='<=', reverse='<')
+      return gast.BoolOp(left, '>', right, line, col, negate='<=', reverse='<')
     elif type(op) is GtE:
-      return gast.BoolOp(left, '>=', right, negate='<', reverse='<=')
+      return gast.BoolOp(left, '>=', right, line, col, negate='<', reverse='<=')
     elif type(op) is Is:
-      return gast.BoolOp(left, 'is', right, negate='is not')
+      return gast.BoolOp(left, 'is', right, line, col, negate='is not')
     elif type(op) is IsNot:
-      return gast.BoolOp(left, 'is not', right, negate='is')
+      return gast.BoolOp(left, 'is not', right, line, col, negate='is')
     elif type(op) is In:
-      return gast.BoolOp(left, 'in', right, negate='not in')
+      return gast.BoolOp(left, 'in', right, line, col, negate='not in')
     elif type(op) is NotIn:
-      return gast.BoolOp(left, 'not in', right, negate='in')
+      return gast.BoolOp(left, 'not in', right, line, col, negate='in')
 
   def unary_operator(self, code):
     operand = self.expression(code.operand)
     operation = code.op
-    return self._unary_operator(operand, operation)
+    return self._unary_operator(operand, operation, code.lineno, code.col_offset)
 
-  def _unary_operator(self, operand, operation):
+  def _unary_operator(self, operand, operation, line, col):
     if type(operation) is UAdd:
-      return gast.UnOp('+', operand)
+      return gast.UnOp('+', operand, line, col)
     elif type(operation) is USub:
-      return gast.UnOp('-', operand)
+      return gast.UnOp('-', operand, line, col)
     elif type(operation) is Not:
-      return gast.Negate(operand)
+      return gast.Negate(operand, line, col)
     elif type(operation) is Invert:
-      return gast.UnOp('~', operand)
+      return gast.UnOp('~', operand, line, col)
     
     raise Exception('Unsupported node')
 
@@ -224,35 +224,35 @@ class Scan:
     left = self.expression(code.left)
     right = self.expression(code.right)
     op = code.op
-    return self._binary_operator(left, op, right)
+    return self._binary_operator(left, op, right, code.lineno, code.col_offset)
 
-  def _binary_operator(self, left, op, right):
+  def _binary_operator(self, left, op, right, line, col):
     if type(op) is Add:
-      return gast.BinOp(left, '+', right, associative=True) 
+      return gast.BinOp(left, '+', right, line, col, associative=True) 
     elif type(op) is Sub:
-      return gast.BinOp(left, '-', right) 
+      return gast.BinOp(left, '-', right, line, col) 
     elif type(op) is Mult:
-      return gast.BinOp(left, '*', right, associative=True)  
+      return gast.BinOp(left, '*', right, line, col, associative=True)  
     elif type(op) is Div:
-      return gast.BinOp(left, '/', right) 
+      return gast.BinOp(left, '/', right, line, col) 
     elif type(op) is FloorDiv:
-      return gast.BinOp(left, '//', right) 
+      return gast.BinOp(left, '//', right, line, col) 
     elif type(op) is Mod:
-      return gast.BinOp(left, '%', right) 
+      return gast.BinOp(left, '%', right, line, col) 
     elif type(op) is Pow:
-      return gast.BinOp(left, '**', right)    
+      return gast.BinOp(left, '**', right, line, col)    
     elif type(op) is LShift:
-      return gast.BinOp(left, '<<', right) 
+      return gast.BinOp(left, '<<', right, line, col) 
     elif type(op) is RShift:
-      return gast.BinOp(left, '>>', right) 
+      return gast.BinOp(left, '>>', right, line, col) 
     elif type(op) is BitOr:
-      return gast.BinOp(left, '|', right, associative=True)
+      return gast.BinOp(left, '|', right, line, col, associative=True)
     elif type(op) is BitXor:
-      return gast.BinOp(left, '^', right, associative=True)
+      return gast.BinOp(left, '^', right, line, col, associative=True)
     elif type(op) is BitAnd:
-      return gast.BinOp(left, '&', right, associative=True)
+      return gast.BinOp(left, '&', right, line, col, associative=True)
     elif type(op) is MatMult:
-      return gast.BinOp(left, '@', right) 
+      return gast.BinOp(left, '@', right, line, col) 
 
     raise Exception('Unsupported node:')
 
@@ -271,7 +271,7 @@ class Scan:
       variable = self.expression(variable)
 
       # compose the expression using the variable and the value  
-      right = self._binary_operator(variable, code.op, value)
+      right = self._binary_operator(variable, code.op, value, code.lineno, code.col_offset)
 
       # augmented assigns have only one target
       # but GAST assigns support multiple targets
@@ -284,27 +284,27 @@ class Scan:
       # kind of a hack to support starred variables
       left = [self.expression(target) for target in code.targets]
 
-    return gast.Assign(left, right)
+    return gast.Assign(left, right, code.lineno, code.col_offset)
     
   def variable(self, code):
     if type(code) is Name:
-      result = gast.Identifier(code.id)
+      result = gast.Identifier(code.id, code.lineno, code.col_offset)
     elif type(code) is Starred:
       intermediate = self.variable(code.value)
-      result = self.starred(intermediate)
+      result = self.starred(intermediate, code.lineno, code.col_offset)
     return result
 
   def attribute(self, code):
     temp = code.value
 
     if type(temp) == Name:
-      target = gast.Identifier(temp.id)
-      attribute = gast.Identifier(code.attr)
+      target = gast.Identifier(temp.id, code.lineno, code.col_offset)
+      attribute = code.attr
     else:
       target = self.expression(temp)
-      attribute = gast.Identifier(code.attr)
+      attribute = code.attr
 
-    return gast.Attribute(target, attribute)
+    return gast.Attribute(target, attribute, code.lineno, code.col_offset)
 
   def subscript(self, code):
     target = self.expression(code.value)
@@ -313,15 +313,15 @@ class Scan:
 
     if type(op) is Index:
       index = self.expression(op.value)
-      return gast.Index(target, index)
+      return gast.Index(target, index, code.lineno, code.col_offset)
     elif type(op) is Slice:
       lower = self.expression(op.lower)
       upper = self.expression(op.upper)
       if op.step is None:
-        step = gast.Number(1)
+        step = gast.Number(1, code.lineno, code.col_offset)
       else:
         step = self.expression(op.step)
-      return gast.Slice(target, lower, upper, step)
+      return gast.Slice(target, lower, upper, step, code.lineno, code.col_offset)
     else:
       dims = []
       for dim in op.dims:
@@ -332,46 +332,46 @@ class Scan:
           lower = self.expression(op.lower)
           upper = self.expression(op.upper)
           if op.step is None:
-            step = gast.Number(1)
+            step = gast.Number(1, code.lineno, code.col_offset)
           else:
             step = self.expression(op.step)
-          temp = gast.Sequence(lower, upper, step)
+          temp = gast.Sequence(lower, upper, step, code.lineno, code.col_offset)
           dims.append(temp)
-      return gast.ExtSlice(target, dims)
+      return gast.ExtSlice(target, dims, code.lineno, code.col_offset)
 
-  def starred(self, code):
-    return gast.Starred(code)
+  def starred(self, code, line=None, col=None):
+    return gast.Starred(code, line, col)
 
   def literal(self, code):
     if type(code) is Num:
-      return gast.Number(code.n)
+      return gast.Number(code.n, code.lineno, code.col_offset)
     elif type(code) is Str:
-      return gast.String(code.s)
+      return gast.String(code.s, code.lineno, code.col_offset)
     elif type(code) is Bytes:
-      return gast.Byte(code.s)
+      return gast.Byte(code.s, code.lineno, code.col_offset)
     elif type(code) is List:
       values = [self.expression(element) for element in code.elts]
-      return gast.List(values) 
+      return gast.List(values, code.lineno, code.col_offset) 
     elif type(code) is Tuple:
       values = [self.expression(element) for element in code.elts]
-      return gast.Sequence(values)
+      return gast.Sequence(values, code.lineno, code.col_offset)
     elif type(code) is Set:
       values = [self.expression(element) for element in code.elts]
-      return gast.Set(values)
+      return gast.Set(values, code.lineno, code.col_offset)
     elif type(code) is Dict:
       # dictionaries are stored as a set of pairs
-      values = [gast.Pair(self.expression(key), self.expression(value)) \
+      values = [gast.Pair(self.expression(key), self.expression(value), code.lineno, code.col_offset) \
                 for key, value in zip(code.keys, code.values)]
-      return gast.Dictionary(values)
+      return gast.Dictionary(values, code.lineno, code.col_offset)
     elif type(code) is NameConstant:
       if code.value is True:
-        return gast.Boolean(True)
+        return gast.Boolean(True, code.lineno, code.col_offset)
       elif code.value is False:
-        return gast.Boolean(False)
+        return gast.Boolean(False, code.lineno, code.col_offset)
       else:
-        return gast.Nil()
+        return gast.Nil(code.lineno, code.col_offset)
     elif code is None:
-      return gast.Nil()
+      return gast.Nil(None, None)
     
     raise Exception('Unsupported node:', code)
 
@@ -385,7 +385,7 @@ class Scan:
       value = self.expression(arg.value)
       kwargs.append(self.argument(keyword, value))
 
-    return gast.Call(name, args, kwargs)    
+    return gast.Call(name, args, code.lineno, code.col_offset, kwargs)    
 
   def argument(self, name, value):
     return gast.Argument(name, value)
@@ -401,7 +401,7 @@ class Scan:
       acc = conditions[0]
 
       for i in range(1, len(conditions)):
-        acc = gast.BoolOp(acc, 'and', conditions[i])
+        acc = gast.BoolOp(acc, 'and', conditions[i], code.lineno, code.col_offset)
 
       return gast.Filter(generator, acc)
 
@@ -413,12 +413,12 @@ class Scan:
     acc = generators[0]
 
     for i in range(1, len(generators)):
-      acc = gast.AndThen(acc, generators[i])
+      acc = gast.AndThen(acc, generators[i], code.lineno, code.col_offset)
 
     fun = self.expression(code.elt)
 
-    mapped = gast.Map(acc, fun)
-    return gast.List(mapped)
+    mapped = gast.Map(acc, fun, code.lineno, code.col_offset)
+    return gast.List(mapped, code.lineno, code.col_offset)
 
   def set_comprehension(self, code):
     generators = [self.expression(generator) for generator in code.generators]
@@ -426,12 +426,12 @@ class Scan:
     acc = generators[0]
 
     for i in range(1, len(generators)):
-      acc = gast.AndThen(acc, generators[i])
+      acc = gast.AndThen(acc, generators[i], code.lineno, code.col_offset)
 
     fun = self.expression(code.elt)
 
-    mapped = gast.Map(acc, fun)
-    return gast.Set(mapped)
+    mapped = gast.Map(acc, fun, code.lineno, code.col_offset)
+    return gast.Set(mapped, code.lineno, code.col_offset)
 
   def generator_expression(self, code):
     generators = [self.expression(generator) for generator in code.generators]
@@ -439,11 +439,11 @@ class Scan:
     acc = generators[0]
 
     for i in range(1, len(generators)):
-      acc = gast.AndThen(acc, generators[i])
+      acc = gast.AndThen(acc, generators[i], code.lineno, code.col_offset)
 
     fun = self.expression(code.elt)
 
-    mapped = gast.Map(acc, fun)
+    mapped = gast.Map(acc, fun, code.lineno, code.col_offset)
     return mapped
 
   def conditional(self, code):
@@ -453,20 +453,20 @@ class Scan:
     body = self.block(code.body)
     orElse = self.block(code.orelse)
 
-    return gast.If(test, body, orElse)
+    return gast.If(test, body, orElse, code.lineno, code.col_offset)
 
   def for_loop(self, code):
     source = self.expression(code.iter)
     target = self.expression(code.target)
 
-    generator = gast.Generator(source, target)
+    generator = gast.Generator(source, target, code.lineno, code.col_offset)
 
     # todo add node id
     body = self.block(code.body)
 
     orElse = self.block(code.orelse)
 
-    return gast.ForEach(generator, body, orElse)
+    return gast.ForEach(generator, body, orElse, code.lineno, code.col_offset)
 
   def while_loop(self, code):
     test = self.expression(code.test)
@@ -476,7 +476,7 @@ class Scan:
 
     orElse = self.block(code.orelse)
 
-    return gast.While(test, body, orElse)
+    return gast.While(test, body, orElse, code.lineno, code.col_offset)
 
   def try_except(self, code):
     # todo add node id
@@ -488,12 +488,11 @@ class Scan:
       handleBody = self.handler(handler)
       handlers.append(handleBody)
 
-
     orElse = self.block(code.orelse)
     
     final = self.block(code.finalbody)
 
-    return gast.Try(handlers, body, orElse, final)
+    return gast.Try(handlers, body, orElse, final, code.lineno, code.col_offset)
 
   # todo, messy
   def with_block(self, code):
@@ -504,41 +503,41 @@ class Scan:
       context = self.expression(item.context_expr)
       
       if item.optional_vars is None:
-        enter = gast.Identifier(constants.ENTER)
-        enter = gast.Attribute(context, enter)
-        enter = gast.Call(enter, [])
+        enter = gast.Identifier(constants.ENTER, code.lineno, code.col_offset)
+        enter = gast.Attribute(context, enter, code.lineno, code.col_offset)
+        enter = gast.Call(enter, [], code.lineno, code.col_offset)
 
-        exit = gast.Identifier(constants.EXIT)
-        exit = gast.Attribute(context, exit)
-        exit = gast.Call(exit, [])
+        exit = gast.Identifier(constants.EXIT, code.lineno, code.col_offset)
+        exit = gast.Attribute(context, exit, code.lineno, code.col_offset)
+        exit = gast.Call(exit, [], code.lineno, code.col_offset)
 
         before_items.append(enter)
         after_items.append(exit)
       else:
         name = self.expression(item.optional_vars)
 
-        assignment = gast.Assign(name, context)
+        assignment = gast.Assign(name, context, code.lineno, code.col_offset)
         before_items.append(assignment)
 
-        enter = gast.Identifier(constants.ENTER)
-        enter = gast.Attribute(name, enter)
-        enter = gast.Call(enter, [])
+        enter = gast.Identifier(constants.ENTER, code.lineno, code.col_offset)
+        enter = gast.Attribute(name, enter, code.lineno, code.col_offset)
+        enter = gast.Call(enter, [], code.lineno, code.col_offset)
 
         before_items.append(enter)
 
-        exit = gast.Identifier(constants.EXIT)
-        exit = gast.Attribute(name, exit)
-        exit = gast.Call(exit, [])
+        exit = gast.Identifier(constants.EXIT, code.lineno, code.col_offset)
+        exit = gast.Attribute(name, exit, code.lineno, code.col_offset)
+        exit = gast.Call(exit, [], code.lineno, code.col_offset)
 
         after_items.append(exit)
 
     body = self.block(code.body)
-    return gast.With(before_items, body, after_items)
+    return gast.With(before_items, body, after_items, code.lineno, code.col_offset)
     
 
   def handler(self, code):
     body = self.block(code.body)
-    return gast.Case(code.type, code.name, body)
+    return gast.Case(code.type, code.name, body,code.lineno, code.col_offset)
 
   def anonymous_function(self, code):
     args = []
@@ -550,12 +549,12 @@ class Scan:
       args.append(gast.Argument(identifier, default))
 
     body = self.block(code.body)
-    return gast.AnonymousFunction(args, body)
+    return gast.AnonymousFunction(args, body, code.lineno, code.col_offset)
 
   def class_def(self, code):
     # extract the name and declare a variable of the same name
     name = code.name
-    identifier = gast.Identifier(identifier.name)
+    identifier = gast.Identifier(identifier.name, code.lineno, code.col_offset)
 
     bases = []
 
@@ -564,7 +563,7 @@ class Scan:
 
     body = self.block(code.body)
 
-    return gast.ClassDef(name, bases, body)
+    return gast.ClassDef(name, bases, body, code.lineno, code.col_offset)
     
   def function(self, function):
     # Helper function for positional arguments in the signature
@@ -621,7 +620,7 @@ class Scan:
         return result
 
     # Helper function for vararg arguments
-    def vararg(arg,):
+    def vararg(arg):
         # name of the identifier
         # _not_ an actual identifier, conform to the argument syntax used when calling
         identifier = arg.arg
@@ -640,7 +639,7 @@ class Scan:
 
     # extract the name and declare a variable of the same name
     name = function.name
-    identifier = gast.Identifier(name)
+    identifier = gast.Identifier(name, function.lineno, function.col_offset)
 
     # contains all kinds of arguments
     args = function.args
@@ -665,6 +664,6 @@ class Scan:
 
     body = self.block(function.body)
 
-    return gast.Function(identifier, positional_args, keyword_args, body)
+    return gast.Function(identifier, positional_args, keyword_args, body, function.lineno, function.col_offset)
 
 

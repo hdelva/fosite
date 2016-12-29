@@ -84,35 +84,45 @@ class Control(GastNode):
     count += 1
 
 class If(Control):
-  def __init__(self, test: 'BoolOp', body:'Block', orElse:'Block'):
+  def __init__(self, test: 'BoolOp', body:'Block', orElse:'Block', line, col):
     super().__init__(None, test, body, orElse, None)
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.IF
 
 class ForEach(Control):
-  def __init__(self, before: 'Generator', body: 'Block', orElse: 'Block'):
+  def __init__(self, before: 'Generator', body: 'Block', orElse: 'Block', line, col):
     super().__init__(before, None, body, orElse, None)
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.FOREACH
 
 class While(Control):
-  def __init__(self, test: 'BoolOp', body: 'Block', orElse: 'Block'):
+  def __init__(self, test: 'BoolOp', body: 'Block', orElse: 'Block', line, col):
     super().__init__(None, test, body, orElse, None)
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.WHILE
 
 class Try(Control):
-  def __init__(self, test: '[Case]', body: 'Block', orElse: 'Block', after: 'Block'):
+  def __init__(self, test: '[Case]', body: 'Block', orElse: 'Block', after: 'Block', line, col):
     super().__init__(None, test, body, orElse, after)
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.TRY
     
 class Case(GastNode):
-  def __init__(self, type: '?', name: 'Identifier', body: 'Block'):
+  def __init__(self, type: '?', name: 'Identifier', body: 'Block', line, col):
+    self.line = line
+    self.col = col
     self.type = type
     self.name = name
     self.body = body
@@ -124,8 +134,10 @@ class Case(GastNode):
     return constants.CASE
 
 class With(Control):
-  def __init__(self, before: '[Expression]', body: 'Block', after: '[Expression]'):
+  def __init__(self, before: '[Expression]', body: 'Block', after: '[Expression]', line, col):
     super().__init__(before, None, body, None, after)
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.WITH
@@ -141,7 +153,9 @@ class Block(GastNode):
     return constants.BLOCK
 
 class Index(GastNode):
-  def __init__(self, target: 'Expression', index: 'Number'):
+  def __init__(self, target: 'Expression', index: 'Number', line, col):
+    self.line = line
+    self.col = col
     self.target = target
     self.index = index
     global count
@@ -152,22 +166,26 @@ class Index(GastNode):
     return constants.INDEX
 
 class Attribute(GastNode):
-  def __init__(self, target: 'Expression', attribute: 'Named'):
+  def __init__(self, target: 'Expression', attribute: 'String', line, col):
     self.of = target
     self.attribute = attribute
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.ATTRIBUTE
 
 class Identifier(Named):
-  def __init__(self, name: 'str'):
+  def __init__(self, name: 'str', line, col):
     super().__init__(name)
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.IDENTIFIER
@@ -176,7 +194,9 @@ class Identifier(Named):
     return '{}'.format(self.name)
 
 class Number(GastNode):
-  def __init__(self, value):
+  def __init__(self, value, line, col):
+    self.line = line
+    self.col = col
     self.value = value
     global count
     self.id = count
@@ -189,7 +209,9 @@ class Number(GastNode):
     return str(self.value)
 
 class String(GastNode):
-  def __init__(self, value):
+  def __init__(self, value, line, col):
+    self.line = line
+    self.col = col
     self.value = value
     global count
     self.id = count
@@ -202,29 +224,35 @@ class String(GastNode):
     return "'" + self.value + "'"
 
 class Byte(GastNode):
-  def __init__(self, value):
+  def __init__(self, value, line, col):
     self.value = value
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.BYTE
 
 # fixed length
 class Sequence(GastNode):
-  def __init__(self, content: 'iterable'):
+  def __init__(self, content: 'iterable', line, col):
     self.content = content
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.SEQUENCE
 
 # variable length
 class List(GastNode):
-  def __init__(self, content: 'iterable'):
+  def __init__(self, content: 'iterable', line, col):
+    self.line = line
+    self.col = col
     self.content = content
     global count
     self.id = count
@@ -235,7 +263,9 @@ class List(GastNode):
 
 # special kind of sequence
 class Pair(GastNode):
-  def __init__(self, first, second):
+  def __init__(self, first, second, line, col):
+    self.line = line
+    self.col = col
     self.first = first
     self.second = second
     global count
@@ -246,17 +276,21 @@ class Pair(GastNode):
     return constants.PAIR
 
 class Dictionary(GastNode):
-  def __init__(self, content: 'list[Pair]'):
+  def __init__(self, content: 'list[Pair]', line, col):
     self.content = content
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
  
   def kind(self):
     return constants.DICTIONARY
 
 class Set(GastNode):
-  def __init__(self, content: 'iterable'):
+  def __init__(self, content: 'iterable', line, col):
+    self.line = line
+    self.col = col
     self.content = content
     global count
     self.id = count
@@ -266,7 +300,9 @@ class Set(GastNode):
     return constants.SET
 
 class Boolean(GastNode):
-  def __init__(self, value:'boolean'):
+  def __init__(self, value:'boolean', line, col):
+    self.line = line
+    self.col = col
     self.value = value
     global count
     self.id = count
@@ -276,7 +312,9 @@ class Boolean(GastNode):
     return constants.BOOLEAN
 
 class Nil(GastNode):
-  def __init__(self):
+  def __init__(self, line, col):
+    self.line = line
+    self.col = col
     global count
     self.id = count
     count += 1
@@ -293,8 +331,10 @@ class Argument(Named):
     return constants.ARGUMENT
 
 class Function(Named):
-  def __init__(self, name: 'Identifier', pos_args: 'list[Argument]', kw_args, body: 'Block'):
+  def __init__(self, name: 'Identifier', pos_args: 'list[Argument]', kw_args, body: 'Block', line, col):
     super().__init__(name)
+    self.line = line
+    self.col = col
     self.positional_args = pos_args
     self.keyword_args = kw_args
     self.body = body
@@ -303,36 +343,44 @@ class Function(Named):
     return constants.FUNCTION
 
 class ClassDef(Named):
-  def __init__(self, name: 'Identifier', bases: '[Identifier]', body: 'Block'):
+  def __init__(self, name: 'Identifier', bases: '[Identifier]', body: 'Block', line, col):
     super().__init__(name)
     self.bases = bases
     self.body = body
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.CLASS
 
 class Call(Named):
-  def __init__(self, name: 'Name', pos_args: 'list[Expression]', kw_args: 'list[Argument]'=[]):
+  def __init__(self, name: 'Name', pos_args: 'list[Expression]', line, col, kw_args: 'list[Argument]'=[]):
     super().__init__(name)
     self.positional_args = pos_args
     self.keyword_args = kw_args
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.CALL
 
 class Assign(GastNode):
-  def __init__(self, targets: 'list', value: 'Expression'):
+  def __init__(self, targets: 'list', value: 'Expression', line, col):
     self.targets = targets
     self.value = value
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.ASSIGN
 
 class Negate(GastNode):
-  def __init__(self, value: 'Expression'):
+  def __init__(self, value: 'Expression', line, col):
+    self.line = line
+    self.col = col
     self.value = value
     global count
     self.id = count
@@ -342,7 +390,7 @@ class Negate(GastNode):
     return constants.NEGATE
 
 class BinOp(GastNode):
-  def __init__(self, left: 'Expression', op: 'str', right, associative=False):
+  def __init__(self, left: 'Expression', op: 'str', right, line, col, associative=False):
     self.left = left
     self.right = right
     self.op = op
@@ -350,15 +398,17 @@ class BinOp(GastNode):
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
     
   def items(self):
-    return [('left', self.left), ('op', self.op), ('right', self.right)]
+    return [('left', self.left), ('op', self.op), ('right', self.right), ('line', self.line), ('col', self.col)]
 
   def kind(self):
     return constants.BINOP
 
 class BoolOp(GastNode):
-  def __init__(self, left: 'Expression', op: 'str', right, reverse: 'str'=None, negate=None):
+  def __init__(self, left: 'Expression', op: 'str', right, line, col, reverse: 'str'=None, negate=None):
     self.left = left
     self.op = op
     self.right = right
@@ -367,40 +417,48 @@ class BoolOp(GastNode):
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.BOOLOP
 
   def items(self):
-    return [('left', self.left), ('op', self.op), ('right', self.right)]
+    return [('left', self.left), ('op', self.op), ('right', self.right), ('line', self.line), ('col', self.col)]
 
 class UnOp(GastNode):
-  def __init__(self, operation: 'str', value: 'Expression'):
+  def __init__(self, operation: 'str', value: 'Expression', line, col):
     self.operation = operation
     self.value = value
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
    
   def kind(self):
     return constants.UNOP
 
 class Return(GastNode):
-  def __init__(self, value: 'Expression'):
+  def __init__(self, value: 'Expression', line, col):
     self.value = value
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.RETURN
 
 class Yield(GastNode):
-  def __init__(self, value: 'Expression'):
+  def __init__(self, value: 'Expression', line, col):
     self.value = value
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.RETURN
@@ -416,91 +474,106 @@ class Raise(GastNode):
     return constants.RAISE
 
 class Assert(GastNode):
-  def __init__(self, test: 'Expression', message: 'Expression'):
+  def __init__(self, test: 'Expression', message: 'Expression', line, col):
     self.test = test
     self.message = message
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.ASSERT
 
 class Import(GastNode):
-  def __init__(self, module: 'str', aliases: '[Pair]'):
+  def __init__(self, module: 'str', aliases: '[Pair]', line, col):
     self.module = module
     self.aliases = aliases
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.Import
 
 class AnonymousFunction(GastNode):
-  def __init__(self, args: '[Argument]', body: 'Block'):
+  def __init__(self, args: '[Argument]', body: 'Block', line, col):
     self.args = args
     self.body = body
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.ANONYMOUS_FUNCTION
 
-def Starred(value: 'Expression'):
-  return UnOp('*', value)
+def Starred(value: 'Expression', line, col):
+  return UnOp('*', value, line, col)
 
-def Slice(target: 'Expression', lower, upper, step):
-  return Call(constants.SLICE, [lower, upper, step])
+def Slice(target: 'Expression', lower, upper, step, line, col):
+  return Call(constants.SLICE, [lower, upper, step], line, col)
 
-def ExtSlice(target: 'Expression', dims):
-  return Call(constants.EXTSLICE, dims)
+def ExtSlice(target: 'Expression', dims, line, col):
+  return Call(constants.EXTSLICE, dims, line, col)
 
 class Stream(GastNode):
   # wat do here
   pass
 
 class Generator(Stream):
-  def __init__(self, source: 'Iterable', target: 'Named'):
+  def __init__(self, source: 'Iterable', target: 'Named', line=None, col=None):
     self.source = source
     self.target = target
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
+
 
   def kind(self):
     return constants.GENERATOR
 
 class Filter(Stream):
-  def __init__(self, source: 'Iterable', condition: 'BoolOp'):
+  def __init__(self, source: 'Iterable', condition: 'BoolOp', line=None, col=None):
     self.source = source
     self.condition = condition
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.FILTER
 
 class Map(Stream):
-  def __init__(self, source: 'Iterable', op: 'Expression'):
+  def __init__(self, source: 'Iterable', op: 'Expression', line, col):
     self.source = source
     self.op = op
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
 
   def kind(self):
     return constants.MAP
 
 class AndThen(Stream):
-  def __init__(self, first: 'Stream', second: 'Stream'):
+  def __init__(self, first: 'Stream', second: 'Stream', line, col):
     self.first = first
     self.second = second
     global count
     self.id = count
     count += 1
+    self.line = line
+    self.col = col
     
   def kind(self):
     return constants.ANDTHEN 
