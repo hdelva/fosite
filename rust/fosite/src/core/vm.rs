@@ -9,20 +9,18 @@ pub struct VirtualMachine {
     contexts: Vec<Context>,
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
-    stream: Sink<Message>,
 
     assumptions: Vec<Assumption>,
 }
 
 impl VirtualMachine {
-    pub fn new(stream: Sink<Message>) -> VirtualMachine {
+    pub fn new() -> VirtualMachine {
         let memory = Memory::new();
         let knowledge = KnowledgeBase::new();
         VirtualMachine {
             contexts: Vec::new(),
             memory: memory,
             knowledge_base: knowledge,
-            stream: stream,
 
             assumptions: vec![Assumption::empty()],
         }
@@ -45,7 +43,8 @@ impl VirtualMachine {
             source: id.clone(),
             content: format!("{:?}", result),
         };
-        self.stream.send(message);
+        
+        &CHANNEL.publish(message);
         return result;
     }
 
@@ -107,7 +106,7 @@ impl VirtualMachine {
         let execution_result = ExecutionResult::Success {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![Change::Identifier { name: name.clone() }],
+            changes: vec![AnalysisItem::Identifier { name: name.clone() }],
             result: mapping,
         };
 
@@ -146,7 +145,7 @@ impl VirtualMachine {
 
         let execution_result = ExecutionResult::Success {
             flow: FlowControl::Continue,
-            dependencies: vec![name.clone()],
+            dependencies: vec![AnalysisItem::Identifier {name: name.clone()} ],
             changes: vec![],
             result: mapping,
         };
@@ -210,18 +209,24 @@ impl VirtualMachine {
         let parent_result = self.execute(parent);
 
         match parent_result {
-            ExecutionResult::Success { result, .. } => {
+            ExecutionResult::Success { result, dependencies, .. } => {
                 let parent_mapping = result;
                 let mut changes = Vec::new();
-                // todo how to model attribute changes
-                changes.push(Change::Identifier { name: attribute.clone() });
+                
+                // add the attribute identifier changes
+                for dependency in dependencies.into_iter() {
+                	changes.push(AnalysisItem::Attribute { parent: Box::new(dependency), name: attribute.clone() });
+                }
 
+				// add the object changes
+				// perform the assignment
                 for (_, parent_address) in parent_mapping.iter() {
+                	changes.push( AnalysisItem::Object { address: parent_address.clone() });
+                	
                     let mut parent_object = self.memory.get_object_mut(parent_address);
                     parent_object.assign_attribute(attribute.clone(),
                                                    self.assumptions.last().unwrap().clone(),
                                                    mapping.clone())
-
                 }
 
                 return ExecutionResult::Success {
@@ -288,7 +293,7 @@ impl VirtualMachine {
         return ExecutionResult::Success {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![Change::Identifier { name: target.clone() }],
+            changes: vec![AnalysisItem::Identifier { name: target.clone() }],
             result: mapping,
         };
     }

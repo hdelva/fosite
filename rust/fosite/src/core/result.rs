@@ -13,14 +13,15 @@ pub enum ExecutionResult {
     Failure,
     Success {
         flow: FlowControl,
-        dependencies: Vec<String>,
-        changes: Vec<Change>,
+        dependencies: Vec<AnalysisItem>,
+        changes: Vec<AnalysisItem>,
         result: Mapping,
     },
 }
 
 #[derive(Debug, Clone)]
-pub enum Change {
+pub enum AnalysisItem {
     Identifier { name: String },
     Object { address: Pointer },
+    Attribute { parent: Box<AnalysisItem>, name: String },
 }

@@ -1,19 +1,15 @@
 use super::Message;
-use carboxyl::Sink;
+use super::CHANNEL;
 use std::thread::*;
 
 pub struct Worker {
-    sink: Sink<Message>,
     thread: JoinHandle<()>,
 }
 
 impl Worker {
-    pub fn new(sink: Sink<Message>) -> Worker {
+    pub fn new() -> Worker {
         let thread = {
-            let stream = sink.stream();
-            let events = stream.events();
-
-            spawn(move || for message in events {
+            spawn(move || for message in CHANNEL.iter() {
                 match message {
                     Message::Notification { ref source, ref content } => {
                         println!("Message from {}: {}", source, content)
@@ -24,7 +20,6 @@ impl Worker {
         };
 
         let worker = Worker {
-            sink: sink,
             thread: thread,
         };
 
@@ -32,7 +27,7 @@ impl Worker {
     }
 
     pub fn finalize(self) -> Result<()> {
-        self.sink.send({
+    	&CHANNEL.publish({
             Message::Terminate
         });
         return self.thread.join();

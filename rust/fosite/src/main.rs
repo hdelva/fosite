@@ -21,13 +21,6 @@ use core::Collection;
 use core::Representant;
 
 
-lazy_static! {
-    static ref PLS: carboxyl::Sink<i32> = carboxyl::Sink::new();
-}
-
-
-
-
 // todo implement for each builtin function
 pub struct BuiltinFunction {
 
@@ -48,7 +41,6 @@ type Type = i16;
 pub type Pointer = i16;
 type TypePointer = i16;
 
-// Giving the compiler something to do
 fn main() {
     // test_json();
     test_vm();
@@ -62,8 +54,6 @@ fn test_collection() {
     definition.push(Representant::new(2, 1));
     definition.push(Representant::new(3, 0));
     collection.define(definition);
-
-    PLS.send(1);
 
     println!("{:?}", collection.get_first_n(1));
     println!("{:?}", collection.get_last_n(1));
@@ -95,12 +85,10 @@ fn test_json() {
 }
 
 fn test_vm() {
-    let sink = carboxyl::Sink::new();
-    let worker = Worker::new(sink.clone());
-
-
+	let mut worker = Worker::new();
+	
     {
-        let mut vm = VirtualMachine::new(sink);
+        let mut vm = VirtualMachine::new();
 
         vm.new_context();
 
@@ -127,9 +115,13 @@ fn test1(vm: &mut VirtualMachine) {
                                        targets: vec![x],
                                        value: value,
                                    });
+    
 
     // executing x = 5
     vm.execute(&assignment);
+
+	let test = GastNode::new(42, NodeType::Identifier {name: "x".to_owned() });
+	vm.execute(&test);
 
     // vm.inspect_identifier(&"number".to_owned());
     // vm.inspect_identifier(&"x".to_owned());

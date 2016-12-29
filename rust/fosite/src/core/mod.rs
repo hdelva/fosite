@@ -11,6 +11,7 @@ mod message;
 mod worker;
 mod collection;
 mod mapping;
+mod channel;
 
 pub use super::Pointer;
 pub use super::FunctionDefinition;
@@ -29,3 +30,4 @@ pub use self::message::*;
 pub use self::worker::*;
 pub use self::collection::*;
 pub use self::mapping::*;
+pub use self::channel::*;
