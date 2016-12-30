@@ -11,6 +11,7 @@ pub struct VirtualMachine {
     knowledge_base: KnowledgeBase,
 
     assumptions: Vec<Assumption>,
+    nodes: Vec<GastID>,
 }
 
 impl VirtualMachine {
@@ -21,7 +22,7 @@ impl VirtualMachine {
             contexts: Vec::new(),
             memory: memory,
             knowledge_base: knowledge,
-
+			nodes: vec!(),
             assumptions: vec![Assumption::empty()],
         }
     }
@@ -29,6 +30,8 @@ impl VirtualMachine {
     pub fn execute(&mut self, node: &GastNode) -> ExecutionResult {
         let ref id = node.id;
         let ref kind = node.kind;
+        
+        self.nodes.push(id.clone());
 
         let result = match kind {
             &NodeType::Number { .. } => self.number(),
@@ -38,6 +41,7 @@ impl VirtualMachine {
             &NodeType::Assignment { ref targets, ref value } => self.assign(targets, value),
             &NodeType::Block { ref content } => self.block(content),
             &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(id, parent, attribute),
+            &NodeType::If { ref test, ref body, ref or_else } => self.conditional(test, body, or_else),
             _ => panic!("Unsupported Operation"),
         };
 
@@ -46,8 +50,67 @@ impl VirtualMachine {
             content: format!("{:?}", result),
         };
         
+        let _ = self.nodes.pop();
+        
         &CHANNEL.publish(message);
         return result;
+    }
+    
+    fn conditional(&mut self, test: &GastNode, body: &GastNode, or_else: &GastNode) -> ExecutionResult {
+    	let _ = self.execute(test);
+    	
+    	let last_assumption = self.assumptions.pop().unwrap();
+    	
+    	let mut changed_objects = HashSet::new();
+    	
+    	let mut positive_assumption = last_assumption.clone();
+    	positive_assumption.add(self.nodes.last().unwrap().clone(), false);
+    	let mut negative_assumption = last_assumption.clone();
+    	negative_assumption.add(self.nodes.last().unwrap().clone(), true);
+    	
+    	self.assumptions.push(positive_assumption);
+    	let body_result = self.execute(body);
+    	let _ = self.assumptions.pop();
+    	
+    	match body_result {
+    		ExecutionResult::Success {ref changes, ..} => {
+    			for change in changes {
+    				if let &AnalysisItem::Object {address} = change {
+    					changed_objects.insert(address);
+    				}
+    			}
+    		},
+    		_ => ()
+    	}
+    	
+    	for address in &changed_objects {
+    		let mut object = self.memory.get_object_mut(address);
+    		object.change_branch();
+    	}
+    	
+    	self.assumptions.push(negative_assumption);
+    	let else_result = self.execute(or_else);
+    	let _ = self.assumptions.pop();
+    	
+    	match else_result {
+    		ExecutionResult::Success {ref changes, ..} => {
+    			for change in changes {
+    				if let &AnalysisItem::Object {address} = change {
+    					changed_objects.insert(address);
+    				}
+    			}
+    		},
+    		_ => ()
+    	}
+    	
+    	for address in &changed_objects {
+    		let mut object = self.memory.get_object_mut(address);
+    		object.merge_branches();
+    	}
+    	
+    	self.assumptions.push(last_assumption);
+    	
+    	return body_result;
     }
     
     fn block(&mut self, content: &Vec<GastNode>) -> ExecutionResult {
@@ -200,6 +263,12 @@ impl VirtualMachine {
 		
 		if unresolved.len() > 0 {
         	let types = object.get_extension();
+        	
+        	if types.len() == 0 {
+        		// can't go further up the hierarchy
+        		result.add_mapping(Assumption::empty(), None);
+        	}
+        	
     		for tpe in types {
     			let mut found = true;
     			

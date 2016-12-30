@@ -88,6 +88,7 @@ fn test_json() {
     vm.new_context();
     
     vm.declare_simple_type(&"number".to_owned());
+    vm.declare_simple_type(&"string".to_owned());
     vm.declare_simple_type(&"Stub".to_owned());
         
     vm.execute(&stuff);

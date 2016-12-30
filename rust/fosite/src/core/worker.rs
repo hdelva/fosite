@@ -55,10 +55,10 @@ impl Logger {
                     println!("Warning from node {} at {:?}\n  under the following assumptions:\n    {:?} \n  {:?}\n", source, self.sources.get(source), assumption, content)
                 },
                 Message::Notification { ref source, ref content } => {
-                    println!("Message from node {} at {:?}: {}", source, self.sources.get(source), content)
+                    //println!("Message from node {} at {:?}: {}", source, self.sources.get(source), content)
                 },
                 Message::Input {source, line, col} => {
-                	println!("mapping node {} to ({}, {})", source, line, col);
+                	//println!("mapping node {} to ({}, {})", source, line, col);
                 	self.sources.insert(source, (line, col));
                 },
                 Message::Terminate => break,

@@ -37,6 +37,10 @@ pub enum NodeType {
     List { content: Vec<GastNode> },
     Sequence { content: Vec<GastNode> },
     Block { content: Vec<GastNode> },
+    If { test: Box<GastNode>,
+    	 body: Box<GastNode>,
+    	 or_else: Box<GastNode>,
+    },
 }
 
 pub fn build(node: &Json) -> GastNode {
@@ -64,11 +68,28 @@ pub fn build(node: &Json) -> GastNode {
         "assign" => build_assign(id, node),
         "identifier" => build_identifier(id, node),
         "number" => build_number(id, node),
+        "string" => build_string(id, node),
         "attribute" => build_attribute(id, node),
         "list" => build_list(id, node),
         "sequence" => build_sequence(id, node),
+        "if" => build_if(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     }
+}
+
+fn build_if(id: GastID, node: &Json) -> GastNode {
+	let obj = node.as_object().unwrap();
+	
+	let json_test = obj.get("test").unwrap();
+    let test = Box::new(build(json_test));
+    
+    let json_body = obj.get("body").unwrap();
+    let body = Box::new(build(json_body));
+    
+    let json_orelse = obj.get("orElse").unwrap();
+    let or_else = Box::new(build(json_orelse));
+    
+    return GastNode::new(id, NodeType::If {test: test, body: body, or_else: or_else});
 }
 
 fn build_block(id: GastID, node: &Json) -> GastNode {
@@ -111,6 +132,12 @@ fn build_number(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let value = obj.get("value").unwrap().as_i64().unwrap();
     return GastNode::new(id, NodeType::Number { value: value });
+}
+
+fn build_string(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    let value = obj.get("value").unwrap().as_string().unwrap().to_owned();
+    return GastNode::new(id, NodeType::String { value: value });
 }
 
 fn build_attribute(id: GastID, node: &Json) -> GastNode {

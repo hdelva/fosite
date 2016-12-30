@@ -4,6 +4,7 @@ use super::{Mapping, OptionalMapping};
 use std::collections::HashSet;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 struct Frame {
     content: HashMap<String, OptionalMapping>,
     assumption: Assumption,
@@ -177,7 +178,7 @@ impl Scope {
 
         // second branch
         {
-            let ref frame = self.frames[self.frames.len() - 1];
+            let ref frame = self.frames[self.frames.len() - 2];
             let assumption = frame.get_assumption();
 
             let &(new_source, new_positive) = assumption.get().last().unwrap();
