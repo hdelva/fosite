@@ -2,7 +2,7 @@ use super::Pointer;
 use super::Assumption;
 
 use std::collections::HashMap;
-use std::collections::hash_map::Iter;
+use std::collections::hash_map::{Iter, IntoIter};
 
 #[derive(Debug, Clone)]
 pub struct Mapping {
@@ -45,5 +45,13 @@ impl OptionalMapping {
 
     pub fn iter(&self) -> Iter<Assumption, Option<Pointer>> {
         return self.possibilities.iter();
+    }
+    
+    pub fn into_iter(self) -> IntoIter<Assumption, Option<Pointer>> {
+    	return self.possibilities.into_iter();
+    }
+    
+    pub fn len(&self) -> usize {
+    	return self.possibilities.len();
     }
 }

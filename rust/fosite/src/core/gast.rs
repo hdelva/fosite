@@ -1,5 +1,8 @@
 use rustc_serialize::json::*;
 
+use super::Message;
+use super::CHANNEL;
+
 pub type GastID = i16;
 
 #[derive(Debug)]
@@ -42,6 +45,20 @@ pub fn build(node: &Json) -> GastNode {
     let kind = kind.as_string().unwrap();
     let id = obj.get("id").unwrap();
     let id = id.as_i64().unwrap() as i16;
+    
+    let line = obj.get("line");
+    let col = obj.get("col");
+        
+    if let (Some(line), Some(col)) = (line, col) {
+    	let message = Message::Input {
+            source: id.clone(),
+            line: line.as_i64().unwrap() as i16,
+            col: col.as_i64().unwrap() as i16,
+        };
+        
+        &CHANNEL.publish(message);
+    }
+    
     match kind {
         "block" => build_block(id, obj.get("content").unwrap()),
         "assign" => build_assign(id, node),

@@ -42,8 +42,10 @@ pub type Pointer = i16;
 type TypePointer = i16;
 
 fn main() {
-    // test_json();
-    test_vm();
+	let worker = Worker::new();
+    test_json();
+    let _ = worker.finalize();
+    //test_vm();
     // test_collection();
 }
 
@@ -74,14 +76,21 @@ fn test_collection() {
 fn test_json() {
     let mut s = String::new();
 
-    let _ = match File::open("output.json") {
+    let _ = match File::open("input.json") {
         Ok(mut file) => file.read_to_string(&mut s),
         Err(why) => panic!("{:?}", why),
     };
 
     let json = Json::from_str(&s).unwrap();
     let stuff = build(&json);
-    println!("{:?}", stuff);
+    
+    let mut vm = VirtualMachine::new();
+    vm.new_context();
+    
+    vm.declare_simple_type(&"number".to_owned());
+    vm.declare_simple_type(&"Stub".to_owned());
+        
+    vm.execute(&stuff);
 }
 
 fn test_vm() {
@@ -104,7 +113,7 @@ fn test_vm() {
         test3(&mut vm);
     }
 
-    let _ = worker.finalize();
+    
 }
 
 fn test1(vm: &mut VirtualMachine) {

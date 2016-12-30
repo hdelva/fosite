@@ -36,6 +36,8 @@ impl VirtualMachine {
             &NodeType::String { .. } => self.string(),
             &NodeType::Declaration { ref id, ref kind } => self.declaration(id, kind),
             &NodeType::Assignment { ref targets, ref value } => self.assign(targets, value),
+            &NodeType::Block { ref content } => self.block(content),
+            &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(id, parent, attribute),
             _ => panic!("Unsupported Operation"),
         };
 
@@ -47,6 +49,30 @@ impl VirtualMachine {
         &CHANNEL.publish(message);
         return result;
     }
+    
+    fn block(&mut self, content: &Vec<GastNode>) -> ExecutionResult {
+    	let mut total_dependencies = Vec::new();
+    	let mut total_changes = Vec::new();
+    	
+    	for node in content {
+    		let mut intermediate = self.execute(node);
+    		
+    		match intermediate {
+    			ExecutionResult::Success {ref mut dependencies, ref mut changes, ..} => {
+    				total_dependencies.append(dependencies);
+    				total_changes.append(changes);
+    			},
+    			_ => panic!("executing block went wrong")
+    		}
+    	}
+    	
+    	return ExecutionResult::Success {
+    		flow: FlowControl::Continue,
+    		dependencies: total_dependencies,
+    		changes: total_changes,
+    		result: Mapping::new(),
+    	}
+    } 
 
     fn string(&mut self) -> ExecutionResult {
         let pointer = self.memory.new_object();
@@ -141,6 +167,8 @@ impl VirtualMachine {
     // todo, add LEGB
     fn load_identifier(&mut self, name: &String) -> ExecutionResult {
         let context = self.contexts.last().unwrap();
+        
+        //todo, change resolve_optional_identifier
         let mapping = context.get_public_scope().resolve_identifier(&name);
 
         let execution_result = ExecutionResult::Success {
@@ -152,6 +180,158 @@ impl VirtualMachine {
 
         return execution_result;
 
+    }
+
+	fn load_object_attribute(&self, address: &Pointer, name: &String) -> OptionalMapping {
+		let mut unresolved = Vec::new();
+		
+		let object = self.memory.get_object(address);
+		let opt_mappings = object.get_attribute(name);
+		
+		let mut result = OptionalMapping::new();		
+		
+		for (ass, opt_address) in opt_mappings.iter() {            	
+            if let &Some(address) = opt_address {
+            	result.add_mapping(ass.clone(), Some(address.clone()));
+            } else {
+            	unresolved.push(ass.clone());
+            }
+        }
+		
+		if unresolved.len() > 0 {
+        	let types = object.get_extension();
+    		for tpe in types {
+    			let mut found = true;
+    			
+    			for (ass, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
+    				if opt_address.is_none() {
+    					found = false;
+    				}
+    				
+    				for original in unresolved.iter() {
+    					let mut new_ass = ass.clone();
+    					for pls in original.iter() {
+    						new_ass.add_element(pls.clone());
+    					}
+    					result.add_mapping(new_ass, opt_address.clone());
+    				}
+    			}
+    			
+    			if found {
+    				//todo, technically we should adjust the unresolved vector now
+    				// the next type only gets explored if this one returned nothing
+    				break;
+    			}
+        	}
+        } 
+		
+		return result;
+	}
+    
+    fn load_attribute(&mut self, source: &GastID, parent: &GastNode, name: &String) -> ExecutionResult {
+        let mut parent_result = self.execute(parent);
+        
+        let mut total_dependencies = Vec::new();
+        let mut mapping = Mapping::new();
+        
+        // which assumptions still need a valid mapping
+        let mut unresolved = Vec::new();
+        
+        match parent_result {
+            ExecutionResult::Success { ref result, ref mut dependencies, .. } => {
+                let parent_mapping = result;
+                
+                for dependency in dependencies.iter() {
+                	total_dependencies.push(AnalysisItem::Attribute { parent: Box::new(dependency.clone()), name: name.clone() });
+                }
+                
+                total_dependencies.append(dependencies);
+                
+                for (parent_assumption, parent_address) in parent_mapping.iter() {
+                	dependencies.push( AnalysisItem::Object { address: parent_address.clone() });
+                	
+                    let parent_object = self.memory.get_object(parent_address);
+                    let opt_mappings = parent_object.get_attribute(name);
+                                        
+                    for (ass, opt_address) in opt_mappings.iter() {
+                    	
+	                    if let &Some(address) = opt_address {	                    	
+	                    	let mut new_ass = ass.clone();
+        					for pls in parent_assumption.iter() {
+        						new_ass.add_element(pls.clone());
+        					}
+	                    	
+	                    	mapping.add_mapping(new_ass, address.clone());
+	                    } else {
+	                    	unresolved.push(ass.clone());
+	                    	
+	                    	if opt_mappings.len() > 1 {
+		                    	// having a single None is fine
+		                    	// probably a class method then
+		                    	
+		                    	let message = Message::Warning {
+		                    		source: source.clone(),
+		                    		assumption: ass.clone(),
+		                    		content: "object does not always have an attribute of this name".to_owned(),
+		                    	};
+		                    	&CHANNEL.publish(message);
+		                    }
+	                    }
+                    }
+                    
+                    // look for the attribute in its types
+                    if unresolved.len() > 0 {
+			        	let types = parent_object.get_extension();
+			        	
+			        	if types.len() == 0 {
+			        		for unmet in unresolved.iter() {
+			        			//todo, add type information as well
+			        			let message = Message::Error {
+		                    		source: source.clone(),
+		                    		assumption: unmet.clone(),
+		                    		content: "object does not have an attribute of this name".to_owned(),
+		                    	};
+		                    	&CHANNEL.publish(message);
+			        		}
+			        		
+	                    	continue;
+			        	}
+			        	
+			        	for tpe in types.iter() {
+			        		for (ass, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
+		        				for original in unresolved.iter() {
+		        					let mut new_ass = ass.clone();
+		        					for pls in original.iter() {
+		        						new_ass.add_element(pls.clone());
+		        					}
+		        					
+		        					if opt_address.is_none() {
+					        			//todo, add type information as well
+					        			let message = Message::Error {
+				                    		source: source.clone(),
+				                    		assumption: new_ass.clone(),
+				                    		content: "object does not have an attribute of this name".to_owned(),
+				                    	};
+				                    	&CHANNEL.publish(message);
+				                    	continue;
+					        		} else {
+			        					mapping.add_mapping(new_ass, opt_address.unwrap());
+					        		}
+		        				}
+		        			}
+			        	}
+			        } 
+                }
+            }
+            _ => panic!("invalid attribute parent"),
+        }
+        
+        return ExecutionResult::Success {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: Vec::new(),
+            result: mapping,
+        };
     }
 
 
@@ -194,7 +374,7 @@ impl VirtualMachine {
             &NodeType::Sequence { ref content } => self.assign_to_iterable(content, mapping),
             &NodeType::Attribute { ref parent, ref attribute } => {
                 self.assign_to_attribute(parent, attribute, mapping)
-            }
+            },
             // attribute
             _ => panic!("unimplemented"),
         }
@@ -207,7 +387,7 @@ impl VirtualMachine {
                            -> ExecutionResult {
 
         let parent_result = self.execute(parent);
-
+        
         match parent_result {
             ExecutionResult::Success { result, dependencies, .. } => {
                 let parent_mapping = result;

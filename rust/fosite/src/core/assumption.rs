@@ -19,6 +19,10 @@ impl Assumption {
         Assumption { content: content.clone() }
     }
 
+	pub fn add_element(&mut self, element: (GastID, bool)) {
+		self.content.push(element);
+	}
+
     pub fn add(&mut self, source: GastID, positive: bool) {
         self.content.push((source, positive));
     }
