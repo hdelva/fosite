@@ -3,7 +3,7 @@
 
 extern crate lazy_static;
 extern crate bidir_map;
-extern crate carboxyl;
+extern crate term_painter;
 
 extern crate rustc_serialize;
 use rustc_serialize::json::Json;

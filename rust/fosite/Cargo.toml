@@ -5,6 +5,7 @@ authors = ["harm.delva@ugent.be"]
 
 [dependencies]
 bidir-map = "0.3.0"
-carboxyl = "0.2.1"
 rustc-serialize = "0.3"
-lazy_static = "0.1.*"
+lazy_static = "0.2.*"
+term-painter = "0.2.3"
+

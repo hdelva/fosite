@@ -1,7 +1,6 @@
 use super::*;
 
 use std::collections::HashSet;
-use carboxyl::Sink;
 
 pub struct VirtualMachine {
     // instruction queue
