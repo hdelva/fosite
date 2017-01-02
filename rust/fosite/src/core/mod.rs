@@ -7,7 +7,7 @@ mod context;
 mod assumption;
 mod vm;
 mod gast;
-mod message;
+pub mod message;
 mod worker;
 mod collection;
 mod mapping;

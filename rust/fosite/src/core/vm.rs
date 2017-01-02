@@ -1,6 +1,7 @@
 use super::*;
 
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub struct VirtualMachine {
     // instruction queue
@@ -44,14 +45,19 @@ impl VirtualMachine {
             _ => panic!("Unsupported Operation"),
         };
 
-        let message = Message::Notification {
-            source: id.clone(),
-            content: format!("{:?}", result),
-        };
-        
+		{
+			let mut items = HashMap::new();
+			items.insert("node".to_owned(), MessageItem::String(format!("{:?}", result)));
+	        let message = Message::Notification {
+	            source: id.clone(),
+	            kind: NPROCESSED_NODE,
+	            content: items,
+	        };
+	        &CHANNEL.publish(message);
+		}   
+		    
         let _ = self.nodes.pop();
         
-        &CHANNEL.publish(message);
         return result;
     }
     
@@ -336,11 +342,13 @@ impl VirtualMachine {
 	                    	if opt_mappings.len() > 1 {
 		                    	// having a single None is fine
 		                    	// probably a class method then
+		                    	let mut items = HashMap::new();
+		                    	items.insert("assumption".to_owned(), MessageItem::Assumption(ass.clone()));
 		                    	
 		                    	let message = Message::Warning {
 		                    		source: source.clone(),
-		                    		assumption: ass.clone(),
-		                    		content: "object does not always have an attribute of this name".to_owned(),
+		                    		kind: WATTRIBUTE_UNSAFE,
+		                    		content: items,
 		                    	};
 		                    	&CHANNEL.publish(message);
 		                    }
@@ -354,10 +362,13 @@ impl VirtualMachine {
 			        	if types.len() == 0 {
 			        		for unmet in unresolved.iter() {
 			        			//todo, add type information as well
-			        			let message = Message::Error {
+			        			let mut items = HashMap::new();
+		                    	items.insert("assumption".to_owned(), MessageItem::Assumption(unmet.clone()));
+		                    	
+		                    	let message = Message::Error {
 		                    		source: source.clone(),
-		                    		assumption: unmet.clone(),
-		                    		content: "object does not have an attribute of this name".to_owned(),
+		                    		kind: EATTRIBUTE_INVALID,
+		                    		content: items,
 		                    	};
 		                    	&CHANNEL.publish(message);
 			        		}
@@ -375,10 +386,13 @@ impl VirtualMachine {
 		        					
 		        					if opt_address.is_none() {
 					        			//todo, add type information as well
-					        			let message = Message::Error {
+					        			let mut items = HashMap::new();
+				                    	items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass.clone()));
+				                    	
+				                    	let message = Message::Error {
 				                    		source: source.clone(),
-				                    		assumption: new_ass.clone(),
-				                    		content: "object does not have an attribute of this name".to_owned(),
+				                    		kind: EATTRIBUTE_INVALID,
+				                    		content: items,
 				                    	};
 				                    	&CHANNEL.publish(message);
 				                    	continue;

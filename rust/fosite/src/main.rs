@@ -94,27 +94,21 @@ fn test_json() {
     vm.execute(&stuff);
 }
 
-fn test_vm() {
-	let mut worker = Worker::new();
-	
-    {
-        let mut vm = VirtualMachine::new();
+fn test_vm() {	
+    let mut vm = VirtualMachine::new();
 
-        vm.new_context();
+    vm.new_context();
 
-        vm.declare_simple_type(&"number".to_owned());
-        vm.declare_simple_type(&"Stub".to_owned());
+    vm.declare_simple_type(&"number".to_owned());
+    vm.declare_simple_type(&"Stub".to_owned());
 
-        test1(&mut vm);
-        // println!("");
+    test1(&mut vm);
+    // println!("");
 
-        // test2(&mut vm);
-        // println!("");
+    // test2(&mut vm);
+    // println!("");
 
-        test3(&mut vm);
-    }
-
-    
+    test3(&mut vm);
 }
 
 fn test1(vm: &mut VirtualMachine) {
