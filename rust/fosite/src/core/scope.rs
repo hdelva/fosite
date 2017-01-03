@@ -3,6 +3,7 @@ use super::{Mapping, OptionalMapping};
 
 use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::hash_set::Iter;
 
 #[derive(Debug)]
 struct Frame {

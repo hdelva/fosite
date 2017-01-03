@@ -1,25 +1,31 @@
 use super::GastID;
 use super::Assumption;
+use super::GastNode;
+
 
 use std::collections::HashMap;
 
-pub const EATTRIBUTE_INVALID: i16 = 1;
-pub const WATTRIBUTE_UNSAFE: i16 = 2;
-pub const NPROCESSING_NODE: i16 = 3;
-pub const NPROCESSED_NODE: i16 = 4;
-pub const EIDENTIFIER_INVALID: i16 = 5;
-pub const WIDENTIFIER_UNSAFE: i16 = 6;
+pub type message_type = i16;
+
+pub const EATTRIBUTE_INVALID: message_type = 1;
+pub const WATTRIBUTE_UNSAFE: message_type = 2;
+pub const NPROCESSING_NODE: message_type = 3;
+pub const NPROCESSED_NODE: message_type = 4;
+pub const EIDENTIFIER_INVALID: message_type = 5;
+pub const WIDENTIFIER_UNSAFE: message_type = 6;
+pub const WATTRIBUTE_POLY_TYPE: message_type = 7;
+pub const WIDENTIFIER_POLY_TYPE: message_type = 8;
 
 #[derive(Clone, Debug)]
 pub enum Message {
 	Error {source: GastID, kind: i16, content: HashMap<String, MessageItem> },
 	Warning {source: GastID, kind: i16, content: HashMap<String, MessageItem> },
-	Input { source: GastID, line: i16, col: i16 },
+	Input { source: GastID, line: i16, col: i16, node: GastNode },
     Notification { source: GastID, kind: i16, content: HashMap<String, MessageItem> },
     Terminate,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum MessageItem {
 	Number(i16),
 	String(String),

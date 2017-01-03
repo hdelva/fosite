@@ -2,6 +2,8 @@ use super::*;
 
 use std::collections::HashSet;
 use std::collections::HashMap;
+use std::iter::FromIterator;
+use std::collections::hash_map::Entry;
 
 pub struct VirtualMachine {
     // instruction queue
@@ -41,7 +43,7 @@ impl VirtualMachine {
             &NodeType::Declaration { ref id, ref kind } => self.declaration(id, kind),
             &NodeType::Assignment { ref targets, ref value } => self.assign(targets, value),
             &NodeType::Block { ref content } => self.block(content),
-            &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(id, parent, attribute),
+            &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(parent, attribute),
             &NodeType::If { ref test, ref body, ref or_else } => self.conditional(test, body, or_else),
             _ => panic!("Unsupported Operation"),
         };
@@ -67,7 +69,8 @@ impl VirtualMachine {
     	
     	let last_assumption = self.assumptions.pop().unwrap();
     	
-    	let mut changed_objects = HashSet::new();
+    	let mut total_changes = HashSet::new();
+        let mut total_dependencies = HashSet::new();
     	
     	let mut positive_assumption = last_assumption.clone();
     	positive_assumption.add(self.nodes.last().unwrap().clone(), false);
@@ -77,28 +80,34 @@ impl VirtualMachine {
     	self.assumptions.push(positive_assumption);
     	let body_result = self.execute(body);
     	let _ = self.assumptions.pop();
-    	
-        let mut scope_changes = false;
 
+        let mut identifier_changed = false;
+    	
     	match body_result {
-    		ExecutionResult::Success {ref changes, ..} => {
+    		ExecutionResult::Success {ref changes, ref dependencies, ..} => {
     			for change in changes {
-    				if let &AnalysisItem::Object {address} = change {
-    					changed_objects.insert(address);
-    				} else if let &AnalysisItem::Identifier {..} = change {
-                        scope_changes = true;
+                    total_changes.insert(change.clone());
+    				
+                    if let &AnalysisItem::Identifier {ref name} = change {
+                        identifier_changed = true;
                     }
     			}
+
+                for dependency in dependencies {
+                    total_dependencies.insert(dependency.clone());
+                }
     		},
     		_ => ()
     	}
     	
-    	for address in &changed_objects {
-    		let mut object = self.memory.get_object_mut(address);
-    		object.change_branch();
+    	for change in &total_changes {
+            if let &AnalysisItem::Object {ref address} = change {
+                let mut object = self.memory.get_object_mut(address);
+    		    object.change_branch();
+            }
     	}
 
-        if scope_changes {
+        if identifier_changed {
             self.scopes.last_mut().unwrap().change_branch();
         }
     	
@@ -107,30 +116,108 @@ impl VirtualMachine {
     	let _ = self.assumptions.pop();
     	
     	match else_result {
-    		ExecutionResult::Success {ref changes, ..} => {
+            ExecutionResult::Success {ref changes, ref dependencies, ..} => {
     			for change in changes {
-    				if let &AnalysisItem::Object {address} = change {
-    					changed_objects.insert(address);
-    				} else if let &AnalysisItem::Identifier {..} = change {
-                        scope_changes = true;
+                    total_changes.insert(change.clone());
+    				
+                    if let &AnalysisItem::Identifier {ref name} = change {
+                        identifier_changed = true;
                     }
     			}
+
+                for dependency in dependencies {
+                    total_dependencies.insert(dependency.clone());
+                }
     		},
     		_ => ()
     	}
     	
-    	for address in &changed_objects {
-    		let mut object = self.memory.get_object_mut(address);
-    		object.merge_branches();
+    	for change in &total_changes {
+            if let &AnalysisItem::Object {ref address} = change {
+                let mut object = self.memory.get_object_mut(address);
+    		    object.merge_branches();
+            }
     	}
 
-        if scope_changes {
+        if identifier_changed {
             self.scopes.last_mut().unwrap().merge_branches();
         }
     	
     	self.assumptions.push(last_assumption);
+
+        self.check_conditional(&total_changes);
     	
-    	return body_result;
+        //todo make this sensible
+    	return ExecutionResult::Success {
+            changes: Vec::from_iter(total_changes.into_iter()),
+            dependencies: Vec::from_iter(total_dependencies.into_iter()),
+            flow: FlowControl::Continue,
+            result: Mapping::new(), //todo change to python None
+        }
+    }
+
+    // has to be mutable because there are executions inside
+    fn check_conditional(&mut self, changes: &HashSet<AnalysisItem>) {
+        for change in changes {
+            if !change.is_object() {
+                let mut all_types = HashMap::new();
+                
+                let execution_result = match change {
+                    &AnalysisItem::Identifier {ref name} => self.load_identifier(name),
+                    &AnalysisItem::Attribute {ref parent, ref name} => self.load_attribute(&parent.as_node(), name),
+                    _ => panic!("AnalysisItem is an object when a previous check should've excluded this"),
+                };
+
+                if let ExecutionResult::Success {ref result, ..} = execution_result {
+                    for (assumption, address) in result.iter() {
+                        let object = self.memory.get_object(address);
+                        let tpe = object.get_extension()[0];
+
+                        match all_types.entry(tpe.clone()) {
+                            Entry::Vacant(v) => {
+                                v.insert(vec!(assumption.clone()));
+                            },
+                            Entry::Occupied(mut o) => {
+                                o.get_mut().push(assumption.clone());
+                            },
+                        };
+                    }
+                }
+
+                if all_types.len() > 1 {
+                    let mut items = HashMap::new();
+
+                    items.insert("name".to_owned(), MessageItem::String(change.to_string()));
+
+                    let mut type_count = 0;
+                    for (tpe, assumptions) in all_types {
+                        let type_name = self.knowledge_base.get_type_name(&tpe).unwrap();
+                        items.insert(format!("type {}", type_count), MessageItem::String(type_name.clone()));
+
+                        let mut ass_count = 0;
+                        for assumption in assumptions {
+                            items.insert(format!("type {} assumption {}", type_count, ass_count), MessageItem::Assumption(assumption.clone()));
+                            ass_count += 1;
+                        }
+                        type_count += 1;
+                    }
+
+                    let kind = if change.is_identifier() {
+                            WIDENTIFIER_POLY_TYPE
+                        } else {
+                            WATTRIBUTE_POLY_TYPE
+                        };
+
+                    let message = Message::Warning {
+                        source: self.nodes.last().unwrap().clone(),
+                        kind: kind,
+                        content: items,
+                    };
+
+                    &CHANNEL.publish(message);
+                }
+            }
+        }
     }
     
     fn block(&mut self, content: &Vec<GastNode>) -> ExecutionResult {
@@ -269,8 +356,7 @@ impl VirtualMachine {
         return execution_result;
     }
 
-    // todo, add LEGB
-    fn load_identifier(&mut self, name: &String) -> ExecutionResult {
+    fn load_identifier(&self, name: &String) -> ExecutionResult {
         let mut unresolved = vec!(Assumption::empty());
 
         let mut mapping = Mapping::new();
@@ -393,7 +479,7 @@ impl VirtualMachine {
 		return result;
 	}
     
-    fn load_attribute(&mut self, source: &GastID, parent: &GastNode, name: &String) -> ExecutionResult {
+    fn load_attribute(&mut self, parent: &GastNode, name: &String) -> ExecutionResult {
         let mut parent_result = self.execute(parent);
         
         let mut total_dependencies = Vec::new();
@@ -437,7 +523,7 @@ impl VirtualMachine {
 		                    	items.insert("assumption".to_owned(), MessageItem::Assumption(ass.clone()));
 		                    	
 		                    	let message = Message::Warning {
-		                    		source: source.clone(),
+                                    source: self.nodes.last().unwrap().clone(),
 		                    		kind: WATTRIBUTE_UNSAFE,
 		                    		content: items,
 		                    	};
@@ -457,7 +543,7 @@ impl VirtualMachine {
 		                    	items.insert("assumption".to_owned(), MessageItem::Assumption(unmet.clone()));
 		                    	
 		                    	let message = Message::Error {
-		                    		source: source.clone(),
+                                    source: self.nodes.last().unwrap().clone(),
 		                    		kind: EATTRIBUTE_INVALID,
 		                    		content: items,
 		                    	};
@@ -481,7 +567,7 @@ impl VirtualMachine {
 				                    	items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass.clone()));
 				                    	
 				                    	let message = Message::Error {
-				                    		source: source.clone(),
+				                    		source: self.nodes.last().unwrap().clone(),
 				                    		kind: EATTRIBUTE_INVALID,
 				                    		content: items,
 				                    	};

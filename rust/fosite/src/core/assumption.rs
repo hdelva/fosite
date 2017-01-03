@@ -1,7 +1,7 @@
 use super::GastID;
 use std::slice::Iter;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Assumption {
     content: Vec<(GastID, bool)>,
 }

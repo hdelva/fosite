@@ -5,7 +5,7 @@ use super::CHANNEL;
 
 pub type GastID = i16;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GastNode {
     pub id: GastID,
     pub kind: NodeType,
@@ -20,7 +20,7 @@ impl GastNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NodeType {
     Identifier { name: String },
     Attribute {
@@ -53,18 +53,8 @@ pub fn build(node: &Json) -> GastNode {
     
     let line = obj.get("line");
     let col = obj.get("col");
-        
-    if let (Some(line), Some(col)) = (line, col) {
-    	let message = Message::Input {
-            source: id.clone(),
-            line: line.as_i64().unwrap() as i16,
-            col: col.as_i64().unwrap() as i16,
-        };
-        
-        &CHANNEL.publish(message);
-    }
     
-    match kind {
+    let node = match kind {
         "block" => build_block(id, obj.get("content").unwrap()),
         "assign" => build_assign(id, node),
         "identifier" => build_identifier(id, node),
@@ -76,7 +66,20 @@ pub fn build(node: &Json) -> GastNode {
         "sequence" => build_sequence(id, node),
         "if" => build_if(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
+    };
+
+    if let (Some(line), Some(col)) = (line, col) {
+    	let message = Message::Input {
+            source: id.clone(),
+            line: line.as_i64().unwrap() as i16,
+            col: col.as_i64().unwrap() as i16,
+            node: node.clone(),
+        };
+        
+        &CHANNEL.publish(message);
     }
+
+    return node;
 }
 
 fn build_if(id: GastID, node: &Json) -> GastNode {
