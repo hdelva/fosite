@@ -32,7 +32,8 @@ pub enum NodeType {
         targets: Vec<GastNode>,
         value: Box<GastNode>,
     },
-    Number { value: i64 },
+    Int { value: i64 },
+    Float { value: f64 },
     String { value: String },
     List { content: Vec<GastNode> },
     Sequence { content: Vec<GastNode> },
@@ -67,7 +68,8 @@ pub fn build(node: &Json) -> GastNode {
         "block" => build_block(id, obj.get("content").unwrap()),
         "assign" => build_assign(id, node),
         "identifier" => build_identifier(id, node),
-        "number" => build_number(id, node),
+        "int" => build_int(id, node),
+        "float" => build_float(id, node),
         "string" => build_string(id, node),
         "attribute" => build_attribute(id, node),
         "list" => build_list(id, node),
@@ -128,10 +130,16 @@ fn build_identifier(id: GastID, node: &Json) -> GastNode {
     return GastNode::new(id, NodeType::Identifier { name: name });
 }
 
-fn build_number(id: GastID, node: &Json) -> GastNode {
+fn build_int(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let value = obj.get("value").unwrap().as_i64().unwrap();
-    return GastNode::new(id, NodeType::Number { value: value });
+    return GastNode::new(id, NodeType::Int { value: value });
+}
+
+fn build_float(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    let value = obj.get("value").unwrap().as_f64().unwrap();
+    return GastNode::new(id, NodeType::Float { value: value });
 }
 
 fn build_string(id: GastID, node: &Json) -> GastNode {

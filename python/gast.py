@@ -193,7 +193,7 @@ class Identifier(Named):
   def str(self):
     return '{}'.format(self.name)
 
-class Number(GastNode):
+class Int(GastNode):
   def __init__(self, value, line, col):
     self.line = line
     self.col = col
@@ -203,7 +203,22 @@ class Number(GastNode):
     count += 1
 
   def kind(self):
-    return constants.NUMBER
+    return constants.INT
+ 
+  def str(self):
+    return str(self.value)
+
+class Float(GastNode):
+  def __init__(self, value, line, col):
+    self.line = line
+    self.col = col
+    self.value = value
+    global count
+    self.id = count
+    count += 1
+
+  def kind(self):
+    return constants.FLOAT
  
   def str(self):
     return str(self.value)

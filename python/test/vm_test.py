@@ -10,7 +10,6 @@ from gast import GastEncoder
 
 code = """
 v = 5
-x, y = 1
 x.attribute = 5
 
 """

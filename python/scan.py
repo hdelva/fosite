@@ -344,7 +344,11 @@ class Scan:
 
   def literal(self, code):
     if type(code) is Num:
-      return gast.Number(code.n, code.lineno, code.col_offset)
+      n = code.n 
+      if type(n) is float:
+        return gast.Float(n, code.lineno, code.col_offset)
+      else:
+        return gast.Int(code.n, code.lineno, code.col_offset)
     elif type(code) is Str:
       return gast.String(code.s, code.lineno, code.col_offset)
     elif type(code) is Bytes:

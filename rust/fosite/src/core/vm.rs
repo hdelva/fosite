@@ -34,7 +34,8 @@ impl VirtualMachine {
         self.nodes.push(id.clone());
 
         let result = match kind {
-            &NodeType::Number { .. } => self.number(),
+            &NodeType::Int { .. } => self.int(),
+            &NodeType::Float { .. } => self.float(),
             &NodeType::Identifier { ref name } => self.load_identifier(name),
             &NodeType::String { .. } => self.string(),
             &NodeType::Declaration { ref id, ref kind } => self.declaration(id, kind),
@@ -218,10 +219,35 @@ impl VirtualMachine {
         return execution_result;
     }
 
-    fn number(&mut self) -> ExecutionResult {
+    fn int(&mut self) -> ExecutionResult {
         let pointer = self.memory.new_object();
         let object = self.memory.get_object_mut(&pointer);
-        let type_name = "number".to_owned();
+        let type_name = "int".to_owned();
+        let type_pointer = self.knowledge_base.get_type(&type_name);
+
+        match type_pointer {
+            Some(address) => {
+                object.extends(address.clone());
+            }
+            _ => panic!("system isn't properly initialized"),
+        }
+
+        let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
+
+        let execution_result = ExecutionResult::Success {
+            flow: FlowControl::Continue,
+            dependencies: vec![],
+            changes: vec![],
+            result: mapping,
+        };
+
+        return execution_result;
+    }
+
+    fn float(&mut self) -> ExecutionResult {
+        let pointer = self.memory.new_object();
+        let object = self.memory.get_object_mut(&pointer);
+        let type_name = "float".to_owned();
         let type_pointer = self.knowledge_base.get_type(&type_name);
 
         match type_pointer {
