@@ -10,8 +10,6 @@ use rustc_serialize::json::Json;
 
 pub mod core;
 use core::VirtualMachine;
-use core::GastNode;
-use core::NodeType;
 use core::build;
 
 use std::io::prelude::*;
@@ -84,12 +82,17 @@ fn test_vm() {
     let stuff = build(&json);
     
     let mut vm = VirtualMachine::new();
+
+    // builtins
     vm.new_scope();
     
     vm.declare_simple_type(&"int".to_owned());
     vm.declare_simple_type(&"float".to_owned());
     vm.declare_simple_type(&"string".to_owned());
     vm.declare_simple_type(&"Stub".to_owned());
+
+    // global scope
+    vm.new_scope();
         
     vm.execute(&stuff);
 }
