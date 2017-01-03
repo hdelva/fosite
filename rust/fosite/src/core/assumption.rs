@@ -35,6 +35,10 @@ impl Assumption {
         return &self.content;
     }
 
+    pub fn len(&self) -> usize {
+        return self.content.len().clone();
+    }
+
     // pub fn merge<'a>(&'a self, other: &'a Assumption) -> Option<Assumption> {
     // if self.conflicts_with(other) {
     // return None

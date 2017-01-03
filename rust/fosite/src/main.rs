@@ -85,7 +85,7 @@ fn test_json() {
     let stuff = build(&json);
     
     let mut vm = VirtualMachine::new();
-    vm.new_context();
+    vm.new_scope();
     
     vm.declare_simple_type(&"number".to_owned());
     vm.declare_simple_type(&"string".to_owned());
@@ -97,7 +97,7 @@ fn test_json() {
 fn test_vm() {	
     let mut vm = VirtualMachine::new();
 
-    vm.new_context();
+    vm.new_scope();
 
     vm.declare_simple_type(&"number".to_owned());
     vm.declare_simple_type(&"Stub".to_owned());

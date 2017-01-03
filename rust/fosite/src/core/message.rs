@@ -7,6 +7,8 @@ pub const EATTRIBUTE_INVALID: i16 = 1;
 pub const WATTRIBUTE_UNSAFE: i16 = 2;
 pub const NPROCESSING_NODE: i16 = 3;
 pub const NPROCESSED_NODE: i16 = 4;
+pub const EIDENTIFIER_INVALID: i16 = 5;
+pub const WIDENTIFIER_UNSAFE: i16 = 6;
 
 #[derive(Clone, Debug)]
 pub enum Message {

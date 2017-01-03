@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub struct VirtualMachine {
     // instruction queue
     // call stack
-    contexts: Vec<Context>,
+    scopes: Vec<Scope>,
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
 
@@ -19,7 +19,7 @@ impl VirtualMachine {
         let memory = Memory::new();
         let knowledge = KnowledgeBase::new();
         VirtualMachine {
-            contexts: Vec::new(),
+            scopes: Vec::new(),
             memory: memory,
             knowledge_base: knowledge,
 			nodes: vec!(),
@@ -77,12 +77,16 @@ impl VirtualMachine {
     	let body_result = self.execute(body);
     	let _ = self.assumptions.pop();
     	
+        let mut scope_changes = false;
+
     	match body_result {
     		ExecutionResult::Success {ref changes, ..} => {
     			for change in changes {
     				if let &AnalysisItem::Object {address} = change {
     					changed_objects.insert(address);
-    				}
+    				} else if let &AnalysisItem::Identifier {..} = change {
+                        scope_changes = true;
+                    }
     			}
     		},
     		_ => ()
@@ -92,6 +96,10 @@ impl VirtualMachine {
     		let mut object = self.memory.get_object_mut(address);
     		object.change_branch();
     	}
+
+        if scope_changes {
+            self.scopes.last_mut().unwrap().change_branch();
+        }
     	
     	self.assumptions.push(negative_assumption);
     	let else_result = self.execute(or_else);
@@ -102,7 +110,9 @@ impl VirtualMachine {
     			for change in changes {
     				if let &AnalysisItem::Object {address} = change {
     					changed_objects.insert(address);
-    				}
+    				} else if let &AnalysisItem::Identifier {..} = change {
+                        scope_changes = true;
+                    }
     			}
     		},
     		_ => ()
@@ -112,6 +122,10 @@ impl VirtualMachine {
     		let mut object = self.memory.get_object_mut(address);
     		object.merge_branches();
     	}
+
+        if scope_changes {
+            self.scopes.last_mut().unwrap().merge_branches();
+        }
     	
     	self.assumptions.push(last_assumption);
     	
@@ -183,17 +197,14 @@ impl VirtualMachine {
         let mut possibilities = HashSet::new();
         possibilities.insert(pointer.clone());
 
-        match self.contexts.last_mut() {
-            Some(mut last) => {
-                let scope = last.get_public_scope_mut();
-                let mut mapping = Mapping::new();
-                mapping.add_mapping(Assumption::empty(), pointer.clone());
-                scope.set_mapping(name.clone(),
-                                  self.assumptions.last().unwrap().clone(),
-                                  mapping);
-            }
-            _ => panic!("No Execution Contexts"),
-        }
+        let mut scope = self.scopes.last_mut().unwrap();
+
+        let mut mapping = Mapping::new();
+        mapping.add_mapping(Assumption::empty(), pointer.clone());
+        scope.set_mapping(name.clone(),
+                            self.assumptions.last().unwrap().clone(),
+                            mapping);
+
 
         let mapping = Mapping::simple(Assumption::empty(), -1); // todo change to python None
 
@@ -234,10 +245,64 @@ impl VirtualMachine {
 
     // todo, add LEGB
     fn load_identifier(&mut self, name: &String) -> ExecutionResult {
-        let context = self.contexts.last().unwrap();
+        let mut unresolved = vec!(Assumption::empty());
+
+        let mut mapping = Mapping::new();
+
+        for scope in self.scopes.iter().rev() {
+            let opt_mappings = scope.resolve_optional_identifier(&name);
+
+            let mut new_unresolved = Vec::new();
+
+            for (ass, opt_address) in opt_mappings.iter() {   
+                for unresolved_ass in &unresolved {
+                    let mut new_ass = ass.clone();
+                    for pls in unresolved_ass.iter() {
+                        new_ass.add_element(pls.clone());
+                    }
+
+                    if let &Some(address) = opt_address {
+                        mapping.add_mapping(new_ass, address.clone());
+                    } else {
+                        new_unresolved.push(new_ass.clone());
+
+                        if opt_mappings.len() > 1 {
+                            let mut items = HashMap::new();
+                            items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass));
+                            
+                            let message = Message::Warning {
+                                source: self.nodes.last().unwrap().clone(),
+                                kind: WIDENTIFIER_UNSAFE,
+                                content: items,
+                            };
+                            &CHANNEL.publish(message);
+                        }
+                    }
+                }         	
+            }
+
+            unresolved = new_unresolved;
+            if unresolved.len() == 0 {
+                break;
+            }
+        }
+
+
+        if unresolved.len() > 0 {
+            for unresolved_ass in unresolved {
+                let mut items = HashMap::new();
+                items.insert("assumption".to_owned(), MessageItem::Assumption(unresolved_ass.clone()));
+                
+                let message = Message::Error {
+                    source: self.nodes.last().unwrap().clone(),
+                    kind: EIDENTIFIER_INVALID,
+                    content: items,
+                };
+                &CHANNEL.publish(message);
+            }
+        }
+
         
-        //todo, change resolve_optional_identifier
-        let mapping = context.get_public_scope().resolve_identifier(&name);
 
         let execution_result = ExecutionResult::Success {
             flow: FlowControl::Continue,
@@ -540,15 +605,11 @@ impl VirtualMachine {
     }
 
     fn assign_to_identifier(&mut self, target: &String, mapping: &Mapping) -> ExecutionResult {
-        match self.contexts.last_mut() {
-            Some(mut last) => {
-                let scope = last.get_public_scope_mut();
-                scope.set_mapping(target.clone(),
-                                  self.assumptions.last().unwrap().clone(),
-                                  mapping.clone());
-            }
-            _ => panic!("No Execution Contexts"),
-        }
+        let mut scope = self.scopes.last_mut().unwrap();
+
+        scope.set_mapping(target.clone(),
+                            self.assumptions.last().unwrap().clone(),
+                            mapping.clone());
 
         let mapping = Mapping::simple(Assumption::empty(), -1);
 
@@ -558,45 +619,6 @@ impl VirtualMachine {
             changes: vec![AnalysisItem::Identifier { name: target.clone() }],
             result: mapping,
         };
-    }
-
-    pub fn inspect_identifier(&self, name: &String) {
-        let context = self.contexts.last().unwrap();
-
-        let candidate = context.get_public_scope().resolve_optional_identifier(&name);
-
-        for (assumption, opt_address) in candidate.iter() {
-            self.print_mapping_info(name, assumption, opt_address)
-        }
-    }
-
-    fn print_mapping_info(&self, name: &String, ass: &Assumption, address: &Option<Pointer>) {
-        let object = self.memory.get_object(&address.unwrap());
-        let tpe = object.get_extension().first();
-
-        match tpe {
-            Some(ref type_pointer) => {
-                let type_name = self.knowledge_base.get_type_name(type_pointer);
-                println!("Assuming {:?}, the Object named {:?} at address {:?} has type {:?}",
-                         ass,
-                         name,
-                         address.unwrap(),
-                         type_name.unwrap());
-            }
-            _ => {
-                if object.is_type() {
-                    println!("Assuming {:?}, {:?} is a type in defined at {:?}",
-                             ass,
-                             name,
-                             address.unwrap())
-                } else {
-                    println!("Assuming {:?}, {:?} is an object of unknown type at address {:?}",
-                             ass,
-                             name,
-                             address.unwrap())
-                }
-            }
-        }
     }
 
     pub fn declare_simple_type(&mut self, name: &String) {
@@ -609,8 +631,8 @@ impl VirtualMachine {
         self.assign_to_identifier(name, &Mapping::simple(Assumption::empty(), pointer));
     }
 
-    pub fn new_context(&mut self) {
-        self.contexts.push(Context::new());
+    pub fn new_scope(&mut self) {
+        self.scopes.push(Scope::new());
     }
 
     // fn resolve_attribute(&mut self, parent: &Pointer, name: &String) -> ExecutionResult {

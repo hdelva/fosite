@@ -95,6 +95,7 @@ impl Logger {
 		
 		let message = match kind {
 			&WATTRIBUTE_UNSAFE => "Object does not always have an attribute of this name",
+			&WIDENTIFIER_UNSAFE => "An identifier of this name does not always exist",
 			_ => "Unknown warning",
 		};
 		
@@ -109,6 +110,7 @@ impl Logger {
 		
         let message = match kind {
 			&EATTRIBUTE_INVALID => "Object does not have an attribute of this name",
+			&EIDENTIFIER_INVALID => "An identifier of this name does not exist",
 			_ => "Unknown error",
 		};
 		
@@ -116,13 +118,15 @@ impl Logger {
 	}
 	
 	fn print_assumption(&self, assumption: &Assumption) {
-		println!("{}", Bold.paint("Under the following assumptions:"));
-		for &(source, positive) in assumption.iter() {
-			let &(row, col) = self.sources.get(&source).unwrap();
-			let condition = if positive {"true"} else {"false"};
-			println!("  {} {} is {}", "Condition at",
-									  Bold.paint(format!("row {}, column {}", row, col+1)),
-									  Bold.paint(format!("{}", condition)));
+		if assumption.len() != 0 {
+			println!("{}", Bold.paint("Under the following assumptions:"));
+			for &(source, positive) in assumption.iter() {
+				let &(row, col) = self.sources.get(&source).unwrap();
+				let condition = if positive {"true"} else {"false"};
+				println!("  {} {} is {}", "Condition at",
+										Bold.paint(format!("row {}, column {}", row, col+1)),
+										Bold.paint(format!("{}", condition)));
+			}
 		}
 	}
 	
