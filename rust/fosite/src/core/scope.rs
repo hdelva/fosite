@@ -3,7 +3,10 @@ use super::{Mapping, OptionalMapping};
 
 use std::collections::HashSet;
 use std::collections::HashMap;
-use std::collections::hash_set::Iter;
+
+use term_painter::ToStyle;
+use term_painter::Color::*;
+use term_painter::Attr::*;
 
 #[derive(Debug)]
 struct Frame {
@@ -92,7 +95,6 @@ impl Scope {
             current_index -= 1
         }
 
-
         loop {
             if let Some(result) = self.frames[current_index].resolve_identifier(name) {
                 return result;
@@ -108,23 +110,26 @@ impl Scope {
     }
 
     pub fn set_mapping(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
+        let mut count = 1 as usize;
         let mut current_index = 0 as usize;
 
         for &(source, positive) in assumption.iter() {
             let old_index = current_index;
 
+            count *= 2;
+
             if positive {
-                current_index += 1
+                current_index = count - 1;
             } else {
-                current_index += 2
+                current_index = count;
             }
 
             if current_index >= self.frames.len() {
-                let positive_assumption = Assumption::simple(source.clone(), positive.clone());
+                let positive_assumption = Assumption::simple(source.clone(), true);
                 self.frames.push(Frame::new(positive_assumption, Some(old_index.clone())));
-                let negative_assumption = Assumption::simple(source.clone(), !positive);
+                let negative_assumption = Assumption::simple(source.clone(), false);
                 self.frames.push(Frame::new(negative_assumption, Some(old_index.clone())));
-                self.path.push(true);
+                self.path.push(positive);
             }
         }
 
@@ -201,7 +206,13 @@ impl Scope {
         let _ = self.frames.pop();
         let _ = self.frames.pop();
 
-        let current_frame = self.frames.last_mut().unwrap();
+        let mut current_index = self.frames.len() - 1;
+
+        if *self.path.last().unwrap() {
+            current_index -= 1
+        }
+
+        let ref mut current_frame = self.frames[current_index];
 
         for (name, mapping) in new_content.into_iter() {
             current_frame.set_optional_mapping(name.clone(), mapping)
