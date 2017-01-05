@@ -10,17 +10,14 @@ pub enum FlowControl {
 }
 
 #[derive(Debug, Clone)]
-pub enum ExecutionResult {
-    Failure,
-    Success {
-        flow: FlowControl,
-        dependencies: Vec<AnalysisItem>,
-        changes: Vec<AnalysisItem>,
-        result: Mapping,
-    },
+pub struct ExecutionResult {
+    pub flow: FlowControl,
+    pub dependencies: Vec<AnalysisItem>,
+    pub changes: Vec<AnalysisItem>,
+    pub result: Mapping,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AnalysisItem {
     Identifier { name: String },
     Object { address: Pointer },
@@ -61,13 +58,13 @@ impl AnalysisItem {
         match self {
             &AnalysisItem::Identifier {ref name} => {
                 return GastNode {
-                    id: -1,
+                    id: 0, 
                     kind: NodeType::Identifier {name: name.clone()},
                 }
             }, 
             &AnalysisItem::Attribute {ref parent, ref name} => {
                 return GastNode {
-                    id: -1,
+                    id: 0,
                     kind: NodeType::Attribute {
                         parent: Box::new(parent.as_node()),
                         attribute: name.clone(),

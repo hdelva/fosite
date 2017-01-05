@@ -5,9 +5,12 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::collections::hash_map::Entry;
 
+use term_painter::ToStyle;
+use term_painter::Color::*;
+use term_painter::Attr::*;
+
 pub struct VirtualMachine {
-    // instruction queue
-    // call stack
+    //todo call stack
     scopes: Vec<Scope>,
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
@@ -45,6 +48,7 @@ impl VirtualMachine {
             &NodeType::Block { ref content } => self.block(content),
             &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(parent, attribute),
             &NodeType::If { ref test, ref body, ref or_else } => self.conditional(test, body, or_else),
+            &NodeType::BinOp {ref left, ref right, .. } => self.binop(left, right),
             _ => panic!("Unsupported Operation"),
         };
 
@@ -63,8 +67,40 @@ impl VirtualMachine {
         
         return result;
     }
+
+    fn binop(&mut self, left: &GastNode, right: &GastNode) -> ExecutionResult {
+        let mut total_changes = Vec::new();
+        let mut total_dependencies = Vec::new();
+
+        let mut left_result = self.execute(left);
+        let mut left_mapping = left_result.result;
+        total_changes.append(&mut left_result.changes);
+        total_dependencies.append(&mut left_result.dependencies);
+
+        let mut right_result = self.execute(left);
+        let mut right_mapping = right_result.result;
+        total_changes.append(&mut right_result.changes);
+        total_dependencies.append(&mut right_result.dependencies);
+
+        for (left_ass, left_address) in left_mapping.iter() {
+
+        }
+
+        let mapping = Mapping::simple(Assumption::empty(), -1);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: mapping,
+        };
+
+        return execution_result;
+    }
     
     fn conditional(&mut self, test: &GastNode, body: &GastNode, or_else: &GastNode) -> ExecutionResult {
+        //todo add this
+
     	let _ = self.execute(test);
     	
     	let last_assumption = self.assumptions.pop().unwrap();
@@ -73,32 +109,30 @@ impl VirtualMachine {
         let mut total_dependencies = HashSet::new();
     	
     	let mut positive_assumption = last_assumption.clone();
-    	positive_assumption.add(self.nodes.last().unwrap().clone(), false);
+    	positive_assumption.add(self.nodes.last().unwrap().clone(), true);
     	let mut negative_assumption = last_assumption.clone();
-    	negative_assumption.add(self.nodes.last().unwrap().clone(), true);
+    	negative_assumption.add(self.nodes.last().unwrap().clone(), false);
     	
     	self.assumptions.push(positive_assumption);
     	let body_result = self.execute(body);
     	let _ = self.assumptions.pop();
 
         let mut identifier_changed = false;
-    	
-    	match body_result {
-    		ExecutionResult::Success {ref changes, ref dependencies, ..} => {
-    			for change in changes {
-                    total_changes.insert(change.clone());
-    				
-                    if let &AnalysisItem::Identifier {ref name} = change {
-                        identifier_changed = true;
-                    }
-    			}
 
-                for dependency in dependencies {
-                    total_dependencies.insert(dependency.clone());
-                }
-    		},
-    		_ => ()
-    	}
+        let changes = body_result.changes;
+        let dependencies = body_result.dependencies;
+    	
+        for change in &changes {
+            total_changes.insert(change.clone());
+            
+            if let &AnalysisItem::Identifier {..} = change {
+                identifier_changed = true;
+            }
+        }
+
+        for dependency in &dependencies {
+            total_dependencies.insert(dependency.clone());
+        }
     	
     	for change in &total_changes {
             if let &AnalysisItem::Object {ref address} = change {
@@ -115,45 +149,47 @@ impl VirtualMachine {
     	let else_result = self.execute(or_else);
     	let _ = self.assumptions.pop();
     	
-    	match else_result {
-            ExecutionResult::Success {ref changes, ref dependencies, ..} => {
-    			for change in changes {
-                    total_changes.insert(change.clone());
-    				
-                    if let &AnalysisItem::Identifier {ref name} = change {
-                        identifier_changed = true;
-                    }
-    			}
+        let changes = else_result.changes;
+        let dependencies = else_result.dependencies;
 
-                for dependency in dependencies {
-                    total_dependencies.insert(dependency.clone());
-                }
-    		},
-    		_ => ()
-    	}
-    	
-    	for change in &total_changes {
-            if let &AnalysisItem::Object {ref address} = change {
-                let mut object = self.memory.get_object_mut(address);
-    		    object.merge_branches();
+        for change in &changes {
+            total_changes.insert(change.clone());
+            
+            if let &AnalysisItem::Identifier {..} = change {
+                identifier_changed = true;
             }
-    	}
-
-        if identifier_changed {
-            self.scopes.last_mut().unwrap().merge_branches();
         }
-    	
-    	self.assumptions.push(last_assumption);
+
+        for dependency in &dependencies {
+            total_dependencies.insert(dependency.clone());
+        }
+
+        self.assumptions.push(last_assumption);
+
+        self.merge_branches(identifier_changed, &total_changes);
 
         self.check_conditional(&total_changes);
     	
         //todo make this sensible
-    	return ExecutionResult::Success {
+    	return ExecutionResult {
             changes: Vec::from_iter(total_changes.into_iter()),
             dependencies: Vec::from_iter(total_dependencies.into_iter()),
             flow: FlowControl::Continue,
             result: Mapping::new(), //todo change to python None
         }
+    }
+
+    fn merge_branches(&mut self, identifier_changed: bool, changes: &HashSet<AnalysisItem> ) {
+        if identifier_changed {
+            self.scopes.last_mut().unwrap().merge_branches();
+        }
+
+    	for change in changes {
+            if let &AnalysisItem::Object {ref address} = change {
+                let mut object = self.memory.get_object_mut(address);
+    		    object.merge_branches();
+            }
+    	}
     }
 
     // has to be mutable because there are executions inside
@@ -168,20 +204,21 @@ impl VirtualMachine {
                     _ => panic!("AnalysisItem is an object when a previous check should've excluded this"),
                 };
 
-                if let ExecutionResult::Success {ref result, ..} = execution_result {
-                    for (assumption, address) in result.iter() {
-                        let object = self.memory.get_object(address);
-                        let tpe = object.get_extension()[0];
+                
 
-                        match all_types.entry(tpe.clone()) {
-                            Entry::Vacant(v) => {
-                                v.insert(vec!(assumption.clone()));
-                            },
-                            Entry::Occupied(mut o) => {
-                                o.get_mut().push(assumption.clone());
-                            },
-                        };
-                    }
+                let result = execution_result.result;
+                for (assumption, address) in result.iter() {
+                    let object = self.memory.get_object(address);
+                    let tpe = object.get_extension()[0];
+
+                    match all_types.entry(tpe.clone()) {
+                        Entry::Vacant(v) => {
+                            v.insert(vec!(assumption.clone()));
+                        },
+                        Entry::Occupied(mut o) => {
+                            o.get_mut().push(assumption.clone());
+                        },
+                    };
                 }
 
                 if all_types.len() > 1 {
@@ -225,18 +262,16 @@ impl VirtualMachine {
     	let mut total_changes = Vec::new();
     	
     	for node in content {
-    		let mut intermediate = self.execute(node);
+    		let intermediate = self.execute(node);
+
+            let mut dependencies = intermediate.dependencies;
+            let mut changes = intermediate.changes;
     		
-    		match intermediate {
-    			ExecutionResult::Success {ref mut dependencies, ref mut changes, ..} => {
-    				total_dependencies.append(dependencies);
-    				total_changes.append(changes);
-    			},
-    			_ => panic!("executing block went wrong")
-    		}
+            total_dependencies.append(&mut dependencies);
+            total_changes.append(&mut changes);
     	}
     	
-    	return ExecutionResult::Success {
+    	return ExecutionResult {
     		flow: FlowControl::Continue,
     		dependencies: total_dependencies,
     		changes: total_changes,
@@ -244,22 +279,28 @@ impl VirtualMachine {
     	}
     } 
 
-    fn string(&mut self) -> ExecutionResult {
+    fn object_of_type(&mut self, type_name: &String) -> Pointer {
         let pointer = self.memory.new_object();
         let object = self.memory.get_object_mut(&pointer);
-        let type_name = "string".to_owned();
         let type_pointer = self.knowledge_base.get_type(&type_name);
 
         match type_pointer {
             Some(address) => {
                 object.extends(address.clone());
             }
-            _ => panic!("system isn't properly initialized"),
+            _ => panic!("There is no type with name {}", type_name),
         }
+
+        return pointer;
+    }
+
+    fn string(&mut self) -> ExecutionResult {
+        let type_name = "string".to_owned();
+        let pointer = self.object_of_type(&type_name);
 
         let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
 
-        let execution_result = ExecutionResult::Success {
+        let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![],
@@ -269,18 +310,8 @@ impl VirtualMachine {
         return execution_result;
     }
 
-    // todo, add assumption merging
     fn declaration(&mut self, name: &String, type_name: &String) -> ExecutionResult {
-        let pointer = self.memory.new_object();
-        let object = self.memory.get_object_mut(&pointer);
-        let type_pointer = self.knowledge_base.get_type(type_name);
-
-        match type_pointer {
-            Some(address) => {
-                object.extends(address.clone());
-            }
-            _ => panic!("declaration type does not exist"),
-        }
+        let pointer = self.object_of_type(type_name);
 
         let mut possibilities = HashSet::new();
         possibilities.insert(pointer.clone());
@@ -296,7 +327,7 @@ impl VirtualMachine {
 
         let mapping = Mapping::simple(Assumption::empty(), -1); // todo change to python None
 
-        let execution_result = ExecutionResult::Success {
+        let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![AnalysisItem::Identifier { name: name.clone() }],
@@ -307,21 +338,12 @@ impl VirtualMachine {
     }
 
     fn int(&mut self) -> ExecutionResult {
-        let pointer = self.memory.new_object();
-        let object = self.memory.get_object_mut(&pointer);
         let type_name = "int".to_owned();
-        let type_pointer = self.knowledge_base.get_type(&type_name);
-
-        match type_pointer {
-            Some(address) => {
-                object.extends(address.clone());
-            }
-            _ => panic!("system isn't properly initialized"),
-        }
+        let pointer = self.object_of_type(&type_name);
 
         let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
 
-        let execution_result = ExecutionResult::Success {
+        let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![],
@@ -332,21 +354,12 @@ impl VirtualMachine {
     }
 
     fn float(&mut self) -> ExecutionResult {
-        let pointer = self.memory.new_object();
-        let object = self.memory.get_object_mut(&pointer);
         let type_name = "float".to_owned();
-        let type_pointer = self.knowledge_base.get_type(&type_name);
-
-        match type_pointer {
-            Some(address) => {
-                object.extends(address.clone());
-            }
-            _ => panic!("system isn't properly initialized"),
-        }
+        let pointer = self.object_of_type(&type_name);
 
         let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
 
-        let execution_result = ExecutionResult::Success {
+        let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![],
@@ -416,7 +429,7 @@ impl VirtualMachine {
 
         
 
-        let execution_result = ExecutionResult::Success {
+        let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![AnalysisItem::Identifier {name: name.clone()} ],
             changes: vec![],
@@ -480,115 +493,121 @@ impl VirtualMachine {
 	}
     
     fn load_attribute(&mut self, parent: &GastNode, name: &String) -> ExecutionResult {
-        let mut parent_result = self.execute(parent);
+        let parent_result = self.execute(parent);
         
         let mut total_dependencies = Vec::new();
+        let mut total_changes = Vec::new();
         let mut mapping = Mapping::new();
         
         // which assumptions still need a valid mapping
         let mut unresolved = Vec::new();
-        
-        match parent_result {
-            ExecutionResult::Success { ref result, ref mut dependencies, .. } => {
-                let parent_mapping = result;
+
+        let parent_mapping = parent_result.result;
+        let mut dependencies = parent_result.dependencies;
+        let mut changes = parent_result.changes;
                 
-                for dependency in dependencies.iter() {
-                	total_dependencies.push(AnalysisItem::Attribute { parent: Box::new(dependency.clone()), name: name.clone() });
-                }
-                
-                total_dependencies.append(dependencies);
-                
-                for (parent_assumption, parent_address) in parent_mapping.iter() {
-                	dependencies.push( AnalysisItem::Object { address: parent_address.clone() });
-                	
-                    let parent_object = self.memory.get_object(parent_address);
-                    let opt_mappings = parent_object.get_attribute(name);
-                                        
-                    for (ass, opt_address) in opt_mappings.iter() {
-                    	
-	                    if let &Some(address) = opt_address {	                    	
-	                    	let mut new_ass = ass.clone();
-        					for pls in parent_assumption.iter() {
-        						new_ass.add_element(pls.clone());
-        					}
-	                    	
-	                    	mapping.add_mapping(new_ass, address.clone());
-	                    } else {
-	                    	unresolved.push(ass.clone());
-	                    	
-	                    	if opt_mappings.len() > 1 {
-		                    	// having a single None is fine
-		                    	// probably a class method then
-		                    	let mut items = HashMap::new();
-		                    	items.insert("assumption".to_owned(), MessageItem::Assumption(ass.clone()));
-		                    	
-		                    	let message = Message::Warning {
-                                    source: self.nodes.last().unwrap().clone(),
-		                    		kind: WATTRIBUTE_UNSAFE,
-		                    		content: items,
-		                    	};
-		                    	&CHANNEL.publish(message);
-		                    }
-	                    }
-                    }
-                    
-                    // look for the attribute in its types
-                    if unresolved.len() > 0 {
-			        	let types = parent_object.get_extension();
-			        	
-			        	if types.len() == 0 {
-			        		for unmet in unresolved.iter() {
-			        			//todo, add type information as well
-			        			let mut items = HashMap::new();
-		                    	items.insert("assumption".to_owned(), MessageItem::Assumption(unmet.clone()));
-		                    	
-		                    	let message = Message::Error {
-                                    source: self.nodes.last().unwrap().clone(),
-		                    		kind: EATTRIBUTE_INVALID,
-		                    		content: items,
-		                    	};
-		                    	&CHANNEL.publish(message);
-			        		}
-			        		
-	                    	continue;
-			        	}
-			        	
-			        	for tpe in types.iter() {
-			        		for (ass, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
-		        				for original in unresolved.iter() {
-		        					let mut new_ass = ass.clone();
-		        					for pls in original.iter() {
-		        						new_ass.add_element(pls.clone());
-		        					}
-		        					
-		        					if opt_address.is_none() {
-					        			//todo, add type information as well
-					        			let mut items = HashMap::new();
-				                    	items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass.clone()));
-				                    	
-				                    	let message = Message::Error {
-				                    		source: self.nodes.last().unwrap().clone(),
-				                    		kind: EATTRIBUTE_INVALID,
-				                    		content: items,
-				                    	};
-				                    	&CHANNEL.publish(message);
-				                    	continue;
-					        		} else {
-			        					mapping.add_mapping(new_ass, opt_address.unwrap());
-					        		}
-		        				}
-		        			}
-			        	}
-			        } 
-                }
-            }
-            _ => panic!("invalid attribute parent"),
+        for dependency in dependencies.iter() {
+            total_dependencies.push(AnalysisItem::Attribute { parent: Box::new(dependency.clone()), name: name.clone() });
         }
         
-        return ExecutionResult::Success {
+        total_dependencies.append(&mut dependencies);
+        total_changes.append(&mut changes);
+        
+        for (parent_assumption, parent_address) in parent_mapping.iter() {
+            dependencies.push( AnalysisItem::Object { address: parent_address.clone() });
+            
+            let parent_object = self.memory.get_object(parent_address);
+            let opt_mappings = parent_object.get_attribute(name);
+                                
+            'outer: for (ass, opt_address) in opt_mappings.iter() {
+                let mut new_ass = parent_assumption.clone();
+                for new_element in ass.iter() {
+                    // avoid duplicate and conflicting assumptions
+                    if new_ass.contains(new_element) {
+                        continue;
+                    } else if new_ass.contains_complement(new_element) {
+                        continue 'outer;
+                    }
+
+                    new_ass.add_element(new_element.clone());
+                }
+                
+                if let &Some(address) = opt_address {	                    	
+                    mapping.add_mapping(new_ass, address.clone());
+                } else {
+                    unresolved.push(new_ass.clone());
+                    
+                    if opt_mappings.len() > 1 {
+                        // having a single None is fine
+                        // probably a class method then
+                        let mut items = HashMap::new();
+
+                        items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass));
+                        
+                        let message = Message::Warning {
+                            source: self.nodes.last().unwrap().clone(),
+                            kind: WATTRIBUTE_UNSAFE,
+                            content: items,
+                        };
+                        &CHANNEL.publish(message);
+                    }
+                }
+            }
+            
+            // look for the attribute in its types
+            if unresolved.len() > 0 {
+                let types = parent_object.get_extension();
+                
+                if types.len() == 0 {
+                    for unmet in unresolved.iter() {
+                        //todo, add type information as well
+                        let mut items = HashMap::new();
+                        items.insert("assumption".to_owned(), MessageItem::Assumption(unmet.clone()));
+                        
+                        let message = Message::Error {
+                            source: self.nodes.last().unwrap().clone(),
+                            kind: EATTRIBUTE_INVALID,
+                            content: items,
+                        };
+                        &CHANNEL.publish(message);
+                    }
+                    
+                    continue;
+                }
+                
+                for tpe in types.iter() {
+                    for (ass, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
+                        for original in unresolved.iter() {
+                            let mut new_ass = ass.clone();
+                            for pls in original.iter() {
+                                new_ass.add_element(pls.clone());
+                            }
+                            
+                            if opt_address.is_none() {
+                                //todo, add type information as well
+                                let mut items = HashMap::new();
+                                items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass.clone()));
+                                
+                                let message = Message::Error {
+                                    source: self.nodes.last().unwrap().clone(),
+                                    kind: EATTRIBUTE_INVALID,
+                                    content: items,
+                                };
+                                &CHANNEL.publish(message);
+                                continue;
+                            } else {
+                                mapping.add_mapping(new_ass, opt_address.unwrap());
+                            }
+                        }
+                    }
+                }
+            } 
+        }
+        
+        return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
-            changes: Vec::new(),
+            changes: total_changes,
             result: mapping,
         };
     }
@@ -597,33 +616,34 @@ impl VirtualMachine {
     fn assign(&mut self, targets: &Vec<GastNode>, value: &GastNode) -> ExecutionResult {
         let value_execution = self.execute(value);
 
-        match value_execution {
-            ExecutionResult::Success { dependencies, mut changes, result, .. } => {
-                for target in targets {
-                    let partial_result = self.assign_to_target(target, &result);
+        let mut total_changes = Vec::new();
+        let mut total_dependencies = Vec::new();
 
-                    match partial_result {
-                        ExecutionResult::Success { changes: mut t_changes, .. } => {
-                            changes.append(&mut t_changes)
-                        }
-                        _ => panic!("bad shit"),
-                    }
-                }
+        let mut value_changes = value_execution.changes;
+        let mut value_dependencies = value_execution.dependencies;
+        let value_mapping = value_execution.result;
 
-                // todo change to python None
-                let mapping = Mapping::simple(Assumption::empty(), -1);
+        total_changes.append(&mut value_changes);
+        total_dependencies.append(&mut value_dependencies);
 
-                return ExecutionResult::Success {
-                    flow: FlowControl::Continue,
-                    dependencies: dependencies,
-                    changes: changes,
-                    result: mapping,
-                };
+        for target in targets {
+            let target_result = self.assign_to_target(target, &value_mapping);
+            let mut target_dependencies = target_result.dependencies;
+            let mut target_changes = target_result.changes;
 
-            }
-            _ => panic!("bad shit"),
-
+            total_changes.append(&mut target_changes);
+            total_dependencies.append(&mut target_dependencies);
         }
+
+        // todo change to python None
+        let mapping = Mapping::simple(Assumption::empty(), -1);
+
+        return ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: mapping,
+        };
     }
 
     fn assign_to_target(&mut self, target: &GastNode, mapping: &Mapping) -> ExecutionResult {
@@ -646,37 +666,38 @@ impl VirtualMachine {
                            -> ExecutionResult {
 
         let parent_result = self.execute(parent);
+
+        let result = parent_result.result;
+        let dependencies = parent_result.dependencies;
         
-        match parent_result {
-            ExecutionResult::Success { result, dependencies, .. } => {
-                let parent_mapping = result;
-                let mut changes = Vec::new();
-                
-                // add the attribute identifier changes
-                for dependency in dependencies.into_iter() {
-                	changes.push(AnalysisItem::Attribute { parent: Box::new(dependency), name: attribute.clone() });
-                }
-
-				// add the object changes
-				// perform the assignment
-                for (_, parent_address) in parent_mapping.iter() {
-                	changes.push( AnalysisItem::Object { address: parent_address.clone() });
-                	
-                    let mut parent_object = self.memory.get_object_mut(parent_address);
-                    parent_object.assign_attribute(attribute.clone(),
-                                                   self.assumptions.last().unwrap().clone(),
-                                                   mapping.clone())
-                }
-
-                return ExecutionResult::Success {
-                    flow: FlowControl::Continue,
-                    dependencies: vec![],
-                    changes: changes,
-                    result: Mapping::new(),
-                };
-            }
-            _ => panic!("invalid attribute parent"),
+        let parent_mapping = result;
+        let mut changes = Vec::new();
+        
+        // add the attribute identifier changes
+        for dependency in dependencies.into_iter() {
+            changes.push(AnalysisItem::Attribute { parent: Box::new(dependency), name: attribute.clone() });
         }
+
+        // add the object changes
+        // perform the assignment
+        for (_, parent_address) in parent_mapping.iter() {
+            changes.push( AnalysisItem::Object { address: parent_address.clone() });
+
+            let current_assumption = self.assumptions.last().unwrap().clone();
+            
+            let mut parent_object = self.memory.get_object_mut(parent_address);
+            parent_object.assign_attribute(attribute.clone(),
+                                            current_assumption,
+                                            mapping.clone())
+        }
+
+        //todo, resolving parent may have had changes/dependencies
+        return ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: vec![],
+            changes: changes,
+            result: Mapping::new(),
+        };
     }
 
     // todo rewrite
@@ -708,7 +729,7 @@ impl VirtualMachine {
         // }
         // }
 
-        return ExecutionResult::Success {
+        return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![],
@@ -725,7 +746,7 @@ impl VirtualMachine {
 
         let mapping = Mapping::simple(Assumption::empty(), -1);
 
-        return ExecutionResult::Success {
+        return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![AnalysisItem::Identifier { name: target.clone() }],
@@ -746,12 +767,4 @@ impl VirtualMachine {
     pub fn new_scope(&mut self) {
         self.scopes.push(Scope::new());
     }
-
-    // fn resolve_attribute(&mut self, parent: &Pointer, name: &String) -> ExecutionResult {
-    // let object = self.memory.get_object(parent);
-    // let locals = object.get_attribute(name);
-    //
-    //
-    // }
-    //
 }

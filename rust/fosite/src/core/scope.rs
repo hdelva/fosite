@@ -1,8 +1,10 @@
 use super::Assumption;
 use super::{Mapping, OptionalMapping};
+use super::Pointer;
 
 use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use term_painter::ToStyle;
 use term_painter::Color::*;
@@ -110,13 +112,13 @@ impl Scope {
     }
 
     pub fn set_mapping(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
-        let mut count = 1 as usize;
+        let mut count = 0 as usize;
         let mut current_index = 0 as usize;
 
         for &(source, positive) in assumption.iter() {
             let old_index = current_index;
 
-            count *= 2;
+            count += 2;
 
             if positive {
                 current_index = count - 1;
@@ -142,6 +144,17 @@ impl Scope {
     }
 
     pub fn merge_branches(&mut self) {
+        // when an attribute and its parent were created in the same branch,
+        // the attribute will have its common parts pruned off
+        /*
+            if cond2:
+                y = 9
+                y.negative = 4
+        */
+        if self.frames.len() == 1 {
+            return;
+        }
+
         let mut new_content = HashMap::new();
 
         let mut identifiers = HashSet::new();
@@ -160,7 +173,8 @@ impl Scope {
             let ref frame = self.frames[self.frames.len() - 1];
             let assumption = frame.get_assumption();
 
-            let &(new_source, new_positive) = assumption.get().last().unwrap();
+            // first element, there should only be one
+            let &(new_source, new_positive) = assumption.iter().next().unwrap();
 
             for name in &identifiers {
                 let old_mapping = self.resolve_optional_identifier(name);
@@ -187,7 +201,7 @@ impl Scope {
             let ref frame = self.frames[self.frames.len() - 2];
             let assumption = frame.get_assumption();
 
-            let &(new_source, new_positive) = assumption.get().last().unwrap();
+            let &(new_source, new_positive) = assumption.iter().next().unwrap();
 
             for name in &identifiers {
                 let old_mapping = self.resolve_optional_identifier(name);
@@ -198,7 +212,6 @@ impl Scope {
                     new_assumption.add(new_source.clone(), new_positive.clone());
                     new_mapping.add_mapping(new_assumption, address.clone());
                 }
-
             }
         }
 

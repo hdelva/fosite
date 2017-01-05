@@ -198,6 +198,7 @@ impl Logger {
 	}
 	
 	fn print_assumption(&self, assumption: &Assumption, padding: &str) {
+		println!("{:?}", assumption);
 		if assumption.len() != 0 {
 			println!("{}{}", padding, Bold.paint("Under the following assumptions:"));
 			for &(source, positive) in assumption.iter() {

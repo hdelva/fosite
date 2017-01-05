@@ -1,37 +1,55 @@
 use super::GastID;
-use std::slice::Iter;
+use std::collections::btree_set::Iter;
+
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Assumption {
-    content: Vec<(GastID, bool)>,
+    content: BTreeSet<(GastID, bool)>,
 }
 
 impl Assumption {
     pub fn empty() -> Assumption {
-        Assumption { content: Vec::new() }
+        Assumption { content: BTreeSet::new() }
     }
 
     pub fn simple(source: GastID, positive: bool) -> Assumption {
-        Assumption { content: vec![(source, positive)] }
+        let mut content = BTreeSet::new();
+        content.insert( (source, positive));
+        Assumption { content: content }
     }
 
-    pub fn from_vec(content: &Vec<(GastID, bool)>) -> Assumption {
-        Assumption { content: content.clone() }
+    pub fn from_vec(vec: Vec<(GastID, bool)>) -> Assumption {
+        let mut content = BTreeSet::new();
+        for element in vec {
+            content.insert( element );
+        }
+        Assumption { content: content }
     }
 
 	pub fn add_element(&mut self, element: (GastID, bool)) {
-		self.content.push(element);
+		self.content.insert(element);
 	}
 
+    pub fn contains(&self, element: &(GastID, bool)) -> bool {
+        return self.content.contains(element);
+    }
+
+    pub fn contains_complement(&self, element: &(GastID, bool)) -> bool {
+        let &(source, positive) = element;
+        let other = (source, !positive);
+        return self.content.contains(&other);
+    }
+
     pub fn add(&mut self, source: GastID, positive: bool) {
-        self.content.push((source, positive));
+        self.content.insert((source, positive));
     }
 
     pub fn iter(&self) -> Iter<(GastID, bool)> {
         return self.content.iter();
     }
 
-    pub fn get(&self) -> &Vec<(GastID, bool)> {
+    pub fn get(&self) -> &BTreeSet<(GastID, bool)> {
         return &self.content;
     }
 

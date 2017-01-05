@@ -15,6 +15,9 @@ class GastNode(object, metaclass=ABCMeta):
   def kind(self):
     pass 
 
+  def relabel(self):
+    pass 
+
   def items(self):
     return self.__dict__.items()
 
@@ -79,9 +82,28 @@ class Control(GastNode):
     self.body = body
     self.orElse = orElse
     self.after = after
+
+    self.relabel()
+
+  def relabel(self):
     global count
     self.id = count
     count += 1
+
+    if self.before:
+      self.before.relabel()
+    
+    if self.test:
+      self.test.relabel()
+
+    if self.body:
+      self.body.relabel()
+    
+    if self.orElse:
+      self.orElse.relabel()
+    
+    if self.after:
+      self.after.relabel()
 
 class If(Control):
   def __init__(self, test: 'BoolOp', body:'Block', orElse:'Block', line, col):
@@ -145,9 +167,16 @@ class With(Control):
 class Block(GastNode):
   def __init__(self, content: '[GastNode]'):
     self.content = content
+    self.relabel()
+    
+
+  def relabel(self):
     global count
     self.id = count
     count += 1
+
+    for node in self.content:
+      node.relabel()
 
   def kind(self):
     return constants.BLOCK

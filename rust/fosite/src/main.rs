@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-#[macro_use]
 
+#[macro_use]
 extern crate lazy_static;
 extern crate bidir_map;
 extern crate term_painter;
@@ -17,6 +17,8 @@ use std::fs::File;
 use core::Worker;
 use core::Collection;
 use core::Representant;
+
+
 
 
 // todo implement for each builtin function

@@ -3,7 +3,7 @@ use rustc_serialize::json::*;
 use super::Message;
 use super::CHANNEL;
 
-pub type GastID = i16;
+pub type GastID = u16;
 
 #[derive(Debug, Clone)]
 pub struct GastNode {
@@ -42,6 +42,11 @@ pub enum NodeType {
     	 body: Box<GastNode>,
     	 or_else: Box<GastNode>,
     },
+    BinOp { left: Box<GastNode>,
+            right: Box<GastNode>,
+            op: String,
+            associative: bool,
+    }
 }
 
 pub fn build(node: &Json) -> GastNode {
@@ -49,7 +54,7 @@ pub fn build(node: &Json) -> GastNode {
     let kind = obj.get("kind").unwrap();
     let kind = kind.as_string().unwrap();
     let id = obj.get("id").unwrap();
-    let id = id.as_i64().unwrap() as i16;
+    let id = id.as_i64().unwrap() as u16;
     
     let line = obj.get("line");
     let col = obj.get("col");
@@ -65,6 +70,7 @@ pub fn build(node: &Json) -> GastNode {
         "list" => build_list(id, node),
         "sequence" => build_sequence(id, node),
         "if" => build_if(id, node),
+        "binop" => build_binop(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -80,6 +86,29 @@ pub fn build(node: &Json) -> GastNode {
     }
 
     return node;
+}
+
+fn build_binop(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_left = obj.get("left").unwrap();
+    let left = Box::new(build(json_left));
+
+    let json_right = obj.get("right").unwrap();
+    let right = Box::new(build(json_right));
+
+    let json_op = obj.get("op").unwrap();
+    let op = json_op.as_string().unwrap().to_owned();
+
+    let json_ass = obj.get("associative").unwrap();
+    let ass = json_ass.as_boolean().unwrap();
+
+    return GastNode::new(id, NodeType::BinOp {
+        left: left,
+        right: right,
+        op: op,
+        associative: ass,
+    })
 }
 
 fn build_if(id: GastID, node: &Json) -> GastNode {
