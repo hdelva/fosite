@@ -9,3 +9,11 @@ rustc-serialize = "0.3"
 lazy_static = "0.2.*"
 term-painter = "0.2.3"
 
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+panic = 'unwind'
