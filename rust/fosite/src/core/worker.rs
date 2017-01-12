@@ -3,6 +3,7 @@ use super::CHANNEL;
 use std::thread::*;
 use std::collections::HashMap;
 use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use super::GastID;
 use super::Assumption;
 use super::GastNode;
@@ -14,6 +15,8 @@ use term_painter::Attr::*;
 
 const DEBUG: bool = false;
 
+type Sources = HashMap<GastID, (i16, i16)>;
+
 pub struct Worker {
     thread: JoinHandle<()>,
 }
@@ -21,6 +24,10 @@ pub struct Worker {
 impl Worker {
     pub fn new() -> Worker {
     	let mut logger = Logger::new();
+		logger.add_warning_handler(WATTRIBUTE_UNSAFE, Box::new(AttributeUnsafe::new()));
+		logger.add_warning_handler(WIDENTIFIER_UNSAFE, Box::new(IdentifierUnsafe::new()));
+		logger.add_warning_handler(WIDENTIFIER_POLY_TYPE, Box::new(PolyType::new()));
+		logger.add_warning_handler(WATTRIBUTE_POLY_TYPE, Box::new(PolyType::new()));
     	
         let thread = {
             spawn(move || 
@@ -46,26 +53,21 @@ impl Worker {
 
 struct Logger {
 	nodes: HashMap<GastID, GastNode>,
-	sources: HashMap<GastID, (i16, i16)>,
-	done: BTreeSet< (i16, BTreeSet<MessageItem>) >,
+	sources: Sources,
+	warning_handlers: BTreeMap<i16, Box<WarningHandler + Send>>,
 }
 
 impl Logger {
 	fn new() -> Logger {
 		Logger {
 			sources: HashMap::new(),
-			done: BTreeSet::new(),
 			nodes: HashMap::new(),
+			warning_handlers: BTreeMap::new(),
 		}
 	}
 
-	fn message_id(&self, kind: &i16, content: &HashMap<String, MessageItem>) -> (i16, BTreeSet<MessageItem>) {
-		let mut set = BTreeSet::new();
-		for item in content.values() {
-			set.insert(item.clone());
-		}
-
-		return (kind.clone(), set)
+	fn add_warning_handler(&mut self, number: i16, handler: Box<WarningHandler + Send>) {
+		self.warning_handlers.insert(number, handler);
 	}
 	
 	fn message_loop(&mut self) {
@@ -73,10 +75,11 @@ impl Logger {
             match message {
             	Message::Error { ref source, ref kind, ref content } => self.print_error(source, kind, content),
             	Message::Warning { ref source, ref kind, ref content } => {
-					let identifier = self.message_id(kind, content);
-					if !self.done.contains(&identifier) {
-						self.print_warning(source, kind, content);
-						self.done.insert(identifier);
+					let mut opt_handler = self.warning_handlers.get_mut(kind);
+					if let Some(handler) = opt_handler {
+						handler.handle(*source, &self.sources, content);
+					} else {
+						println!("  Unknown Warning: {:?}\n", message);
 					}
 				},
                 Message::Notification { ref source, ref kind, ref content } => {
@@ -116,49 +119,6 @@ impl Logger {
 		};
 	}
 	
-	fn print_warning(&self, source: &GastID, kind: &i16, content: &HashMap<String, MessageItem>) {
-		let &(row, col) = self.sources.get(source).unwrap();
-		println!("{}", Custom(220).bold().paint(format!("Warning at row {}, column {}", row, col+1)));
-		
-		
-		match kind {
-			&WATTRIBUTE_UNSAFE => {
-				let assumption = content.get(&"assumption".to_owned()).unwrap().to_assumption().unwrap();
-				self.print_assumption(&assumption, "  ");
-				println!("  {:?}\n", "Object does not always have an attribute of this name");
-			}
-			&WIDENTIFIER_UNSAFE => {
-				let assumption = content.get(&"assumption".to_owned()).unwrap().to_assumption().unwrap();
-				self.print_assumption(&assumption, "  ");
-				println!("  {:?}\n", "An identifier of this name does not always exist");
-			},
-			&WIDENTIFIER_POLY_TYPE | &WATTRIBUTE_POLY_TYPE => {
-				let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
-				println!("  Identifier {} does not always have the same type after executing this", Bold.paint(name));
-
-				let mut type_count = 0;
-				let mut current_type = format!("type {}", type_count);
-				while let Some(type_name) = content.get(&current_type) {
-					println!("  Type {}: {}", type_count, Bold.paint(type_name.to_string().unwrap()));
-
-					let mut ass_count = 0;
-					let mut current_ass = format!("type {} assumption {}", type_count, ass_count);
-					while let Some(assumption) = content.get(&current_ass) {
-						self.print_assumption(&assumption.to_assumption().unwrap(), "    ");
-						ass_count += 1;
-						current_ass = format!("type {} assumption {}", type_count, ass_count);
-						println!("");
-					}
-
-					type_count += 1;
-					current_type = format!("type {}", type_count);
-					
-				}
-			},
-			_ => println!("  {:?}\n", "Unknown warning"),
-		};
-	}
-	
 	fn print_error(&mut self, source: &GastID, kind: &i16, content: &HashMap<String, MessageItem>) {
 		match kind {
 			&EATTRIBUTE_INVALID => {
@@ -175,13 +135,6 @@ impl Logger {
 			},
 			_ => (),
 		};
-
-		let identifier = self.message_id(kind, content);
-		if self.done.contains(&identifier) {
-			return
-		}
-
-		self.done.insert(identifier);
 
 		let &(row, col) = self.sources.get(source).unwrap();
 		println!("{}", Red.bold().paint(format!("Error at row {}, column {}", row, col+1)));
@@ -213,4 +166,157 @@ impl Logger {
 	}
 	
 	
+}
+
+trait WarningHandler {
+	fn preamble(&self, sources: &Sources, node: GastID)  {
+		let &(row, col) = sources.get(&node).unwrap();
+		println!("{}", Custom(220).bold().paint(format!("Warning at row {}, column {}", row, col+1)));
+	}
+
+	fn print_assumption(&self, sources: &Sources, assumption: &Assumption, padding: &str) {
+		println!("{:?}", assumption);
+		if assumption.len() != 0 {
+			println!("{}{}", padding, Bold.paint("Under the following assumptions:"));
+			for &(source, positive) in assumption.iter() {
+				let &(row, col) = sources.get(&source).unwrap();
+				let condition = if positive {"true"} else {"false"};
+				println!("{}{} {} is {}", padding,
+										"Condition at",
+										Bold.paint(format!("row {}, column {}", row, col+1)),
+										Bold.paint(format!("{}", condition)));
+			}
+		}
+	}
+
+	fn handle(&mut self, node: GastID, sources: &Sources,content: &HashMap<String, MessageItem>);
+}
+
+struct AttributeUnsafe {
+	done: BTreeSet< (GastID, bool) >,
+}
+
+impl AttributeUnsafe {
+	pub fn new() -> AttributeUnsafe {
+		AttributeUnsafe {
+			done: BTreeSet::new(),
+		}
+	}
+
+	fn message_id(&self, content: &HashMap<String, MessageItem>) -> (GastID, bool) {
+		let assumption = content.get(&"assumption".to_owned()).unwrap().to_assumption().unwrap();
+
+		match assumption.get().iter().next_back() {
+			Some(thing) => return thing.clone(),
+			_ => return (0, true),
+		}
+	}
+}
+
+impl WarningHandler for AttributeUnsafe {
+	fn handle(&mut self, node: GastID, sources: &Sources,content: &HashMap<String, MessageItem>) {
+		let identifier = self.message_id(content);
+		if self.done.contains(&identifier) {
+			return;			
+		}
+
+		self.done.insert(identifier);
+
+		self.preamble(sources, node);
+		let assumption = content.get(&"assumption".to_owned()).unwrap().to_assumption().unwrap();
+		self.print_assumption(sources, &assumption, "  ");
+		println!("  {:?}\n", "Object does not always have an attribute of this name");
+	}
+}
+
+struct IdentifierUnsafe {
+	done: BTreeSet< (GastID, bool) >,
+}
+
+impl IdentifierUnsafe {
+	pub fn new() -> IdentifierUnsafe {
+		IdentifierUnsafe {
+			done: BTreeSet::new(),
+		}
+	}
+
+	fn message_id(&self, content: &HashMap<String, MessageItem>) -> (GastID, bool) {
+		let assumption = content.get(&"assumption".to_owned()).unwrap().to_assumption().unwrap();
+
+		match assumption.get().iter().next_back() {
+			Some(thing) => return thing.clone(),
+			_ => return (0, true),
+		}
+	}
+}
+
+impl WarningHandler for IdentifierUnsafe {
+	fn handle(&mut self, node: GastID, sources: &Sources,content: &HashMap<String, MessageItem>) {
+		let identifier = self.message_id(content);
+		if self.done.contains(&identifier) {
+			return;			
+		}
+
+		self.done.insert(identifier);
+
+		self.preamble(sources, node);
+		let assumption = content.get(&"assumption".to_owned()).unwrap().to_assumption().unwrap();
+		self.print_assumption(sources, &assumption, "  ");
+		println!("  {:?}\n", "An identifier of this name does not always exist");
+	}
+}
+
+struct PolyType {
+	done: BTreeSet<BTreeSet<MessageItem>>,
+}
+
+impl PolyType {
+	pub fn new() -> PolyType {
+		PolyType {
+			done: BTreeSet::new(),
+		}
+	}
+
+	fn message_id(&self, content: &HashMap<String, MessageItem>) -> BTreeSet<MessageItem> {
+		let mut set = BTreeSet::new();
+		for item in content.values() {
+			set.insert(item.clone());
+		}
+
+		return set
+	}
+}
+
+impl WarningHandler for PolyType {
+	fn handle(&mut self, node: GastID, sources: &Sources, content: &HashMap<String, MessageItem>) {
+		let identifier = self.message_id(content);
+		if self.done.contains(&identifier) {
+			return;			
+		}
+
+		self.done.insert(identifier);
+
+		self.preamble(sources, node);
+
+		let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
+		println!("  Identifier {} does not always have the same type after executing this", Bold.paint(name));
+
+		let mut type_count = 0;
+		let mut current_type = format!("type {}", type_count);
+		while let Some(type_name) = content.get(&current_type) {
+			println!("  Type {}: {}", type_count, Bold.paint(type_name.to_string().unwrap()));
+
+			let mut ass_count = 0;
+			let mut current_ass = format!("type {} assumption {}", type_count, ass_count);
+			while let Some(assumption) = content.get(&current_ass) {
+				self.print_assumption(sources, &assumption.to_assumption().unwrap(), "    ");
+				ass_count += 1;
+				current_ass = format!("type {} assumption {}", type_count, ass_count);
+				println!("");
+			}
+
+			type_count += 1;
+			current_type = format!("type {}", type_count);
+		}
+	}
 }

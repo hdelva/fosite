@@ -27,6 +27,23 @@ impl Frame {
         }
     }
 
+    // inefficient but easy
+    fn resolve_pointer(&self, address: &Pointer) -> Vec<(Assumption, String)> {
+        let mut result = Vec::new();
+
+        for (name, opt_map) in self.content.iter() {
+            for (assumption, opt_address) in opt_map.iter() {
+                if let &Some(candidate) = opt_address {
+                    if *address == candidate {
+                        result.push( (assumption.clone(), name.clone()) ) ;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     fn resolve_identifier(&self, name: &String) -> Option<&OptionalMapping> {
         return self.content.get(name);
     }
@@ -91,6 +108,27 @@ impl Scope {
     }
 
     pub fn resolve_optional_identifier(&self, name: &String) -> &OptionalMapping {
+        let mut current_index = self.frames.len() - 1;
+
+        if *self.path.last().unwrap() {
+            current_index -= 1
+        }
+
+        loop {
+            if let Some(result) = self.frames[current_index].resolve_identifier(name) {
+                return result;
+            }
+
+            if let Some(parent) = self.frames[current_index].parent_index() {
+                current_index = parent;
+            } else {
+                return &self.default;
+            }
+
+        }
+    }
+
+    pub fn resolve_pointer(&self, name: &String) -> &OptionalMapping {
         let mut current_index = self.frames.len() - 1;
 
         if *self.path.last().unwrap() {
