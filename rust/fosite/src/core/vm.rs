@@ -10,6 +10,10 @@ use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
 
+const NONE: Pointer = 1;
+const TRUE: Pointer = 5;
+const FALSE: Pointer = 6;
+
 pub struct VirtualMachine {
     //todo call stack
     scopes: Vec<Scope>,
@@ -50,6 +54,8 @@ impl VirtualMachine {
             &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(parent, attribute),
             &NodeType::If { ref test, ref body, ref or_else } => self.conditional(test, body, or_else),
             &NodeType::BinOp {ref left, ref right, .. } => self.binop(left, right),
+            &NodeType::Nil {} => self.load_identifier(&"None".to_owned()),
+            &NodeType::Boolean { ref value } => self.boolean(*value),            
             _ => panic!("Unsupported Operation"),
         };
 
@@ -67,6 +73,14 @@ impl VirtualMachine {
         let _ = self.nodes.pop();
         
         return result;
+    }
+
+    fn boolean(&self, value: bool) -> ExecutionResult {
+        if value {
+            self.load_identifier(&"True".to_owned())
+        } else {
+            self.load_identifier(&"False".to_owned())
+        }
     }
 
     fn binop(&mut self, left: &GastNode, right: &GastNode) -> ExecutionResult {
@@ -287,7 +301,7 @@ impl VirtualMachine {
 
         match type_pointer {
             Some(address) => {
-                object.extends(address.clone());
+                object.extend(address.clone());
             }
             _ => panic!("There is no type with name {}", type_name),
         }
@@ -787,6 +801,23 @@ impl VirtualMachine {
         };
     }
 
+    pub fn declare_new_constant(&mut self, target: &String, tpe: &String) -> ExecutionResult {
+        let pointer = self.object_of_type(tpe);
+        let mut scope = self.scopes.last_mut().unwrap();
+        let mapping = Mapping::simple(Assumption::empty(), pointer);
+        scope.set_constant(target.clone(),
+                            self.assumptions.last().unwrap().clone(),
+                            mapping.clone());
+
+        let result = Mapping::simple(Assumption::empty(), NONE);
+        return ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: vec![],
+            changes: vec![AnalysisItem::Identifier { name: target.clone() }],
+            result: mapping,
+        };
+    }
+
     pub fn declare_simple_type(&mut self, name: &String) {
         let pointer = self.memory.new_object();
         {
@@ -795,6 +826,21 @@ impl VirtualMachine {
         }
         self.knowledge_base.add_type(name.clone(), pointer.clone());
         self.assign_to_identifier(name, &Mapping::simple(Assumption::empty(), pointer));
+    }
+
+    pub fn declare_sub_type(&mut self, name: &String, parent: &String) {
+        let result = self.load_identifier(parent).result;
+        let (_, parent_pointer) = result.iter().next().unwrap();
+
+        let new_pointer = self.memory.new_object();
+        {
+            let mut object = self.memory.get_object_mut(&new_pointer);
+            object.set_type(true);
+            object.extend(parent_pointer.clone());
+        }
+
+        self.knowledge_base.add_type(name.clone(), new_pointer.clone());
+        self.assign_to_identifier(name, &Mapping::simple(Assumption::empty(), new_pointer));
     }
 
     pub fn new_scope(&mut self) {

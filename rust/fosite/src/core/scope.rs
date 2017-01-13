@@ -2,6 +2,7 @@ use super::Assumption;
 use super::{Mapping, OptionalMapping};
 use super::Pointer;
 
+use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -79,6 +80,7 @@ pub struct Scope {
     frames: Vec<Frame>,
     path: Vec<bool>,
     default: OptionalMapping,
+    constants: BTreeSet<String>,
 }
 
 impl Scope {
@@ -90,6 +92,7 @@ impl Scope {
             frames: vec![Frame::new(Assumption::empty(), None)],
             default: default,
             path: vec![false],
+            constants: BTreeSet::new(),
         }
     }
 
@@ -150,6 +153,11 @@ impl Scope {
     }
 
     pub fn set_mapping(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
+        if self.constants.contains(&name) {
+            // todo, throw error
+            return
+        }
+
         let mut count = 0 as usize;
         let mut current_index = 0 as usize;
 
@@ -174,6 +182,11 @@ impl Scope {
         }
 
         self.frames[current_index].set_mapping(name, mapping)
+    }
+
+    pub fn set_constant(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
+        self.set_mapping(name.clone(), assumption, mapping);
+        self.constants.insert(name);
     }
 
     pub fn change_branch(&mut self) {

@@ -50,7 +50,9 @@ pub enum NodeType {
             right: Box<GastNode>,
             op: String,
             associative: bool,
-    }
+    },
+    Boolean {value: bool},
+    Nil {},
 }
 
 impl NodeType {
@@ -85,6 +87,8 @@ pub fn build(node: &Json) -> GastNode {
         "sequence" => build_sequence(id, node),
         "if" => build_if(id, node),
         "binop" => build_binop(id, node),
+        "nil" => build_nil(id, node),
+        "boolean" => build_bool(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -122,6 +126,23 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
         right: right,
         op: op,
         associative: ass,
+    })
+}
+
+fn build_bool(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_value = obj.get("value").unwrap();
+    let value = json_value.as_boolean().unwrap();
+
+    return GastNode::new(id, NodeType::Boolean {
+        value: value,
+    })
+}
+
+fn build_nil(id: GastID, node: &Json) -> GastNode {
+    return GastNode::new(id, NodeType::Nil {
+
     })
 }
 

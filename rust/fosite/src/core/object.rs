@@ -50,7 +50,7 @@ impl Object {
         self.parent_property = Some(parent);
     }
 
-    pub fn extends(&mut self, tpe: Pointer) {
+    pub fn extend(&mut self, tpe: Pointer) {
         self.extension_property.push(tpe);
     }
 
