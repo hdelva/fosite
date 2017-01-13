@@ -2,6 +2,7 @@ use super::*;
 
 use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::BTreeSet;
 use std::iter::FromIterator;
 use std::collections::hash_map::Entry;
 
@@ -374,6 +375,8 @@ impl VirtualMachine {
 
         let mut mapping = Mapping::new();
 
+        let mut warning = Vec::new();
+
         for scope in self.scopes.iter().rev() {
             let opt_mappings = scope.resolve_optional_identifier(&name);
 
@@ -392,15 +395,7 @@ impl VirtualMachine {
                         new_unresolved.push(new_ass.clone());
 
                         if opt_mappings.len() > 1 {
-                            let mut items = HashMap::new();
-                            items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass));
-                            
-                            let message = Message::Warning {
-                                source: self.nodes.last().unwrap().clone(),
-                                kind: WIDENTIFIER_UNSAFE,
-                                content: items,
-                            };
-                            &CHANNEL.publish(message);
+                            warning.push(new_ass);
                         }
                     }
                 }         	
@@ -412,22 +407,43 @@ impl VirtualMachine {
             }
         }
 
+        if warning.len() > 0 {
+            let mut items = HashMap::new();
 
-        if unresolved.len() > 0 {
-            for unresolved_ass in unresolved {
-                let mut items = HashMap::new();
-                items.insert("assumption".to_owned(), MessageItem::Assumption(unresolved_ass.clone()));
-                
-                let message = Message::Error {
-                    source: self.nodes.last().unwrap().clone(),
-                    kind: EIDENTIFIER_INVALID,
-                    content: items,
-                };
-                &CHANNEL.publish(message);
+            items.insert("name".to_owned(), MessageItem::String(name.clone()));
+
+            let mut ass_count = 0;
+            for assumption in warning {
+                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
+                ass_count += 1;
             }
+            
+            let message = Message::Warning {
+                source: self.nodes.last().unwrap().clone(),
+                kind: WIDENTIFIER_UNSAFE,
+                content: items,
+            };
+            &CHANNEL.publish(message);
         }
 
-        
+        if unresolved.len() > 0 {
+            let mut items = HashMap::new();
+
+            items.insert("name".to_owned(), MessageItem::String(name.clone()));
+
+            let mut ass_count = 0;
+            for assumption in unresolved {
+                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
+                ass_count += 1;
+            }
+            
+            let message = Message::Error {
+                source: self.nodes.last().unwrap().clone(),
+                kind: EIDENTIFIER_INVALID,
+                content: items,
+            };
+            &CHANNEL.publish(message);
+        }
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
@@ -500,7 +516,7 @@ impl VirtualMachine {
         let mut mapping = Mapping::new();
         
         // which assumptions still need a valid mapping
-        let mut unresolved = Vec::new();
+        let mut unresolved = BTreeSet::new();
 
         let parent_mapping = parent_result.result;
         let mut dependencies = parent_result.dependencies;
@@ -512,7 +528,10 @@ impl VirtualMachine {
         
         total_dependencies.append(&mut dependencies);
         total_changes.append(&mut changes);
-        
+
+        let mut warning = BTreeSet::new();
+        let mut error = BTreeSet::new();
+
         for (parent_assumption, parent_address) in parent_mapping.iter() {
             dependencies.push( AnalysisItem::Object { address: parent_address.clone() });
             
@@ -535,21 +554,12 @@ impl VirtualMachine {
                 if let &Some(address) = opt_address {	                    	
                     mapping.add_mapping(new_ass, address.clone());
                 } else {
-                    unresolved.push(new_ass.clone());
+                    unresolved.insert(new_ass.clone());
                     
                     if opt_mappings.len() > 1 {
                         // having a single None is fine
                         // probably a class method then
-                        let mut items = HashMap::new();
-
-                        items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass));
-                        
-                        let message = Message::Warning {
-                            source: self.nodes.last().unwrap().clone(),
-                            kind: WATTRIBUTE_UNSAFE,
-                            content: items,
-                        };
-                        &CHANNEL.publish(message);
+                        warning.insert(new_ass);                        
                     }
                 }
             }
@@ -561,17 +571,8 @@ impl VirtualMachine {
                 if types.len() == 0 {
                     for unmet in unresolved.iter() {
                         //todo, add type information as well
-                        let mut items = HashMap::new();
-                        items.insert("assumption".to_owned(), MessageItem::Assumption(unmet.clone()));
-                        
-                        let message = Message::Error {
-                            source: self.nodes.last().unwrap().clone(),
-                            kind: EATTRIBUTE_INVALID,
-                            content: items,
-                        };
-                        &CHANNEL.publish(message);
+                        error.insert(unmet.clone());
                     }
-                    
                     continue;
                 }
                 
@@ -585,15 +586,7 @@ impl VirtualMachine {
                             
                             if opt_address.is_none() {
                                 //todo, add type information as well
-                                let mut items = HashMap::new();
-                                items.insert("assumption".to_owned(), MessageItem::Assumption(new_ass.clone()));
-                                
-                                let message = Message::Error {
-                                    source: self.nodes.last().unwrap().clone(),
-                                    kind: EATTRIBUTE_INVALID,
-                                    content: items,
-                                };
-                                &CHANNEL.publish(message);
+                                error.insert(new_ass);
                                 continue;
                             } else {
                                 mapping.add_mapping(new_ass, opt_address.unwrap());
@@ -602,6 +595,46 @@ impl VirtualMachine {
                     }
                 }
             } 
+        }
+
+        if warning.len() > 0 {
+            let mut items = HashMap::new();
+
+            items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
+            items.insert("name".to_owned(), MessageItem::String(name.clone()));
+
+            let mut ass_count = 0;
+            for assumption in warning {
+                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
+                ass_count += 1;
+            }
+            
+            let message = Message::Warning {
+                source: self.nodes.last().unwrap().clone(),
+                kind: WATTRIBUTE_UNSAFE,
+                content: items,
+            };
+            &CHANNEL.publish(message);
+        }
+
+        if error.len() > 0 {
+            let mut items = HashMap::new();
+
+            items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
+            items.insert("name".to_owned(), MessageItem::String(name.clone()));
+
+            let mut ass_count = 0;
+            for assumption in error {
+                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
+                ass_count += 1;
+            }
+            
+            let message = Message::Error {
+                source: self.nodes.last().unwrap().clone(),
+                kind: EATTRIBUTE_INVALID,
+                content: items,
+            };
+            &CHANNEL.publish(message);
         }
         
         return ExecutionResult {

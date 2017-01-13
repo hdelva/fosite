@@ -18,6 +18,10 @@ impl GastNode {
             kind: kind,
         }
     }
+
+    pub fn to_string(&self) -> String {
+        self.kind.to_string()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +50,16 @@ pub enum NodeType {
             right: Box<GastNode>,
             op: String,
             associative: bool,
+    }
+}
+
+impl NodeType {
+    fn to_string(&self) -> String {
+        match self {
+            &NodeType::Identifier {ref name} => name.clone(),
+            &NodeType::Attribute {ref parent, ref attribute} => format!("{}.{}", parent.kind.to_string(), attribute),
+            _ => panic!("Node {:?} doesn't have a string representation", self),
+        }
     }
 }
 
