@@ -10,37 +10,54 @@ pub struct KnowledgeBase {
     callable_types: BidirMap<String, Pointer>,
     iterable_types: BidirMap<String, Pointer>,
     indexable_types: BidirMap<String, Pointer>,
-
-    types_with_attribute: HashMap<String, HashSet<Pointer>>,
+    constants: HashMap<String, Pointer>,
+    arithmetic_types: HashMap<String, HashSet<String>>,
 }
 
 impl KnowledgeBase {
     pub fn new() -> KnowledgeBase {
         KnowledgeBase {
             types: BidirMap::new(),
+            constants: HashMap::new(),
             callable_types: BidirMap::new(),
             iterable_types: BidirMap::new(),
             indexable_types: BidirMap::new(),
-            types_with_attribute: HashMap::new(),
+            arithmetic_types: HashMap::new(),
         }
     }
 
-    pub fn add_type_with_attribute(&mut self, attr: String, address: Pointer) {
-        if !self.types.contains_second_key(&address) {
-            panic!("Referring to non-existing type")
-        }
-
-        match self.types_with_attribute.entry(attr.clone()) {
-            Occupied(mut entry) => {
-                let mut set = entry.get_mut();
-                set.insert(address.clone());
-            }
+    pub fn add_arithmetic_type(&mut self, name: &str, op: &str) {
+        match self.arithmetic_types.entry(name.to_owned()) {
+            Occupied(mut ops) => {
+                let mut set = ops.get_mut();
+                set.insert(op.to_owned());
+            },
             Vacant(entry) => {
                 let mut set = HashSet::new();
-                set.insert(address.clone());
+                set.insert(op.to_owned());
                 entry.insert(set);
             }
-        };
+        }
+    }
+
+    pub fn add_constant(&mut self, name: &String, address: &Pointer) {
+        self.constants.insert(name.clone(), address.clone());
+    }
+
+    pub fn constant(&self, name: &str) -> Pointer {
+        // need this to assign the None constant :|
+        if name == "None" {
+            return 2
+        }
+
+        return self.constants.get(name).unwrap().clone();
+    }
+
+    pub fn operation_supported(&self, type_name: &String, operation: &String) -> bool {
+        match self.arithmetic_types.get(type_name) {
+            Some(ops) => return ops.contains(operation),
+            _ => false,
+        }
     }
 
     pub fn add_callable_type(&mut self, name: String, address: Pointer) {
@@ -66,12 +83,7 @@ impl KnowledgeBase {
         return self.types.get_by_first(name);
     }
 
-
-    pub fn get_types_with_attribute(&self, name: &String) -> Option<&HashSet<Pointer>> {
-        return self.types_with_attribute.get(name);
-    }
-
-    pub fn get_type_name(&self, pointer: &Pointer) -> Option<&String> {
-        return self.types.get_by_second(pointer);
+    pub fn get_type_name(&self, pointer: &Pointer) -> &String {
+        return self.types.get_by_second(pointer).expect("No type at this address");
     }
 }

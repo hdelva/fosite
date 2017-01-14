@@ -10,10 +10,6 @@ use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
 
-const NONE: Pointer = 1;
-const TRUE: Pointer = 5;
-const FALSE: Pointer = 6;
-
 pub struct VirtualMachine {
     //todo call stack
     scopes: Vec<Scope>,
@@ -53,7 +49,7 @@ impl VirtualMachine {
             &NodeType::Block { ref content } => self.block(content),
             &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(parent, attribute),
             &NodeType::If { ref test, ref body, ref or_else } => self.conditional(test, body, or_else),
-            &NodeType::BinOp {ref left, ref right, .. } => self.binop(left, right),
+            &NodeType::BinOp {ref left, ref right, ref op, .. } => self.binop(left, op, right),
             &NodeType::Nil {} => self.load_identifier(&"None".to_owned()),
             &NodeType::Boolean { ref value } => self.boolean(*value),            
             _ => panic!("Unsupported Operation"),
@@ -83,31 +79,96 @@ impl VirtualMachine {
         }
     }
 
-    fn binop(&mut self, left: &GastNode, right: &GastNode) -> ExecutionResult {
+    fn binop(&mut self, left: &GastNode, op: &String, right: &GastNode) -> ExecutionResult {
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
+        let mut result = Mapping::new();
 
         let mut left_result = self.execute(left);
         let mut left_mapping = left_result.result;
         total_changes.append(&mut left_result.changes);
         total_dependencies.append(&mut left_result.dependencies);
 
-        let mut right_result = self.execute(left);
+        let mut right_result = self.execute(right);
         let mut right_mapping = right_result.result;
         total_changes.append(&mut right_result.changes);
         total_dependencies.append(&mut right_result.dependencies);
 
-        for (left_ass, left_address) in left_mapping.iter() {
+        let mut error = Vec::new();
 
+        for (left_ass, left_address) in left_mapping.iter() {
+            'outer: for (right_ass, right_address) in right_mapping.iter() {
+                let mut new_ass = left_ass.clone();
+                for element in right_ass.iter() {
+                    if new_ass.contains(element) {
+                        continue;
+                    } else if new_ass.contains_complement(element) {
+                        continue 'outer;
+                    }
+                    new_ass.add_element(element.clone());
+                }
+
+                //todo, bit of a hack
+                // concludes that if the most recently defined type supports addition
+                // that the entire thing does
+                // reality is more complicated, and full of runtime type checks
+                let mut ancestor_name = "None".to_owned();
+
+                for ancestor in self.common_ancestor(left_address, right_address) {
+                    ancestor_name = self.knowledge_base.get_type_name(&ancestor).clone();
+                    if self.knowledge_base.operation_supported(&ancestor_name, op) {
+                        break;
+                    } 
+                }
+
+                if self.knowledge_base.operation_supported(&ancestor_name, op) {
+                    let new_type = match &ancestor_name[..] {
+                        "number" => "float".to_owned(),
+                        _ => ancestor_name,
+                    };
+
+                    let new_object = self.object_of_type(&new_type);
+
+                    result.add_mapping(new_ass, new_object);
+                } else {
+                    let left_object = self.memory.get_object(left_address);
+                    let left_type = left_object.get_extension().first().unwrap();
+                    let left_type_name = self.knowledge_base.get_type_name(left_type).clone();
+                    let right_object = self.memory.get_object(left_address);
+                    let right_type = right_object.get_extension().first().unwrap();
+                    let right_type_name = self.knowledge_base.get_type_name(right_type).clone();
+                    error.push( ((left_ass, right_ass), (left_type_name, right_type_name)) );
+                }
+            }
         }
 
-        let mapping = Mapping::simple(Assumption::empty(), -1);
+        if error.len() > 0 {
+            let mut items = HashMap::new();
+
+            items.insert("operation".to_owned(), MessageItem::String(op.clone()));
+
+            let mut comb_count = 0;
+            for ((left, right), (left_type, right_type)) in error {
+                items.insert(format!("combination {} left", comb_count), MessageItem::Assumption(left.clone()));
+                items.insert(format!("combination {} left type", comb_count), MessageItem::String(left_type));
+                items.insert(format!("combination {} right", comb_count), MessageItem::Assumption(right.clone()));
+                items.insert(format!("combination {} right type", comb_count), MessageItem::String(right_type));
+                comb_count += 1;
+            }
+            
+            let message = Message::Error {
+                source: self.nodes.last().unwrap().clone(),
+                kind: EBINOP,
+                content: items,
+            };
+            &CHANNEL.publish(message);
+        }
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
             changes: total_changes,
-            result: mapping,
+            result: result,
         };
 
         return execution_result;
@@ -190,7 +251,7 @@ impl VirtualMachine {
             changes: Vec::from_iter(total_changes.into_iter()),
             dependencies: Vec::from_iter(total_dependencies.into_iter()),
             flow: FlowControl::Continue,
-            result: Mapping::new(), //todo change to python None
+            result: Mapping::new(), 
         }
     }
 
@@ -243,7 +304,7 @@ impl VirtualMachine {
 
                     let mut type_count = 0;
                     for (tpe, assumptions) in all_types {
-                        let type_name = self.knowledge_base.get_type_name(&tpe).unwrap();
+                        let type_name = self.knowledge_base.get_type_name(&tpe);
                         items.insert(format!("type {}", type_count), MessageItem::String(type_name.clone()));
 
                         let mut ass_count = 0;
@@ -340,7 +401,8 @@ impl VirtualMachine {
                             mapping);
 
 
-        let mapping = Mapping::simple(Assumption::empty(), -1); // todo change to python None
+        let mapping = Mapping::simple(Assumption::empty(), 
+            self.knowledge_base.constant("None")); 
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
@@ -385,16 +447,17 @@ impl VirtualMachine {
     }
 
     fn load_identifier(&self, name: &String) -> ExecutionResult {
-        let mut unresolved = vec!(Assumption::empty());
+        let mut unresolved = BTreeSet::new();
+        unresolved.insert(Assumption::empty());
 
         let mut mapping = Mapping::new();
 
-        let mut warning = Vec::new();
+        let mut warning = BTreeSet::new();
 
         for scope in self.scopes.iter().rev() {
             let opt_mappings = scope.resolve_optional_identifier(&name);
 
-            let mut new_unresolved = Vec::new();
+            let mut new_unresolved = BTreeSet::new();
 
             for (ass, opt_address) in opt_mappings.iter() {   
                 for unresolved_ass in &unresolved {
@@ -406,10 +469,10 @@ impl VirtualMachine {
                     if let &Some(address) = opt_address {
                         mapping.add_mapping(new_ass, address.clone());
                     } else {
-                        new_unresolved.push(new_ass.clone());
+                        new_unresolved.insert(new_ass.clone());
 
                         if opt_mappings.len() > 1 {
-                            warning.push(new_ass);
+                            warning.insert(new_ass);
                         }
                     }
                 }         	
@@ -682,8 +745,8 @@ impl VirtualMachine {
             total_dependencies.append(&mut target_dependencies);
         }
 
-        // todo change to python None
-        let mapping = Mapping::simple(Assumption::empty(), -1);
+        let mapping = Mapping::simple(Assumption::empty(), 
+            self.knowledge_base.constant("None"));
 
         return ExecutionResult {
             flow: FlowControl::Continue,
@@ -791,7 +854,8 @@ impl VirtualMachine {
                             self.assumptions.last().unwrap().clone(),
                             mapping.clone());
 
-        let mapping = Mapping::simple(Assumption::empty(), -1);
+        let mapping = Mapping::simple(Assumption::empty(), 
+            self.knowledge_base.constant("None"));
 
         return ExecutionResult {
             flow: FlowControl::Continue,
@@ -808,8 +872,9 @@ impl VirtualMachine {
         scope.set_constant(target.clone(),
                             self.assumptions.last().unwrap().clone(),
                             mapping.clone());
-
-        let result = Mapping::simple(Assumption::empty(), NONE);
+        self.knowledge_base.add_constant(target, &pointer);
+        let result = Mapping::simple(Assumption::empty(), 
+            self.knowledge_base.constant("None"));
         return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
@@ -843,7 +908,35 @@ impl VirtualMachine {
         self.assign_to_identifier(name, &Mapping::simple(Assumption::empty(), new_pointer));
     }
 
+    pub fn knowledge_base(&mut self) -> &mut KnowledgeBase {
+        return &mut self.knowledge_base;
+    }
+
     pub fn new_scope(&mut self) {
         self.scopes.push(Scope::new());
+    }
+
+    pub fn ancestors(&self, pointer: &Pointer) -> Vec<Pointer> {
+        let object = self.memory.get_object(pointer);
+
+        let mut result = Vec::new();
+
+        let types = object.get_extension();
+
+        for tpe in types {
+            result.push(tpe.clone());
+            let mut intermediate = self.ancestors(tpe).clone();
+            result.append(&mut intermediate);
+        }
+
+        return result;
+    }
+
+    pub fn common_ancestor(&self, first: &Pointer, second: &Pointer) -> BTreeSet<Pointer> {
+        let first_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(first).into_iter());
+        let second_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(second).into_iter());
+
+        let intersection = &first_ancestors & &second_ancestors;
+        return intersection
     }
 }

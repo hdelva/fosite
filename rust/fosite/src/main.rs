@@ -88,19 +88,30 @@ fn test_vm() {
     // builtins
     vm.new_scope();
 
-    vm.declare_simple_type(&"NoneType".to_owned());
+    vm.declare_simple_type(&"object".to_owned());   
+    vm.declare_sub_type(&"NoneType".to_owned(), &"object".to_owned());
     vm.declare_new_constant(&"None".to_owned(), &"NoneType".to_owned());
-    
-    vm.declare_simple_type(&"int".to_owned());
-    vm.declare_simple_type(&"float".to_owned());
+    vm.declare_sub_type(&"number".to_owned(), &"object".to_owned());
+    vm.declare_sub_type(&"int".to_owned(), &"number".to_owned());
+    vm.declare_sub_type(&"float".to_owned(), &"number".to_owned());
     vm.declare_sub_type(&"bool".to_owned(), &"int".to_owned());
     vm.declare_new_constant(&"True".to_owned(), &"bool".to_owned());
     vm.declare_new_constant(&"False".to_owned(), &"bool".to_owned());
 
     vm.declare_simple_type(&"string".to_owned());
-    vm.declare_simple_type(&"Stub".to_owned());
 
-    
+    {
+        let mut kb = vm.knowledge_base();
+        kb.add_arithmetic_type("number", "+");
+        kb.add_arithmetic_type("number", "-");
+        kb.add_arithmetic_type("number", "/");
+        kb.add_arithmetic_type("number", "*");
+        kb.add_arithmetic_type("number", "//");
+        kb.add_arithmetic_type("number", "**");
+        kb.add_arithmetic_type("number", "%");
+
+        kb.add_arithmetic_type("string", "+");
+    }
 
     // global scope
     vm.new_scope();
