@@ -33,6 +33,7 @@ impl Worker {
 
 		logger.add_error_handler(EATTRIBUTE_INVALID, Box::new(AttributeInvalid::new()));
 		logger.add_error_handler(EIDENTIFIER_INVALID, Box::new(IdentifierInvalid::new()));
+		logger.add_error_handler(EBINOP, Box::new(BinopInvalid::new()));
     	
         let thread = {
             spawn(move || 
@@ -276,7 +277,7 @@ impl WarningHandler for IdentifierUnsafe {
 
 		self.preamble(sources, node);
 		let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
-		println!("  {} does not always exist", Bold.paint(name));
+		println!("  {} does not always exist at the of this", Bold.paint(name));
 
 		let mut ass_count = 0;
 		let mut current_ass = format!("assumption {}", ass_count);
@@ -453,6 +454,67 @@ impl ErrorHandler for AttributeInvalid {
 			ass_count += 1;
 			current_ass = format!("assumption {}", ass_count);
 			println!("");
+		}
+	}
+}
+
+struct BinopInvalid {
+	
+}
+
+impl BinopInvalid {
+	pub fn new() -> BinopInvalid {
+		BinopInvalid {
+
+		}
+	}
+}
+
+impl ErrorHandler for BinopInvalid {
+	fn handle(&mut self, node: GastID, sources: &Sources, nodes: &Nodes, content: &Content) {
+		self.preamble(sources, node);
+
+		let operator = content.get(&"operation".to_owned()).unwrap().to_string().unwrap();
+
+		println!("  Incompatible types for operation {}", Bold.paint(operator.clone()));
+		println!("  The following combinations exist:");
+
+		let mut comb_count = 0;
+		let mut current_left_comb = format!("combination {} left", comb_count);
+		let mut current_right_comb = format!("combination {} right", comb_count);
+		while let Some(left_type) = content.get(&current_left_comb) {
+			let right_type = content.get(&current_right_comb).unwrap();
+			let left_type = left_type.to_string().unwrap();
+			let right_type = right_type.to_string().unwrap();
+
+			println!("  Combination {}: {}", comb_count,
+				Bold.paint(format!("{} {} {}", left_type, operator, right_type)));
+
+			let mut ass_count = 0;
+			let mut current_left_ass = format!("combination {} left {}", comb_count, ass_count);
+			println!("    Left side has type {}", left_type);
+			while let Some(left_ass) = content.get(&current_left_ass) {
+				self.print_assumption(sources, &left_ass.to_assumption().unwrap(), "      ");
+				println!("");
+
+				ass_count += 1;
+				current_left_ass = format!("combination {} left {}", comb_count, ass_count);
+			}
+
+			let mut ass_count = 0;
+			let mut current_right_ass = format!("combination {} right {}", comb_count, ass_count);
+			println!("    Right side has type {}", right_type);
+			while let Some(right_ass) = content.get(&current_right_ass) {
+				self.print_assumption(sources, &right_ass.to_assumption().unwrap(), "      ");
+				println!("");
+
+				ass_count += 1;
+				current_right_ass = format!("combination {} right {}", comb_count, ass_count);
+			}
+			
+			comb_count += 1;
+			current_left_comb = format!("combination {} left", comb_count);
+			current_right_comb = format!("combination {} right", comb_count);
 		}
 	}
 }

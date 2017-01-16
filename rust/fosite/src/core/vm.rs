@@ -94,7 +94,7 @@ impl VirtualMachine {
         total_changes.append(&mut right_result.changes);
         total_dependencies.append(&mut right_result.dependencies);
 
-        let mut error = Vec::new();
+        let mut error = HashMap::new();
 
         for (left_ass, left_address) in left_mapping.iter() {
             'outer: for (right_ass, right_address) in right_mapping.iter() {
@@ -134,10 +134,24 @@ impl VirtualMachine {
                     let left_object = self.memory.get_object(left_address);
                     let left_type = left_object.get_extension().first().unwrap();
                     let left_type_name = self.knowledge_base.get_type_name(left_type).clone();
-                    let right_object = self.memory.get_object(left_address);
+                    let right_object = self.memory.get_object(right_address);
                     let right_type = right_object.get_extension().first().unwrap();
                     let right_type_name = self.knowledge_base.get_type_name(right_type).clone();
-                    error.push( ((left_ass, right_ass), (left_type_name, right_type_name)) );
+
+                    match error.entry((left_type_name, right_type_name)) {
+                        Entry::Vacant(o) => {
+                            let mut left_set = BTreeSet::new();
+                            let mut right_set = BTreeSet::new();
+                            left_set.insert(left_ass.clone());
+                            right_set.insert(right_ass.clone());
+                            o.insert((left_set, right_set));
+                        },
+                        Entry::Occupied(mut entry) => {
+                            let &mut (ref mut left_set, ref mut right_set) = entry.get_mut();
+                            left_set.insert(left_ass.clone());
+                            right_set.insert(right_ass.clone());
+                        }
+                    }
                 }
             }
         }
@@ -148,11 +162,28 @@ impl VirtualMachine {
             items.insert("operation".to_owned(), MessageItem::String(op.clone()));
 
             let mut comb_count = 0;
-            for ((left, right), (left_type, right_type)) in error {
-                items.insert(format!("combination {} left", comb_count), MessageItem::Assumption(left.clone()));
-                items.insert(format!("combination {} left type", comb_count), MessageItem::String(left_type));
-                items.insert(format!("combination {} right", comb_count), MessageItem::Assumption(right.clone()));
-                items.insert(format!("combination {} right type", comb_count), MessageItem::String(right_type));
+            for (types, assumptions) in error {
+                let (left_type, right_type) = types;
+
+                items.insert(format!("combination {} left", comb_count), MessageItem::String(left_type.clone()));
+                items.insert(format!("combination {} right", comb_count), MessageItem::String(right_type.clone()));
+
+                let (left_ass, right_ass) = assumptions;
+
+                let mut ass_count = 0;
+                for assumption in left_ass.into_iter() {
+                    items.insert(format!("combination {} left {}", comb_count, ass_count), 
+                        MessageItem::Assumption(assumption));
+                    ass_count += 1;
+                }
+
+                let mut ass_count = 0;
+                for assumption in right_ass.into_iter() {
+                    items.insert(format!("combination {} right {}", comb_count, ass_count), 
+                        MessageItem::Assumption(assumption));
+                    ass_count += 1;
+                }
+
                 comb_count += 1;
             }
             
