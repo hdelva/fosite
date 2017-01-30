@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::Pointer;
 use super::OptionalMapping;
-use super::Assumption;
+use super::Path;
 use super::Collection;
 use super::Representant;
 use super::Scope;
@@ -71,8 +71,8 @@ impl Object {
         self.collection_property = Some(CollectionProperty::new());
     }
 
-    pub fn assign_attribute(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
-        self.composite_property.assign_attribute(name, assumption, mapping);
+    pub fn assign_attribute(&mut self, name: String, path: Path, mapping: Mapping) {
+        self.composite_property.assign_attribute(name, path, mapping);
     }
 
     pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
@@ -91,7 +91,7 @@ impl Object {
 /// Object Properties
 
 struct CollectionProperty {
-    collections: HashMap<Assumption, Collection>,
+    collections: HashMap<Path, Collection>,
 }
 
 impl CollectionProperty {
@@ -102,30 +102,8 @@ impl CollectionProperty {
     fn define(&mut self, content: Vec<Representant>) {
         let mut collection = Collection::empty();
         collection.define(content);
-        self.collections.insert(Assumption::empty(), collection);
+        self.collections.insert(Path::empty(), collection);
     }
-
-    // fn expand_collections_(&mut self, assumption: &Assumption) {
-    // let mut new_collections = HashMap::new();
-    //
-    // for opposite in Assumption::opposites(assumption) {
-    // for (old_assumption, collection) in self.collections.iter() {
-    // let optional_assumption = old_assumption.merge(&opposite);
-    //
-    // match optional_assumption {
-    // Some(new_assumption) => {
-    // new_collections.insert(new_assumption, collection.clone());
-    // },
-    // None => {
-    // new_collections.insert(old_assumption.clone(), collection.clone());
-    // }
-    // }
-    // }
-    // }
-    //
-    // self.collections = new_collections;
-    // }
-    //
 }
 
 struct CompositeProperty {
@@ -138,8 +116,8 @@ impl CompositeProperty {
         CompositeProperty { namespace: Scope::new() }
     }
 
-    fn assign_attribute(&mut self, name: String, assumption: Assumption, mapping: Mapping) {
-        self.namespace.set_mapping(name, assumption, mapping);
+    fn assign_attribute(&mut self, name: String, path: Path, mapping: Mapping) {
+        self.namespace.set_mapping(name, path, mapping);
     }
 
     fn get_attribute(&self, name: &String) -> &OptionalMapping {

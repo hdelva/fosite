@@ -1,12 +1,12 @@
 use super::Pointer;
-use super::Assumption;
+use super::{Path, PathNode};
 
 use std::collections::HashMap;
 use std::collections::hash_map::{Iter, IntoIter};
 
 #[derive(Debug, Clone)]
 pub struct Mapping {
-    possibilities: HashMap<Assumption, Pointer>,
+    possibilities: HashMap<Path, Pointer>,
 }
 
 impl Mapping {
@@ -14,24 +14,33 @@ impl Mapping {
         Mapping { possibilities: HashMap::new() }
     }
 
-    pub fn simple(ass: Assumption, address: Pointer) -> Mapping {
+    pub fn simple(path: Path, address: Pointer) -> Mapping {
         let mut map = HashMap::new();
-        map.insert(ass, address);
+        map.insert(path, address);
         Mapping { possibilities: map }
     }
 
-    pub fn add_mapping(&mut self, ass: Assumption, address: Pointer) {
-        self.possibilities.insert(ass, address);
+    pub fn add_mapping(&mut self, path: Path, address: Pointer) {
+        self.possibilities.insert(path, address);
     }
 
-    pub fn iter(&self) -> Iter<Assumption, Pointer> {
+    pub fn iter(&self) -> Iter<Path, Pointer> {
         return self.possibilities.iter();
+    }
+
+    pub fn augment(self, node: PathNode) -> Mapping {
+        let mut new_possibilities = HashMap::new();
+        for (mut path, address) in self.possibilities.into_iter() {
+            path.add_node(node.clone());
+            new_possibilities.insert(path.clone(), address);
+        }
+        return Mapping {possibilities: new_possibilities};
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct OptionalMapping {
-    possibilities: HashMap<Assumption, Option<Pointer>>,
+    possibilities: HashMap<Path, Option<Pointer>>,
 }
 
 impl OptionalMapping {
@@ -39,15 +48,15 @@ impl OptionalMapping {
         OptionalMapping { possibilities: HashMap::new() }
     }
 
-    pub fn add_mapping(&mut self, ass: Assumption, address: Option<Pointer>) {
-        self.possibilities.insert(ass, address);
+    pub fn add_mapping(&mut self, path: Path, address: Option<Pointer>) {
+        self.possibilities.insert(path, address);
     }
 
-    pub fn iter(&self) -> Iter<Assumption, Option<Pointer>> {
+    pub fn iter(&self) -> Iter<Path, Option<Pointer>> {
         return self.possibilities.iter();
     }
     
-    pub fn into_iter(self) -> IntoIter<Assumption, Option<Pointer>> {
+    pub fn into_iter(self) -> IntoIter<Path, Option<Pointer>> {
     	return self.possibilities.into_iter();
     }
     

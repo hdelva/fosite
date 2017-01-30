@@ -16,7 +16,9 @@ pub struct VirtualMachine {
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
 
-    assumptions: Vec<Assumption>,
+    // todo, can we use a single Path
+    // would require a way to shrink Paths
+    paths: Vec<Path>,
     nodes: Vec<GastID>,
 }
 
@@ -29,7 +31,7 @@ impl VirtualMachine {
             memory: memory,
             knowledge_base: knowledge,
 			nodes: vec!(),
-            assumptions: vec![Assumption::empty()],
+            paths: vec![Path::empty()],
         }
     }
 
@@ -96,17 +98,16 @@ impl VirtualMachine {
 
         let mut error = HashMap::new();
 
-        for (left_ass, left_address) in left_mapping.iter() {
-            'outer: for (right_ass, right_address) in right_mapping.iter() {
-                let mut new_ass = left_ass.clone();
-                for element in right_ass.iter() {
-                    if new_ass.contains(element) {
-                        continue;
-                    } else if new_ass.contains_complement(element) {
-                        continue 'outer;
-                    }
-                    new_ass.add_element(element.clone());
+        for (left_path, left_address) in left_mapping.iter() {
+            for (right_path, right_address) in right_mapping.iter() {
+                if !left_path.mergeable(right_path){
+                    continue;
                 }
+
+                let mut new_path = left_path.clone();
+
+                //todo can probably avoid this clone
+                new_path.merge_into(right_path.clone());
 
                 //todo, bit of a hack
                 // concludes that if the most recently defined type supports addition
@@ -129,7 +130,7 @@ impl VirtualMachine {
 
                     let new_object = self.object_of_type(&new_type);
 
-                    result.add_mapping(new_ass, new_object);
+                    result.add_mapping(new_path, new_object);
                 } else {
                     let left_object = self.memory.get_object(left_address);
                     let left_type = left_object.get_extension().first().unwrap();
@@ -142,14 +143,14 @@ impl VirtualMachine {
                         Entry::Vacant(o) => {
                             let mut left_set = BTreeSet::new();
                             let mut right_set = BTreeSet::new();
-                            left_set.insert(left_ass.clone());
-                            right_set.insert(right_ass.clone());
+                            left_set.insert(left_path.clone());
+                            right_set.insert(right_path.clone());
                             o.insert((left_set, right_set));
                         },
                         Entry::Occupied(mut entry) => {
                             let &mut (ref mut left_set, ref mut right_set) = entry.get_mut();
-                            left_set.insert(left_ass.clone());
-                            right_set.insert(right_ass.clone());
+                            left_set.insert(left_path.clone());
+                            right_set.insert(right_path.clone());
                         }
                     }
                 }
@@ -162,26 +163,26 @@ impl VirtualMachine {
             items.insert("operation".to_owned(), MessageItem::String(op.clone()));
 
             let mut comb_count = 0;
-            for (types, assumptions) in error {
+            for (types, paths) in error {
                 let (left_type, right_type) = types;
 
                 items.insert(format!("combination {} left", comb_count), MessageItem::String(left_type.clone()));
                 items.insert(format!("combination {} right", comb_count), MessageItem::String(right_type.clone()));
 
-                let (left_ass, right_ass) = assumptions;
+                let (left_paths, right_paths) = paths;
 
-                let mut ass_count = 0;
-                for assumption in left_ass.into_iter() {
-                    items.insert(format!("combination {} left {}", comb_count, ass_count), 
-                        MessageItem::Assumption(assumption));
-                    ass_count += 1;
+                let mut path_count = 0;
+                for path in left_paths.into_iter() {
+                    items.insert(format!("combination {} left {}", comb_count, path_count), 
+                        MessageItem::Path(path));
+                    path_count += 1;
                 }
 
-                let mut ass_count = 0;
-                for assumption in right_ass.into_iter() {
-                    items.insert(format!("combination {} right {}", comb_count, ass_count), 
-                        MessageItem::Assumption(assumption));
-                    ass_count += 1;
+                let mut path_count = 0;
+                for path in right_paths.into_iter() {
+                    items.insert(format!("combination {} right {}", comb_count, path_count), 
+                        MessageItem::Path(path));
+                    path_count += 1;
                 }
 
                 comb_count += 1;
@@ -206,23 +207,22 @@ impl VirtualMachine {
     }
     
     fn conditional(&mut self, test: &GastNode, body: &GastNode, or_else: &GastNode) -> ExecutionResult {
-        //todo add this
-
+        //todo execute the test properly
     	let _ = self.execute(test);
     	
-    	let last_assumption = self.assumptions.pop().unwrap();
+    	let last_path = self.paths.pop().unwrap();
     	
     	let mut total_changes = HashSet::new();
         let mut total_dependencies = HashSet::new();
     	
-    	let mut positive_assumption = last_assumption.clone();
-    	positive_assumption.add(self.nodes.last().unwrap().clone(), true);
-    	let mut negative_assumption = last_assumption.clone();
-    	negative_assumption.add(self.nodes.last().unwrap().clone(), false);
+    	let mut positive = last_path.clone();
+        positive.add_node(PathNode::Condition(self.nodes.last().unwrap().clone(), true));
+    	let mut negative = last_path.clone();
+        negative.add_node(PathNode::Condition(self.nodes.last().unwrap().clone(), false));
     	
-    	self.assumptions.push(positive_assumption);
+    	self.paths.push(positive);
     	let body_result = self.execute(body);
-    	let _ = self.assumptions.pop();
+    	let _ = self.paths.pop();
 
         let mut identifier_changed = false;
 
@@ -252,9 +252,9 @@ impl VirtualMachine {
             self.scopes.last_mut().unwrap().change_branch();
         }
     	
-    	self.assumptions.push(negative_assumption);
+    	self.paths.push(negative);
     	let else_result = self.execute(or_else);
-    	let _ = self.assumptions.pop();
+    	let _ = self.paths.pop();
     	
         let changes = else_result.changes;
         let dependencies = else_result.dependencies;
@@ -271,7 +271,7 @@ impl VirtualMachine {
             total_dependencies.insert(dependency.clone());
         }
 
-        self.assumptions.push(last_assumption);
+        self.paths.push(last_path);
 
         self.merge_branches(identifier_changed, &total_changes);
 
@@ -299,7 +299,7 @@ impl VirtualMachine {
     	}
     }
 
-    // has to be mutable because there are executions inside
+    // has to be mutable because there is a load_attribute inside 
     fn check_conditional(&mut self, changes: &HashSet<AnalysisItem>) {
         for change in changes {
             if !change.is_object() {
@@ -308,22 +308,20 @@ impl VirtualMachine {
                 let execution_result = match change {
                     &AnalysisItem::Identifier {ref name} => self.load_identifier(name),
                     &AnalysisItem::Attribute {ref parent, ref name} => self.load_attribute(&parent.as_node(), name),
-                    _ => panic!("AnalysisItem is an object when a previous check should've excluded this"),
+                    _ => unreachable!("AnalysisItem is an object when a previous check should've excluded this"),
                 };
 
-                
-
                 let result = execution_result.result;
-                for (assumption, address) in result.iter() {
+                for (path, address) in result.iter() {
                     let object = self.memory.get_object(address);
                     let tpe = object.get_extension()[0];
 
                     match all_types.entry(tpe.clone()) {
                         Entry::Vacant(v) => {
-                            v.insert(vec!(assumption.clone()));
+                            v.insert(vec!(path.clone()));
                         },
                         Entry::Occupied(mut o) => {
-                            o.get_mut().push(assumption.clone());
+                            o.get_mut().push(path.clone());
                         },
                     };
                 }
@@ -334,14 +332,14 @@ impl VirtualMachine {
                     items.insert("name".to_owned(), MessageItem::String(change.to_string()));
 
                     let mut type_count = 0;
-                    for (tpe, assumptions) in all_types {
+                    for (tpe, paths) in all_types {
                         let type_name = self.knowledge_base.get_type_name(&tpe);
                         items.insert(format!("type {}", type_count), MessageItem::String(type_name.clone()));
 
-                        let mut ass_count = 0;
-                        for assumption in assumptions {
-                            items.insert(format!("type {} assumption {}", type_count, ass_count), MessageItem::Assumption(assumption.clone()));
-                            ass_count += 1;
+                        let mut path_count = 0;
+                        for path in paths {
+                            items.insert(format!("type {} path {}", type_count, path_count), MessageItem::Path(path.clone()));
+                            path_count += 1;
                         }
                         type_count += 1;
                     }
@@ -405,7 +403,7 @@ impl VirtualMachine {
         let type_name = "string".to_owned();
         let pointer = self.object_of_type(&type_name);
 
-        let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
@@ -426,13 +424,13 @@ impl VirtualMachine {
         let mut scope = self.scopes.last_mut().unwrap();
 
         let mut mapping = Mapping::new();
-        mapping.add_mapping(Assumption::empty(), pointer.clone());
+        mapping.add_mapping(Path::empty(), pointer.clone());
         scope.set_mapping(name.clone(),
-                            self.assumptions.last().unwrap().clone(),
+                            self.paths.last().unwrap().clone(),
                             mapping);
 
 
-        let mapping = Mapping::simple(Assumption::empty(), 
+        let mapping = Mapping::simple(Path::empty(), 
             self.knowledge_base.constant("None")); 
 
         let execution_result = ExecutionResult {
@@ -449,7 +447,7 @@ impl VirtualMachine {
         let type_name = "int".to_owned();
         let pointer = self.object_of_type(&type_name);
 
-        let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
@@ -465,7 +463,7 @@ impl VirtualMachine {
         let type_name = "float".to_owned();
         let pointer = self.object_of_type(&type_name);
 
-        let mapping = Mapping::simple(Assumption::empty(), pointer.clone());
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
@@ -479,7 +477,7 @@ impl VirtualMachine {
 
     fn load_identifier(&self, name: &String) -> ExecutionResult {
         let mut unresolved = BTreeSet::new();
-        unresolved.insert(Assumption::empty());
+        unresolved.insert(Path::empty());
 
         let mut mapping = Mapping::new();
 
@@ -490,20 +488,20 @@ impl VirtualMachine {
 
             let mut new_unresolved = BTreeSet::new();
 
-            for (ass, opt_address) in opt_mappings.iter() {   
-                for unresolved_ass in &unresolved {
-                    let mut new_ass = ass.clone();
-                    for pls in unresolved_ass.iter() {
-                        new_ass.add_element(pls.clone());
+            for (path, opt_address) in opt_mappings.iter() {   
+                for unresolved_path in &unresolved {
+                    let mut new_path = path.clone();
+                    for pls in unresolved_path.iter() {
+                        new_path.add_node(pls.clone());
                     }
 
                     if let &Some(address) = opt_address {
-                        mapping.add_mapping(new_ass, address.clone());
+                        mapping.add_mapping(new_path, address.clone());
                     } else {
-                        new_unresolved.insert(new_ass.clone());
+                        new_unresolved.insert(new_path.clone());
 
                         if opt_mappings.len() > 1 {
-                            warning.insert(new_ass);
+                            warning.insert(new_path);
                         }
                     }
                 }         	
@@ -520,10 +518,10 @@ impl VirtualMachine {
 
             items.insert("name".to_owned(), MessageItem::String(name.clone()));
 
-            let mut ass_count = 0;
-            for assumption in warning {
-                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
-                ass_count += 1;
+            let mut path_count = 0;
+            for path in warning {
+                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
+                path_count += 1;
             }
             
             let message = Message::Warning {
@@ -539,10 +537,10 @@ impl VirtualMachine {
 
             items.insert("name".to_owned(), MessageItem::String(name.clone()));
 
-            let mut ass_count = 0;
-            for assumption in unresolved {
-                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
-                ass_count += 1;
+            let mut path_count = 0;
+            for path in unresolved {
+                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
+                path_count += 1;
             }
             
             let message = Message::Error {
@@ -572,11 +570,11 @@ impl VirtualMachine {
 		
 		let mut result = OptionalMapping::new();		
 		
-		for (ass, opt_address) in opt_mappings.iter() {            	
+		for (path, opt_address) in opt_mappings.iter() {            	
             if let &Some(address) = opt_address {
-            	result.add_mapping(ass.clone(), Some(address.clone()));
+            	result.add_mapping(path.clone(), Some(address.clone()));
             } else {
-            	unresolved.push(ass.clone());
+            	unresolved.push(path.clone());
             }
         }
 		
@@ -585,23 +583,23 @@ impl VirtualMachine {
         	
         	if types.len() == 0 {
         		// can't go further up the hierarchy
-        		result.add_mapping(Assumption::empty(), None);
+        		result.add_mapping(Path::empty(), None);
         	}
         	
     		for tpe in types {
     			let mut found = true;
     			
-    			for (ass, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
+    			for (path, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
     				if opt_address.is_none() {
     					found = false;
     				}
     				
     				for original in unresolved.iter() {
-    					let mut new_ass = ass.clone();
+    					let mut new_path = path.clone();
     					for pls in original.iter() {
-    						new_ass.add_element(pls.clone());
+    						new_path.add_node(pls.clone());
     					}
-    					result.add_mapping(new_ass, opt_address.clone());
+    					result.add_mapping(new_path, opt_address.clone());
     				}
     			}
     			
@@ -616,9 +614,10 @@ impl VirtualMachine {
 		return result;
 	}
     
+    // mutable because parent needs to be executed
     fn load_attribute(&mut self, parent: &GastNode, name: &String) -> ExecutionResult {
         let parent_result = self.execute(parent);
-        
+
         let mut total_dependencies = Vec::new();
         let mut total_changes = Vec::new();
         let mut mapping = Mapping::new();
@@ -640,34 +639,37 @@ impl VirtualMachine {
         let mut warning = BTreeSet::new();
         let mut error = BTreeSet::new();
 
-        for (parent_assumption, parent_address) in parent_mapping.iter() {
+        for (parent_path, parent_address) in parent_mapping.iter() {
             dependencies.push( AnalysisItem::Object { address: parent_address.clone() });
             
             let parent_object = self.memory.get_object(parent_address);
-            let opt_mappings = parent_object.get_attribute(name);
-                                
-            'outer: for (ass, opt_address) in opt_mappings.iter() {
-                let mut new_ass = parent_assumption.clone();
-                for new_element in ass.iter() {
-                    // avoid duplicate and conflicting assumptions
-                    if new_ass.contains(new_element) {
-                        continue;
-                    } else if new_ass.contains_complement(new_element) {
-                        continue 'outer;
-                    }
+            let mut opt_mappings = parent_object.get_attribute(name);
 
-                    new_ass.add_element(new_element.clone());
+            // copy the actual possible paths
+            // need the amount of actual paths to decide whether or not to send a warning
+            let mut actual_paths = Vec::new();
+            for (mut path, opt_address) in opt_mappings.iter() {
+                if parent_path.mergeable(&path){
+                    let mut new_path = parent_path.clone();
+
+                    //todo can probably remove this clone
+                    new_path.merge_into(path.clone());
+                    actual_paths.push((new_path, opt_address));
                 }
-                
+            }
+
+            let num_paths = actual_paths.len();
+                                
+            for (path, opt_address) in actual_paths.into_iter() {
                 if let &Some(address) = opt_address {	                    	
-                    mapping.add_mapping(new_ass, address.clone());
+                    mapping.add_mapping(path, address.clone());
                 } else {
-                    unresolved.insert(new_ass.clone());
+                    unresolved.insert(path.clone());
                     
-                    if opt_mappings.len() > 1 {
+                    if num_paths > 1 {
                         // having a single None is fine
                         // probably a class method then
-                        warning.insert(new_ass);                        
+                        warning.insert(path);                        
                     }
                 }
             }
@@ -685,19 +687,19 @@ impl VirtualMachine {
                 }
                 
                 for tpe in types.iter() {
-                    for (ass, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
+                    for (path, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
                         for original in unresolved.iter() {
-                            let mut new_ass = ass.clone();
+                            let mut new_path = path.clone();
                             for pls in original.iter() {
-                                new_ass.add_element(pls.clone());
+                                new_path.add_node(pls.clone());
                             }
                             
                             if opt_address.is_none() {
                                 //todo, add type information as well
-                                error.insert(new_ass);
+                                error.insert(new_path);
                                 continue;
                             } else {
-                                mapping.add_mapping(new_ass, opt_address.unwrap());
+                                mapping.add_mapping(new_path, opt_address.unwrap());
                             }
                         }
                     }
@@ -711,18 +713,23 @@ impl VirtualMachine {
             items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
             items.insert("name".to_owned(), MessageItem::String(name.clone()));
 
-            let mut ass_count = 0;
-            for assumption in warning {
-                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
-                ass_count += 1;
+            let mut path_count = 0;
+            for path in warning {
+                if error.contains(&path) {
+                    continue;
+                }
+                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
+                path_count += 1;
             }
-            
-            let message = Message::Warning {
-                source: self.nodes.last().unwrap().clone(),
-                kind: WATTRIBUTE_UNSAFE,
-                content: items,
-            };
-            &CHANNEL.publish(message);
+
+            if path_count > 0 {
+                let message = Message::Warning {
+                    source: self.nodes.last().unwrap().clone(),
+                    kind: WATTRIBUTE_UNSAFE,
+                    content: items,
+                };
+                &CHANNEL.publish(message);
+            }
         }
 
         if error.len() > 0 {
@@ -731,10 +738,10 @@ impl VirtualMachine {
             items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
             items.insert("name".to_owned(), MessageItem::String(name.clone()));
 
-            let mut ass_count = 0;
-            for assumption in error {
-                items.insert(format!("assumption {}", ass_count), MessageItem::Assumption(assumption.clone()));
-                ass_count += 1;
+            let mut path_count = 0;
+            for path in error {
+                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
+                path_count += 1;
             }
             
             let message = Message::Error {
@@ -762,7 +769,7 @@ impl VirtualMachine {
 
         let mut value_changes = value_execution.changes;
         let mut value_dependencies = value_execution.dependencies;
-        let value_mapping = value_execution.result;
+        let mut value_mapping = value_execution.result;
 
         total_changes.append(&mut value_changes);
         total_dependencies.append(&mut value_dependencies);
@@ -776,7 +783,7 @@ impl VirtualMachine {
             total_dependencies.append(&mut target_dependencies);
         }
 
-        let mapping = Mapping::simple(Assumption::empty(), 
+        let mapping = Mapping::simple(Path::empty(), 
             self.knowledge_base.constant("None"));
 
         return ExecutionResult {
@@ -805,6 +812,11 @@ impl VirtualMachine {
                            attribute: &String,
                            mapping: &Mapping)
                            -> ExecutionResult {
+        //todo get rid of clone
+        let mapping = mapping.clone().augment(
+            PathNode::Assignment(
+                *self.nodes.last().unwrap(), 
+                format!("{}.{}", parent.to_string(), attribute)));
 
         let parent_result = self.execute(parent);
 
@@ -824,11 +836,12 @@ impl VirtualMachine {
         for (_, parent_address) in parent_mapping.iter() {
             changes.push( AnalysisItem::Object { address: parent_address.clone() });
 
-            let current_assumption = self.assumptions.last().unwrap().clone();
+            //todo this clone shouldn't be here
+            let current_path = self.paths.last().unwrap().clone();
             
             let mut parent_object = self.memory.get_object_mut(parent_address);
             parent_object.assign_attribute(attribute.clone(),
-                                            current_assumption,
+                                            current_path,
                                             mapping.clone())
         }
 
@@ -879,13 +892,19 @@ impl VirtualMachine {
     }
 
     fn assign_to_identifier(&mut self, target: &String, mapping: &Mapping) -> ExecutionResult {
+        //todo get rid of clone
+        let mapping = mapping.clone().augment(
+            PathNode::Assignment(
+                *self.nodes.last().unwrap_or(&0), 
+                target.clone()));
+
         let mut scope = self.scopes.last_mut().unwrap();
 
         scope.set_mapping(target.clone(),
-                            self.assumptions.last().unwrap().clone(),
+                            self.paths.last().unwrap().clone(),
                             mapping.clone());
 
-        let mapping = Mapping::simple(Assumption::empty(), 
+        let mapping = Mapping::simple(Path::empty(), 
             self.knowledge_base.constant("None"));
 
         return ExecutionResult {
@@ -899,12 +918,12 @@ impl VirtualMachine {
     pub fn declare_new_constant(&mut self, target: &String, tpe: &String) -> ExecutionResult {
         let pointer = self.object_of_type(tpe);
         let mut scope = self.scopes.last_mut().unwrap();
-        let mapping = Mapping::simple(Assumption::empty(), pointer);
+        let mapping = Mapping::simple(Path::empty(), pointer);
         scope.set_constant(target.clone(),
-                            self.assumptions.last().unwrap().clone(),
+                            self.paths.last().unwrap().clone(),
                             mapping.clone());
         self.knowledge_base.add_constant(target, &pointer);
-        let result = Mapping::simple(Assumption::empty(), 
+        let result = Mapping::simple(Path::empty(), 
             self.knowledge_base.constant("None"));
         return ExecutionResult {
             flow: FlowControl::Continue,
@@ -921,7 +940,7 @@ impl VirtualMachine {
             object.set_type(true);
         }
         self.knowledge_base.add_type(name.clone(), pointer.clone());
-        self.assign_to_identifier(name, &Mapping::simple(Assumption::empty(), pointer));
+        self.assign_to_identifier(name, &Mapping::simple(Path::empty(), pointer));
     }
 
     pub fn declare_sub_type(&mut self, name: &String, parent: &String) {
@@ -936,7 +955,7 @@ impl VirtualMachine {
         }
 
         self.knowledge_base.add_type(name.clone(), new_pointer.clone());
-        self.assign_to_identifier(name, &Mapping::simple(Assumption::empty(), new_pointer));
+        self.assign_to_identifier(name, &Mapping::simple(Path::empty(), new_pointer));
     }
 
     pub fn knowledge_base(&mut self) -> &mut KnowledgeBase {

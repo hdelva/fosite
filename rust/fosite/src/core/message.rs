@@ -1,5 +1,5 @@
 use super::GastID;
-use super::Assumption;
+use super::Path;
 use super::GastNode;
 
 
@@ -30,7 +30,7 @@ pub enum Message {
 pub enum MessageItem {
 	Number(i16),
 	String(String),
-	Assumption(Assumption),
+	Path(Path),
 }
 
 impl MessageItem {
@@ -48,9 +48,9 @@ impl MessageItem {
 		}
 	}
 	
-	pub fn to_assumption(&self) -> Option<Assumption> {
+	pub fn to_path(&self) -> Option<Path> {
 		match self {
-			&MessageItem::Assumption(ref content) => Some(content.clone()),
+			&MessageItem::Path(ref content) => Some(content.clone()),
 			_ => None,
 		}
 	}

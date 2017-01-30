@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::collections::BTreeSet;
 use std::collections::BTreeMap;
 use super::GastID;
-use super::Assumption;
+use super::{Path, PathNode};
 use super::GastNode;
 use super::NodeType;
 
@@ -138,21 +138,6 @@ impl Logger {
 		};
 	}
 	
-	fn print_assumption(&self, assumption: &Assumption, padding: &str) {
-		println!("{:?}", assumption);
-		if assumption.len() != 0 {
-			println!("{}{}", padding, Bold.paint("Under the following assumptions:"));
-			for &(source, positive) in assumption.iter() {
-				let &(row, col) = self.sources.get(&source).unwrap();
-				let condition = if positive {"true"} else {"false"};
-				println!("{}{} {} is {}", padding,
-										"Condition at",
-										Bold.paint(format!("row {}, column {}", row, col+1)),
-										Bold.paint(format!("{}", condition)));
-			}
-		}
-	}
-	
 	
 }
 
@@ -162,27 +147,49 @@ trait WarningHandler {
 		println!("{}", Custom(220).bold().paint(format!("Warning at row {}, column {}", row, col+1)));
 	}
 
-	fn print_assumption(&self, sources: &Sources, assumption: &Assumption, padding: &str) {
-		if assumption.len() != 0 {
-			println!("{}{}", padding, Bold.paint("Under the following assumptions:"));
-			for &(source, positive) in assumption.iter() {
-				let &(row, col) = sources.get(&source).unwrap();
-				let condition = if positive {"true"} else {"false"};
-				println!("{}{} {} is {}", padding,
-										"Condition at",
-										Bold.paint(format!("row {}, column {}", row, col+1)),
-										Bold.paint(format!("{}", condition)));
+	fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {
+		if path.len() != 0 {
+			for node in path.iter() {
+				let &(row, col) = sources.get(&node.get_location()).unwrap();
+
+				match node {
+					&PathNode::Condition(_, b) => {
+						let condition = if b {"true"} else {"false"};
+						println!("{}{} {} is {}", padding,
+							"Condition at",
+							Bold.paint(format!("row {}, column {}", row, col+1)),
+							Bold.paint(format!("{}", condition)));
+					},
+					&PathNode::Loop(_, b) => {
+						let taken = if b {"executed"} else {"not executed"};
+						println!("{}{} {} is {}", padding,
+							"Loop at",
+							Bold.paint(format!("row {}, column {}", row, col+1)),
+							Bold.paint(format!("{}", taken)));
+					},
+					&PathNode::Assignment(_, ref name) => {
+						println!("{}Assignment to {} at {}", padding,
+							Bold.paint(format!("{}", name)),
+							Bold.paint(format!("row {}, column {}", row, col+1)));
+					},
+					&PathNode::Return(_) => {
+						println!("{}{} {}", padding,
+							"Return at",
+							Bold.paint(format!("row {}, column {}", row, col+1)));
+					},
+					_ => {
+						println!("Frame?");
+					}
+				}
 			}
-		} else {
-			println!("{}{}", padding, Red.bold().paint("Under all circumstances"));
 		}
-	}
+	}	
 
 	fn handle(&mut self, node: GastID, sources: &Sources,content: &Content);
 }
 
 struct AttributeUnsafe {
-	done: BTreeSet<BTreeSet<(GastID, bool)>>,
+	done: BTreeSet<BTreeSet<BTreeSet<GastID>>>,
 }
 
 impl AttributeUnsafe {
@@ -192,22 +199,31 @@ impl AttributeUnsafe {
 		}
 	}
 
-	fn message_id(&self, content: &Content) -> BTreeSet<(GastID, bool)> {
-		let mut set = BTreeSet::new();
+	fn message_id(&self, content: &Content) -> BTreeSet<BTreeSet<GastID>> {
+		let mut fingerprint = BTreeSet::new();
 
 		let mut ass_count = 0;
-		let mut current_ass = format!("assumption {}", ass_count);
-		while let Some(assumption) = content.get(&current_ass) {
-			let assumption = assumption.to_assumption().unwrap();
-			match assumption.get().iter().next_back() {
-				Some(thing) => set.insert(thing.clone()),
-				_ => set.insert((0, true)),
+		let mut current_ass = format!("path {}", ass_count);
+		while let Some(path) = content.get(&current_ass) {
+			let path = path.to_path().unwrap();
+
+			let mut set = BTreeSet::new();
+			for node in path.iter() {
+				match node {
+					&PathNode::Assignment(location, _) => {
+						set.insert(location);
+					},
+					_ => (),
+				}
 			};
+
+			fingerprint.insert(set);
+
 			ass_count += 1;
-			current_ass = format!("assumption {}", ass_count);
+			current_ass = format!("path {}", ass_count);
 		}
 
-		return set;
+		return fingerprint;
 	}
 }
 
@@ -226,18 +242,18 @@ impl WarningHandler for AttributeUnsafe {
 		println!("  Object {} does not always have an attribute {}", Bold.paint(parent), Bold.paint(name));
 
 		let mut ass_count = 0;
-		let mut current_ass = format!("assumption {}", ass_count);
-		while let Some(assumption) = content.get(&current_ass) {
-			self.print_assumption(sources, &assumption.to_assumption().unwrap(), "    ");
+		let mut current_ass = format!("path {}", ass_count);
+		while let Some(path) = content.get(&current_ass) {
+			self.print_path(sources, &path.to_path().unwrap(), "    ");
 			ass_count += 1;
-			current_ass = format!("assumption {}", ass_count);
+			current_ass = format!("path {}", ass_count);
 			println!("");
 		}
 	}
 }
 
 struct IdentifierUnsafe {
-	done: BTreeSet<BTreeSet<(GastID, bool)>>,
+	done: BTreeSet<BTreeSet<BTreeSet<GastID>>>,
 }
 
 impl IdentifierUnsafe {
@@ -247,22 +263,31 @@ impl IdentifierUnsafe {
 		}
 	}
 
-	fn message_id(&self, content: &Content) -> BTreeSet<(GastID, bool)> {
-		let mut set = BTreeSet::new();
+	fn message_id(&self, content: &Content) -> BTreeSet<BTreeSet<GastID>> {
+		let mut fingerprint = BTreeSet::new();
 
 		let mut ass_count = 0;
-		let mut current_ass = format!("assumption {}", ass_count);
-		while let Some(assumption) = content.get(&current_ass) {
-			let assumption = assumption.to_assumption().unwrap();
-			match assumption.get().iter().next_back() {
-				Some(thing) => set.insert(thing.clone()),
-				_ => set.insert((0, true)),
+		let mut current_ass = format!("path {}", ass_count);
+		while let Some(path) = content.get(&current_ass) {
+			let path = path.to_path().unwrap();
+
+			let mut set = BTreeSet::new();
+			for node in path.iter() {
+				match node {
+					&PathNode::Assignment(location, _) => {
+						set.insert(location);
+					},
+					_ => (),
+				}
 			};
+
+			fingerprint.insert(set);
+
 			ass_count += 1;
-			current_ass = format!("assumption {}", ass_count);
+			current_ass = format!("path {}", ass_count);
 		}
 
-		return set;
+		return fingerprint;
 	}
 }
 
@@ -280,18 +305,18 @@ impl WarningHandler for IdentifierUnsafe {
 		println!("  {} does not always exist at the of this", Bold.paint(name));
 
 		let mut ass_count = 0;
-		let mut current_ass = format!("assumption {}", ass_count);
-		while let Some(assumption) = content.get(&current_ass) {
-			self.print_assumption(sources, &assumption.to_assumption().unwrap(), "    ");
+		let mut current_ass = format!("path {}", ass_count);
+		while let Some(path) = content.get(&current_ass) {
+			self.print_path(sources, &path.to_path().unwrap(), "    ");
 			ass_count += 1;
-			current_ass = format!("assumption {}", ass_count);
+			current_ass = format!("path {}", ass_count);
 			println!("");
 		}
 	}
 }
 
 struct PolyType {
-	done: BTreeSet<BTreeSet<(i16, (GastID, bool))>>,
+	done: BTreeSet<BTreeSet<(i16, PathNode)>>,
 }
 
 impl PolyType {
@@ -301,22 +326,22 @@ impl PolyType {
 		}
 	}
 
-	fn message_id(&self, content: &Content) -> BTreeSet<(i16, (GastID, bool))> {
+	fn message_id(&self, content: &Content) -> BTreeSet<(i16, PathNode)> {
 		let mut set = BTreeSet::new();
 
 		let mut type_count = 0;
 		let mut current_type = format!("type {}", type_count);
 		while let Some(type_name) = content.get(&current_type) {
-			let mut ass_count = 0;
-			let mut current_ass = format!("type {} assumption {}", type_count, ass_count);
-			while let Some(assumption) = content.get(&current_ass) {
-				let assumption = assumption.to_assumption().unwrap();
-				match assumption.get().iter().next_back() {
+			let mut path_count = 0;
+			let mut current_ass = format!("type {} path {}", type_count, path_count);
+			while let Some(path) = content.get(&current_ass) {
+				let path = path.to_path().unwrap();
+				match path.iter().next_back() {
 					Some(thing) => set.insert( (type_count as i16, thing.clone())),
-					_ => set.insert( (0, (0, true)) ),
+					_ => set.insert( (0, PathNode::Condition(0, true)) ),
 				};
-				ass_count += 1;
-				current_ass = format!("type {} assumption {}", type_count, ass_count);
+				path_count += 1;
+				current_ass = format!("type {} path {}", type_count, path_count);
 			}
 
 			type_count += 1;
@@ -346,12 +371,12 @@ impl WarningHandler for PolyType {
 		while let Some(type_name) = content.get(&current_type) {
 			println!("  Type {}: {}", type_count, Bold.paint(type_name.to_string().unwrap()));
 
-			let mut ass_count = 0;
-			let mut current_ass = format!("type {} assumption {}", type_count, ass_count);
-			while let Some(assumption) = content.get(&current_ass) {
-				self.print_assumption(sources, &assumption.to_assumption().unwrap(), "    ");
-				ass_count += 1;
-				current_ass = format!("type {} assumption {}", type_count, ass_count);
+			let mut path_count = 0;
+			let mut current_ass = format!("type {} path {}", type_count, path_count);
+			while let Some(path) = content.get(&current_ass) {
+				self.print_path(sources, &path.to_path().unwrap(), "    ");
+				path_count += 1;
+				current_ass = format!("type {} path {}", type_count, path_count);
 				println!("");
 			}
 
@@ -367,21 +392,43 @@ trait ErrorHandler {
 		println!("{}", Red.bold().paint(format!("Error at row {}, column {}", row, col+1)));
 	}
 
-	fn print_assumption(&self, sources: &Sources, assumption: &Assumption, padding: &str) {
-		if assumption.len() != 0 {
-			println!("{}{}", padding, Bold.paint("Under the following assumptions:"));
-			for &(source, positive) in assumption.iter() {
-				let &(row, col) = sources.get(&source).unwrap();
-				let condition = if positive {"true"} else {"false"};
-				println!("{}{} {} is {}", padding,
-										"Condition at",
-										Bold.paint(format!("row {}, column {}", row, col+1)),
-										Bold.paint(format!("{}", condition)));
+	fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {
+		if path.len() != 0 {
+			for node in path.iter() {
+				let &(row, col) = sources.get(&node.get_location()).unwrap();
+
+				match node {
+					&PathNode::Condition(_, b) => {
+						let condition = if b {"true"} else {"false"};
+						println!("{}{} {} is {}", padding,
+							"Condition at",
+							Bold.paint(format!("row {}, column {}", row, col+1)),
+							Bold.paint(format!("{}", condition)));
+					},
+					&PathNode::Loop(_, b) => {
+						let taken = if b {"executed"} else {"not executed"};
+						println!("{}{} {} is {}", padding,
+							"Loop at",
+							Bold.paint(format!("row {}, column {}", row, col+1)),
+							Bold.paint(format!("{}", taken)));
+					},
+					&PathNode::Assignment(_, ref name) => {
+						println!("{}Assignment to {} at {}", padding,
+							Bold.paint(format!("{}", name)),
+							Bold.paint(format!("row {}, column {}", row, col+1)));
+					},
+					&PathNode::Return(_) => {
+						println!("{}{} {}", padding,
+							"Return at",
+							Bold.paint(format!("row {}, column {}", row, col+1)));
+					},
+					_ => {
+						println!("Frame?");
+					}
+				}
 			}
-		} else {
-			println!("{}{}", padding, Red.bold().paint("Under all circumstances\n"));
 		}
-	}
+	}	
 
 	fn handle(&mut self, node: GastID, sources: &Sources, nodes: &Nodes, content: &Content);
 }
@@ -411,11 +458,11 @@ impl ErrorHandler for IdentifierInvalid {
 		println!("  {} does not exist", Bold.paint(name));
 
 		let mut ass_count = 0;
-		let mut current_ass = format!("assumption {}", ass_count);
-		while let Some(assumption) = content.get(&current_ass) {
-			self.print_assumption(sources, &assumption.to_assumption().unwrap(), "    ");
+		let mut current_ass = format!("path {}", ass_count);
+		while let Some(path) = content.get(&current_ass) {
+			self.print_path(sources, &path.to_path().unwrap(), "    ");
 			ass_count += 1;
-			current_ass = format!("assumption {}", ass_count);
+			current_ass = format!("path {}", ass_count);
 			println!("");
 		}
 	}
@@ -448,11 +495,11 @@ impl ErrorHandler for AttributeInvalid {
 		println!("  Object {} does not have an attribute {}", Bold.paint(parent), Bold.paint(name));
 
 		let mut ass_count = 0;
-		let mut current_ass = format!("assumption {}", ass_count);
-		while let Some(assumption) = content.get(&current_ass) {
-			self.print_assumption(sources, &assumption.to_assumption().unwrap(), "    ");
+		let mut current_ass = format!("path {}", ass_count);
+		while let Some(path) = content.get(&current_ass) {
+			self.print_path(sources, &path.to_path().unwrap(), "    ");
 			ass_count += 1;
-			current_ass = format!("assumption {}", ass_count);
+			current_ass = format!("path {}", ass_count);
 			println!("");
 		}
 	}
@@ -494,7 +541,7 @@ impl ErrorHandler for BinopInvalid {
 			let mut current_left_ass = format!("combination {} left {}", comb_count, ass_count);
 			println!("    Left side has type {}", left_type);
 			while let Some(left_ass) = content.get(&current_left_ass) {
-				self.print_assumption(sources, &left_ass.to_assumption().unwrap(), "      ");
+				self.print_path(sources, &left_ass.to_path().unwrap(), "      ");
 				println!("");
 
 				ass_count += 1;
@@ -505,7 +552,7 @@ impl ErrorHandler for BinopInvalid {
 			let mut current_right_ass = format!("combination {} right {}", comb_count, ass_count);
 			println!("    Right side has type {}", right_type);
 			while let Some(right_ass) = content.get(&current_right_ass) {
-				self.print_assumption(sources, &right_ass.to_assumption().unwrap(), "      ");
+				self.print_path(sources, &right_ass.to_path().unwrap(), "      ");
 				println!("");
 
 				ass_count += 1;

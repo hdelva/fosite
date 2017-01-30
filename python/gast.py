@@ -16,7 +16,9 @@ class GastNode(object, metaclass=ABCMeta):
     pass 
 
   def relabel(self):
-    pass 
+    global count
+    self.id = count
+    count += 1 
 
   def items(self):
     return self.__dict__.items()
@@ -444,9 +446,6 @@ class BinOp(GastNode):
     count += 1
     self.line = line
     self.col = col
-    
-  def items(self):
-    return [('left', self.left), ('op', self.op), ('right', self.right), ('line', self.line), ('col', self.col)]
 
   def kind(self):
     return constants.BINOP
