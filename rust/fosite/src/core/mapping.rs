@@ -34,7 +34,7 @@ impl Mapping {
             path.add_node(node.clone());
             new_possibilities.insert(path.clone(), address);
         }
-        return Mapping {possibilities: new_possibilities};
+        return Mapping { possibilities: new_possibilities };
     }
 }
 
@@ -55,12 +55,12 @@ impl OptionalMapping {
     pub fn iter(&self) -> Iter<Path, Option<Pointer>> {
         return self.possibilities.iter();
     }
-    
+
     pub fn into_iter(self) -> IntoIter<Path, Option<Pointer>> {
-    	return self.possibilities.into_iter();
+        return self.possibilities.into_iter();
     }
-    
+
     pub fn len(&self) -> usize {
-    	return self.possibilities.len();
+        return self.possibilities.len();
     }
 }

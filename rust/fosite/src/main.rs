@@ -9,7 +9,9 @@ extern crate rustc_serialize;
 use rustc_serialize::json::Json;
 
 pub mod core;
-use core::VirtualMachine;
+pub mod python;
+
+pub use core::VirtualMachine;
 use core::build;
 
 use std::io::prelude::*;
@@ -17,9 +19,9 @@ use std::fs::File;
 use core::Worker;
 use core::Collection;
 use core::Representant;
+use core::Executors;
 
-
-
+use python::*;
 
 // todo implement for each builtin function
 pub struct BuiltinFunction {
@@ -42,7 +44,7 @@ pub type Pointer = i16;
 type TypePointer = i16;
 
 fn main() {
-	let worker = Worker::new();
+    let worker = Worker::new();
     test_vm();
     let _ = worker.finalize();
     // test_collection();
@@ -73,6 +75,20 @@ fn test_collection() {
 
 
 fn test_vm() {
+    let executors = Executors {
+        assign: Some(Box::new(PythonAssign {})),
+        attribute: Some(Box::new(PythonAttribute {})),
+        binop: Some(Box::new(PythonBinOp {})),
+        block: Some(Box::new(PythonBlock {})),
+        boolean: Some(Box::new(PythonBoolean {})),
+        conditional: Some(Box::new(PythonConditional {})),
+        declaration: None,
+        float: Some(Box::new(PythonFloat {})),
+        identifier: Some(Box::new(PythonIdentifier {})),
+        int: Some(Box::new(PythonInt {})),
+        string: Some(Box::new(PythonString {})),
+    };
+
     let mut s = String::new();
 
     let _ = match File::open("input.json") {
@@ -82,19 +98,19 @@ fn test_vm() {
 
     let json = Json::from_str(&s).unwrap();
     let stuff = build(&json);
-    
+
     let mut vm = VirtualMachine::new();
 
     // builtins
     vm.new_scope();
 
-    vm.declare_simple_type(&"object".to_owned());   
-    vm.declare_sub_type(&"NoneType".to_owned(), &"object".to_owned());
+    vm.declare_simple_type(&"object".to_owned());
+    vm.declare_sub_type(&executors, &"NoneType".to_owned(), &"object".to_owned());
     vm.declare_new_constant(&"None".to_owned(), &"NoneType".to_owned());
-    vm.declare_sub_type(&"number".to_owned(), &"object".to_owned());
-    vm.declare_sub_type(&"int".to_owned(), &"number".to_owned());
-    vm.declare_sub_type(&"float".to_owned(), &"number".to_owned());
-    vm.declare_sub_type(&"bool".to_owned(), &"int".to_owned());
+    vm.declare_sub_type(&executors, &"number".to_owned(), &"object".to_owned());
+    vm.declare_sub_type(&executors, &"int".to_owned(), &"number".to_owned());
+    vm.declare_sub_type(&executors, &"float".to_owned(), &"number".to_owned());
+    vm.declare_sub_type(&executors, &"bool".to_owned(), &"int".to_owned());
     vm.declare_new_constant(&"True".to_owned(), &"bool".to_owned());
     vm.declare_new_constant(&"False".to_owned(), &"bool".to_owned());
 
@@ -115,6 +131,6 @@ fn test_vm() {
 
     // global scope
     vm.new_scope();
-        
-    vm.execute(&stuff);
+
+    vm.execute(&executors, &stuff);
 }

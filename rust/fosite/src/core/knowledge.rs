@@ -31,7 +31,7 @@ impl KnowledgeBase {
             Occupied(mut ops) => {
                 let mut set = ops.get_mut();
                 set.insert(op.to_owned());
-            },
+            }
             Vacant(entry) => {
                 let mut set = HashSet::new();
                 set.insert(op.to_owned());
@@ -47,7 +47,7 @@ impl KnowledgeBase {
     pub fn constant(&self, name: &str) -> Pointer {
         // need this to assign the None constant :|
         if name == "None" {
-            return 2
+            return 2;
         }
 
         return self.constants.get(name).unwrap().clone();

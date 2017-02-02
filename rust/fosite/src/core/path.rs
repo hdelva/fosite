@@ -3,7 +3,6 @@ use std::collections::btree_set::Iter;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
-use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
 pub enum PathNode {
@@ -11,12 +10,10 @@ pub enum PathNode {
     Assignment(GastID, String),
     Loop(GastID, bool),
     Return(GastID),
-    Frame(GastID,
-        Option<String>,
-        BTreeSet<PathNode>),
+    Frame(GastID, Option<String>, BTreeSet<PathNode>),
 }
 
-impl Ord for PathNode  {
+impl Ord for PathNode {
     fn cmp(&self, other: &PathNode) -> Ordering {
         self.get_location().cmp(&other.get_location())
     }
@@ -45,19 +42,19 @@ impl Hash for PathNode {
 impl PathNode {
     pub fn get_location(&self) -> GastID {
         match self {
-            &PathNode::Condition (location, _) => location,
-            &PathNode::Assignment (location, _) => location,
-            &PathNode::Loop (location, _) => location,
-            &PathNode::Return (location) => location,
-            &PathNode::Frame (location, _, _) => location,
+            &PathNode::Condition(location, _) => location,
+            &PathNode::Assignment(location, _) => location,
+            &PathNode::Loop(location, _) => location,
+            &PathNode::Return(location) => location,
+            &PathNode::Frame(location, _, _) => location,
         }
     }
 
     fn merge_into(&mut self, other: &PathNode) {
         match (self, other) {
-            (&mut PathNode::Frame (_, _, ref mut n1), &PathNode::Frame (_, _, ref n2)) => {
+            (&mut PathNode::Frame(_, _, ref mut n1), &PathNode::Frame(_, _, ref n2)) => {
                 for node in n2 {
-                    let mut new;
+                    let new;
 
                     {
                         let original_opt = n1.get(&node);
@@ -72,22 +69,22 @@ impl PathNode {
 
                     n1.insert(new);
                 }
-            },
+            }
             _ => (),
         }
     }
 
     fn mergeable(&self, other: &PathNode) -> bool {
         match (self, other) {
-            (&PathNode::Condition (l1, n1), &PathNode::Condition (l2, n2)) => {
+            (&PathNode::Condition(l1, n1), &PathNode::Condition(l2, n2)) => {
                 return l1 != l2 || n1 == n2;
-            },
-            (&PathNode::Loop (l1, t1), &PathNode::Loop (l2, t2)) => {
+            }
+            (&PathNode::Loop(l1, t1), &PathNode::Loop(l2, t2)) => {
                 return l1 != l2 || t1 == t2;
-            },
-            (&PathNode::Frame (_, _, ref n1), &PathNode::Frame (_, _, ref n2)) => {
+            }
+            (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
                 for node in n2 {
-                    let mut original_opt = n1.get(node);
+                    let original_opt = n1.get(node);
                     if let Some(original) = original_opt {
                         if !original.mergeable(node) {
                             return false;
@@ -95,17 +92,17 @@ impl PathNode {
                     }
                 }
                 return true;
-            },
-            _ => self.get_location() != other.get_location(), 
+            }
+            _ => self.get_location() != other.get_location(),
         }
     }
 
     fn add_node(&mut self, other: PathNode) {
         match self {
-            &mut PathNode::Frame (_, _, ref mut nodes) => {
+            &mut PathNode::Frame(_, _, ref mut nodes) => {
                 nodes.insert(other);
-            },
-            _ => unreachable!("Trying to add to something that isn't a Frame node")
+            }
+            _ => unreachable!("Trying to add to something that isn't a Frame node"),
         }
     }
 }
@@ -117,9 +114,7 @@ pub struct Path {
 
 impl Path {
     pub fn empty() -> Self {
-        Path {
-            nodes: BTreeSet::new(),
-        }
+        Path { nodes: BTreeSet::new() }
     }
 
     pub fn len(&self) -> usize {
@@ -136,7 +131,7 @@ impl Path {
 
     pub fn merge_into(&mut self, other: Path) {
         for node in other.get_nodes() {
-            let mut new;
+            let new;
 
             {
                 let original_opt = self.nodes.get(node);

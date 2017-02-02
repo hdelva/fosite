@@ -4,14 +4,10 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
-use std::collections::hash_map::Entry;
-
-use term_painter::ToStyle;
-use term_painter::Color::*;
-use term_painter::Attr::*;
+use std::slice::Iter;
 
 pub struct VirtualMachine {
-    //todo call stack
+    // todo call stack
     scopes: Vec<Scope>,
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
@@ -30,361 +26,237 @@ impl VirtualMachine {
             scopes: Vec::new(),
             memory: memory,
             knowledge_base: knowledge,
-			nodes: vec!(),
+            nodes: vec![],
             paths: vec![Path::empty()],
         }
     }
 
-    pub fn execute(&mut self, node: &GastNode) -> ExecutionResult {
+    pub fn scopes(&self) -> Iter<Scope> {
+        return self.scopes.iter();
+    }
+
+    pub fn last_scope_mut(&mut self) -> &mut Scope {
+        return self.scopes.last_mut().unwrap();
+    }
+
+    pub fn pop_path(&mut self) -> Path {
+        self.paths.pop().unwrap()
+    }
+
+    pub fn push_path(&mut self, path: Path) {
+        self.paths.push(path);
+    }
+
+    pub fn current_path(&self) -> &Path {
+        self.paths.last().unwrap()
+    }
+
+    pub fn binop(&mut self,
+                 executors: &Executors,
+                 left: &GastNode,
+                 op: &String,
+                 right: &GastNode)
+                 -> ExecutionResult {
+        match executors.binop {
+            Some(ref binop) => {
+                let env = Environment::new(self, executors);
+                binop.execute(env, left, op, right)
+            }
+            None => panic!("VM is not setup to execute binary operations"),
+        }
+    }
+
+    pub fn conditional(&mut self,
+                       executors: &Executors,
+                       test: &GastNode,
+                       body: &GastNode,
+                       or_else: &GastNode)
+                       -> ExecutionResult {
+        match executors.conditional {
+            Some(ref conditional) => {
+                let env = Environment::new(self, executors);
+                conditional.execute(env, test, body, or_else)
+            }
+            None => panic!("VM is not setup to execute conditionals"),
+        }
+    }
+
+    pub fn block(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+        match executors.block {
+            Some(ref block) => {
+                let env = Environment::new(self, executors);
+                block.execute(env, content)
+            }
+            None => panic!("VM is not setup to execute blocks"),
+        }
+    }
+
+    pub fn load_identifier(&mut self, executors: &Executors, name: &String) -> ExecutionResult {
+        match executors.identifier {
+            Some(ref identifier) => {
+                let env = Environment::new(self, executors);
+                identifier.execute(env, name)
+            }
+            None => panic!("VM is not setup to execute identifiers"),
+        }
+    }
+
+    pub fn load_attribute(&mut self,
+                          executors: &Executors,
+                          parent: &GastNode,
+                          name: &String)
+                          -> ExecutionResult {
+        match executors.attribute {
+            Some(ref attribute) => {
+                let env = Environment::new(self, executors);
+                attribute.execute(env, parent, name)
+            }
+            None => panic!("VM is not setup to execute attributes"),
+        }
+    }
+
+    pub fn boolean(&mut self, executors: &Executors, value: bool) -> ExecutionResult {
+        match executors.boolean {
+            Some(ref boolean) => {
+                let env = Environment::new(self, executors);
+                boolean.execute(env, value)
+            }
+            None => panic!("VM is not setup to execute booleans"),
+        }
+    }
+
+    pub fn string(&mut self, executors: &Executors) -> ExecutionResult {
+        match executors.string {
+            Some(ref string) => {
+                let env = Environment::new(self, executors);
+                string.execute(env)
+            }
+            None => panic!("VM is not setup to execute strings"),
+        }
+    }
+
+    pub fn int(&mut self, executors: &Executors) -> ExecutionResult {
+        match executors.int {
+            Some(ref int) => {
+                let env = Environment::new(self, executors);
+                int.execute(env)
+            }
+            None => panic!("VM is not setup to execute integers"),
+        }
+    }
+
+    pub fn float(&mut self, executors: &Executors) -> ExecutionResult {
+        match executors.float {
+            Some(ref float) => {
+                let env = Environment::new(self, executors);
+                float.execute(env)
+            }
+            None => panic!("VM is not setup to execute floats"),
+        }
+    }
+
+    pub fn declaration(&mut self,
+                       executors: &Executors,
+                       name: &String,
+                       kind: &String)
+                       -> ExecutionResult {
+        match executors.declaration {
+            Some(ref declaration) => {
+                let env = Environment::new(self, executors);
+                declaration.execute(env, name, kind)
+            }
+            None => panic!("VM is not setup to execute declarations"),
+        }
+    }
+
+    pub fn assign(&mut self,
+                  executors: &Executors,
+                  targets: &Vec<GastNode>,
+                  value: &GastNode)
+                  -> ExecutionResult {
+        match executors.assign {
+            Some(ref assign) => {
+                let env = Environment::new(self, executors);
+                assign.execute(env, targets, value)
+            }
+            None => panic!("VM is not setup to execute declarations"),
+        }
+    }
+
+    pub fn execute(&mut self, executors: &Executors, node: &GastNode) -> ExecutionResult {
         let ref id = node.id;
         let ref kind = node.kind;
-        
+
         self.nodes.push(id.clone());
 
         let result = match kind {
-            &NodeType::Int { .. } => self.int(),
-            &NodeType::Float { .. } => self.float(),
-            &NodeType::Identifier { ref name } => self.load_identifier(name),
-            &NodeType::String { .. } => self.string(),
-            &NodeType::Declaration { ref id, ref kind } => self.declaration(id, kind),
-            &NodeType::Assignment { ref targets, ref value } => self.assign(targets, value),
-            &NodeType::Block { ref content } => self.block(content),
-            &NodeType::Attribute { ref parent, ref attribute } => self.load_attribute(parent, attribute),
-            &NodeType::If { ref test, ref body, ref or_else } => self.conditional(test, body, or_else),
-            &NodeType::BinOp {ref left, ref right, ref op, .. } => self.binop(left, op, right),
-            &NodeType::Nil {} => self.load_identifier(&"None".to_owned()),
-            &NodeType::Boolean { ref value } => self.boolean(*value),            
+            &NodeType::Boolean { ref value } => self.boolean(executors, *value),
+            &NodeType::String { .. } => self.string(executors),
+            &NodeType::Int { .. } => self.int(executors),
+            &NodeType::Float { .. } => self.float(executors),
+            &NodeType::Nil {} => self.load_identifier(executors, &"None".to_owned()),
+            &NodeType::BinOp { ref left, ref right, ref op, .. } => {
+                self.binop(executors, left, op, right)
+            }
+            &NodeType::If { ref test, ref body, ref or_else } => {
+                self.conditional(executors, test, body, or_else)
+            }
+            &NodeType::Block { ref content } => self.block(executors, content),
+            &NodeType::Identifier { ref name } => self.load_identifier(executors, name),
+            &NodeType::Attribute { ref parent, ref attribute } => {
+                self.load_attribute(executors, parent, attribute)
+            }
+            &NodeType::Declaration { ref id, ref kind } => self.declaration(executors, id, kind),
+            &NodeType::Assignment { ref targets, ref value } => {
+                self.assign(executors, targets, value)
+            }
             _ => panic!("Unsupported Operation"),
         };
 
-		{
-			let mut items = HashMap::new();
-			items.insert("node".to_owned(), MessageItem::String(format!("{:?}", result)));
-	        let message = Message::Notification {
-	            source: id.clone(),
-	            kind: NPROCESSED_NODE,
-	            content: items,
-	        };
-	        &CHANNEL.publish(message);
-		}   
-		    
-        let _ = self.nodes.pop();
-        
-        return result;
-    }
-
-    fn boolean(&self, value: bool) -> ExecutionResult {
-        if value {
-            self.load_identifier(&"True".to_owned())
-        } else {
-            self.load_identifier(&"False".to_owned())
-        }
-    }
-
-    fn binop(&mut self, left: &GastNode, op: &String, right: &GastNode) -> ExecutionResult {
-        let mut total_changes = Vec::new();
-        let mut total_dependencies = Vec::new();
-        let mut result = Mapping::new();
-
-        let mut left_result = self.execute(left);
-        let mut left_mapping = left_result.result;
-        total_changes.append(&mut left_result.changes);
-        total_dependencies.append(&mut left_result.dependencies);
-
-        let mut right_result = self.execute(right);
-        let mut right_mapping = right_result.result;
-        total_changes.append(&mut right_result.changes);
-        total_dependencies.append(&mut right_result.dependencies);
-
-        let mut error = HashMap::new();
-
-        for (left_path, left_address) in left_mapping.iter() {
-            for (right_path, right_address) in right_mapping.iter() {
-                if !left_path.mergeable(right_path){
-                    continue;
-                }
-
-                let mut new_path = left_path.clone();
-
-                //todo can probably avoid this clone
-                new_path.merge_into(right_path.clone());
-
-                //todo, bit of a hack
-                // concludes that if the most recently defined type supports addition
-                // that the entire thing does
-                // reality is more complicated, and full of runtime type checks
-                let mut ancestor_name = "None".to_owned();
-
-                for ancestor in self.common_ancestor(left_address, right_address) {
-                    ancestor_name = self.knowledge_base.get_type_name(&ancestor).clone();
-                    if self.knowledge_base.operation_supported(&ancestor_name, op) {
-                        break;
-                    } 
-                }
-
-                if self.knowledge_base.operation_supported(&ancestor_name, op) {
-                    let new_type = match &ancestor_name[..] {
-                        "number" => "float".to_owned(),
-                        _ => ancestor_name,
-                    };
-
-                    let new_object = self.object_of_type(&new_type);
-
-                    result.add_mapping(new_path, new_object);
-                } else {
-                    let left_object = self.memory.get_object(left_address);
-                    let left_type = left_object.get_extension().first().unwrap();
-                    let left_type_name = self.knowledge_base.get_type_name(left_type).clone();
-                    let right_object = self.memory.get_object(right_address);
-                    let right_type = right_object.get_extension().first().unwrap();
-                    let right_type_name = self.knowledge_base.get_type_name(right_type).clone();
-
-                    match error.entry((left_type_name, right_type_name)) {
-                        Entry::Vacant(o) => {
-                            let mut left_set = BTreeSet::new();
-                            let mut right_set = BTreeSet::new();
-                            left_set.insert(left_path.clone());
-                            right_set.insert(right_path.clone());
-                            o.insert((left_set, right_set));
-                        },
-                        Entry::Occupied(mut entry) => {
-                            let &mut (ref mut left_set, ref mut right_set) = entry.get_mut();
-                            left_set.insert(left_path.clone());
-                            right_set.insert(right_path.clone());
-                        }
-                    }
-                }
-            }
-        }
-
-        if error.len() > 0 {
+        {
             let mut items = HashMap::new();
-
-            items.insert("operation".to_owned(), MessageItem::String(op.clone()));
-
-            let mut comb_count = 0;
-            for (types, paths) in error {
-                let (left_type, right_type) = types;
-
-                items.insert(format!("combination {} left", comb_count), MessageItem::String(left_type.clone()));
-                items.insert(format!("combination {} right", comb_count), MessageItem::String(right_type.clone()));
-
-                let (left_paths, right_paths) = paths;
-
-                let mut path_count = 0;
-                for path in left_paths.into_iter() {
-                    items.insert(format!("combination {} left {}", comb_count, path_count), 
-                        MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                let mut path_count = 0;
-                for path in right_paths.into_iter() {
-                    items.insert(format!("combination {} right {}", comb_count, path_count), 
-                        MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                comb_count += 1;
-            }
-            
-            let message = Message::Error {
-                source: self.nodes.last().unwrap().clone(),
-                kind: EBINOP,
+            items.insert("node".to_owned(),
+                         MessageItem::String(format!("{:?}", result)));
+            let message = Message::Notification {
+                source: id.clone(),
+                kind: NPROCESSED_NODE,
                 content: items,
             };
             &CHANNEL.publish(message);
         }
 
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: total_dependencies,
-            changes: total_changes,
-            result: result,
-        };
+        let _ = self.nodes.pop();
 
-        return execution_result;
+        return result;
     }
-    
-    fn conditional(&mut self, test: &GastNode, body: &GastNode, or_else: &GastNode) -> ExecutionResult {
-        //todo execute the test properly
-    	let _ = self.execute(test);
-    	
-    	let last_path = self.paths.pop().unwrap();
-    	
-    	let mut total_changes = HashSet::new();
-        let mut total_dependencies = HashSet::new();
-    	
-    	let mut positive = last_path.clone();
-        positive.add_node(PathNode::Condition(self.nodes.last().unwrap().clone(), true));
-    	let mut negative = last_path.clone();
-        negative.add_node(PathNode::Condition(self.nodes.last().unwrap().clone(), false));
-    	
-    	self.paths.push(positive);
-    	let body_result = self.execute(body);
-    	let _ = self.paths.pop();
 
-        let mut identifier_changed = false;
-
-        let changes = body_result.changes;
-        let dependencies = body_result.dependencies;
-    	
-        for change in &changes {
-            total_changes.insert(change.clone());
-            
-            if let &AnalysisItem::Identifier {..} = change {
-                identifier_changed = true;
-            }
-        }
-
-        for dependency in &dependencies {
-            total_dependencies.insert(dependency.clone());
-        }
-    	
-    	for change in &total_changes {
-            if let &AnalysisItem::Object {ref address} = change {
-                let mut object = self.memory.get_object_mut(address);
-    		    object.change_branch();
-            }
-    	}
-
+    pub fn change_branch(&mut self, identifier_changed: bool, changes: &HashSet<AnalysisItem>) {
         if identifier_changed {
             self.scopes.last_mut().unwrap().change_branch();
         }
-    	
-    	self.paths.push(negative);
-    	let else_result = self.execute(or_else);
-    	let _ = self.paths.pop();
-    	
-        let changes = else_result.changes;
-        let dependencies = else_result.dependencies;
 
-        for change in &changes {
-            total_changes.insert(change.clone());
-            
-            if let &AnalysisItem::Identifier {..} = change {
-                identifier_changed = true;
+        for change in changes {
+            if let &AnalysisItem::Object { ref address } = change {
+                let mut object = self.memory.get_object_mut(address);
+                object.change_branch();
             }
-        }
-
-        for dependency in &dependencies {
-            total_dependencies.insert(dependency.clone());
-        }
-
-        self.paths.push(last_path);
-
-        self.merge_branches(identifier_changed, &total_changes);
-
-        self.check_conditional(&total_changes);
-    	
-        //todo make this sensible
-    	return ExecutionResult {
-            changes: Vec::from_iter(total_changes.into_iter()),
-            dependencies: Vec::from_iter(total_dependencies.into_iter()),
-            flow: FlowControl::Continue,
-            result: Mapping::new(), 
         }
     }
 
-    fn merge_branches(&mut self, identifier_changed: bool, changes: &HashSet<AnalysisItem> ) {
+    pub fn merge_branches(&mut self, identifier_changed: bool, changes: &HashSet<AnalysisItem>) {
         if identifier_changed {
             self.scopes.last_mut().unwrap().merge_branches();
         }
 
-    	for change in changes {
-            if let &AnalysisItem::Object {ref address} = change {
-                let mut object = self.memory.get_object_mut(address);
-    		    object.merge_branches();
-            }
-    	}
-    }
-
-    // has to be mutable because there is a load_attribute inside 
-    fn check_conditional(&mut self, changes: &HashSet<AnalysisItem>) {
         for change in changes {
-            if !change.is_object() {
-                let mut all_types = HashMap::new();
-                
-                let execution_result = match change {
-                    &AnalysisItem::Identifier {ref name} => self.load_identifier(name),
-                    &AnalysisItem::Attribute {ref parent, ref name} => self.load_attribute(&parent.as_node(), name),
-                    _ => unreachable!("AnalysisItem is an object when a previous check should've excluded this"),
-                };
-
-                let result = execution_result.result;
-                for (path, address) in result.iter() {
-                    let object = self.memory.get_object(address);
-                    let tpe = object.get_extension()[0];
-
-                    match all_types.entry(tpe.clone()) {
-                        Entry::Vacant(v) => {
-                            v.insert(vec!(path.clone()));
-                        },
-                        Entry::Occupied(mut o) => {
-                            o.get_mut().push(path.clone());
-                        },
-                    };
-                }
-
-                if all_types.len() > 1 {
-                    let mut items = HashMap::new();
-
-                    items.insert("name".to_owned(), MessageItem::String(change.to_string()));
-
-                    let mut type_count = 0;
-                    for (tpe, paths) in all_types {
-                        let type_name = self.knowledge_base.get_type_name(&tpe);
-                        items.insert(format!("type {}", type_count), MessageItem::String(type_name.clone()));
-
-                        let mut path_count = 0;
-                        for path in paths {
-                            items.insert(format!("type {} path {}", type_count, path_count), MessageItem::Path(path.clone()));
-                            path_count += 1;
-                        }
-                        type_count += 1;
-                    }
-
-                    let kind = if change.is_identifier() {
-                            WIDENTIFIER_POLY_TYPE
-                        } else {
-                            WATTRIBUTE_POLY_TYPE
-                        };
-
-                    let message = Message::Warning {
-                        source: self.nodes.last().unwrap().clone(),
-                        kind: kind,
-                        content: items,
-                    };
-
-                    &CHANNEL.publish(message);
-                }
+            if let &AnalysisItem::Object { ref address } = change {
+                let mut object = self.memory.get_object_mut(address);
+                object.merge_branches();
             }
         }
     }
-    
-    fn block(&mut self, content: &Vec<GastNode>) -> ExecutionResult {
-    	let mut total_dependencies = Vec::new();
-    	let mut total_changes = Vec::new();
-    	
-    	for node in content {
-    		let intermediate = self.execute(node);
 
-            let mut dependencies = intermediate.dependencies;
-            let mut changes = intermediate.changes;
-    		
-            total_dependencies.append(&mut dependencies);
-            total_changes.append(&mut changes);
-    	}
-    	
-    	return ExecutionResult {
-    		flow: FlowControl::Continue,
-    		dependencies: total_dependencies,
-    		changes: total_changes,
-    		result: Mapping::new(),
-    	}
-    } 
-
-    fn object_of_type(&mut self, type_name: &String) -> Pointer {
+    pub fn object_of_type(&mut self, type_name: &String) -> Pointer {
         let pointer = self.memory.new_object();
         let object = self.memory.get_object_mut(&pointer);
         let type_pointer = self.knowledge_base.get_type(&type_name);
@@ -399,552 +271,41 @@ impl VirtualMachine {
         return pointer;
     }
 
-    fn string(&mut self) -> ExecutionResult {
-        let type_name = "string".to_owned();
-        let pointer = self.object_of_type(&type_name);
-
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![],
-            result: mapping,
-        };
-
-        return execution_result;
-    }
-
-    fn declaration(&mut self, name: &String, type_name: &String) -> ExecutionResult {
-        let pointer = self.object_of_type(type_name);
-
-        let mut possibilities = HashSet::new();
-        possibilities.insert(pointer.clone());
-
-        let mut scope = self.scopes.last_mut().unwrap();
-
-        let mut mapping = Mapping::new();
-        mapping.add_mapping(Path::empty(), pointer.clone());
-        scope.set_mapping(name.clone(),
-                            self.paths.last().unwrap().clone(),
-                            mapping);
-
-
-        let mapping = Mapping::simple(Path::empty(), 
-            self.knowledge_base.constant("None")); 
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier { name: name.clone() }],
-            result: mapping,
-        };
-
-        return execution_result;
-    }
-
-    fn int(&mut self) -> ExecutionResult {
-        let type_name = "int".to_owned();
-        let pointer = self.object_of_type(&type_name);
-
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![],
-            result: mapping,
-        };
-
-        return execution_result;
-    }
-
-    fn float(&mut self) -> ExecutionResult {
-        let type_name = "float".to_owned();
-        let pointer = self.object_of_type(&type_name);
-
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![],
-            result: mapping,
-        };
-
-        return execution_result;
-    }
-
-    fn load_identifier(&self, name: &String) -> ExecutionResult {
-        let mut unresolved = BTreeSet::new();
-        unresolved.insert(Path::empty());
-
-        let mut mapping = Mapping::new();
-
-        let mut warning = BTreeSet::new();
-
-        for scope in self.scopes.iter().rev() {
-            let opt_mappings = scope.resolve_optional_identifier(&name);
-
-            let mut new_unresolved = BTreeSet::new();
-
-            for (path, opt_address) in opt_mappings.iter() {   
-                for unresolved_path in &unresolved {
-                    let mut new_path = path.clone();
-                    for pls in unresolved_path.iter() {
-                        new_path.add_node(pls.clone());
-                    }
-
-                    if let &Some(address) = opt_address {
-                        mapping.add_mapping(new_path, address.clone());
-                    } else {
-                        new_unresolved.insert(new_path.clone());
-
-                        if opt_mappings.len() > 1 {
-                            warning.insert(new_path);
-                        }
-                    }
-                }         	
-            }
-
-            unresolved = new_unresolved;
-            if unresolved.len() == 0 {
-                break;
-            }
-        }
-
-        if warning.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in warning {
-                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-            
-            let message = Message::Warning {
-                source: self.nodes.last().unwrap().clone(),
-                kind: WIDENTIFIER_UNSAFE,
-                content: items,
-            };
-            &CHANNEL.publish(message);
-        }
-
-        if unresolved.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in unresolved {
-                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-            
-            let message = Message::Error {
-                source: self.nodes.last().unwrap().clone(),
-                kind: EIDENTIFIER_INVALID,
-                content: items,
-            };
-            &CHANNEL.publish(message);
-        }
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![AnalysisItem::Identifier {name: name.clone()} ],
-            changes: vec![],
-            result: mapping,
-        };
-
-        return execution_result;
-
-    }
-
-	fn load_object_attribute(&self, address: &Pointer, name: &String) -> OptionalMapping {
-		let mut unresolved = Vec::new();
-		
-		let object = self.memory.get_object(address);
-		let opt_mappings = object.get_attribute(name);
-		
-		let mut result = OptionalMapping::new();		
-		
-		for (path, opt_address) in opt_mappings.iter() {            	
-            if let &Some(address) = opt_address {
-            	result.add_mapping(path.clone(), Some(address.clone()));
-            } else {
-            	unresolved.push(path.clone());
-            }
-        }
-		
-		if unresolved.len() > 0 {
-        	let types = object.get_extension();
-        	
-        	if types.len() == 0 {
-        		// can't go further up the hierarchy
-        		result.add_mapping(Path::empty(), None);
-        	}
-        	
-    		for tpe in types {
-    			let mut found = true;
-    			
-    			for (path, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
-    				if opt_address.is_none() {
-    					found = false;
-    				}
-    				
-    				for original in unresolved.iter() {
-    					let mut new_path = path.clone();
-    					for pls in original.iter() {
-    						new_path.add_node(pls.clone());
-    					}
-    					result.add_mapping(new_path, opt_address.clone());
-    				}
-    			}
-    			
-    			if found {
-    				//todo, technically we should adjust the unresolved vector now
-    				// the next type only gets explored if this one returned nothing
-    				break;
-    			}
-        	}
-        } 
-		
-		return result;
-	}
-    
-    // mutable because parent needs to be executed
-    fn load_attribute(&mut self, parent: &GastNode, name: &String) -> ExecutionResult {
-        let parent_result = self.execute(parent);
-
-        let mut total_dependencies = Vec::new();
-        let mut total_changes = Vec::new();
-        let mut mapping = Mapping::new();
-        
-        // which assumptions still need a valid mapping
-        let mut unresolved = BTreeSet::new();
-
-        let parent_mapping = parent_result.result;
-        let mut dependencies = parent_result.dependencies;
-        let mut changes = parent_result.changes;
-                
-        for dependency in dependencies.iter() {
-            total_dependencies.push(AnalysisItem::Attribute { parent: Box::new(dependency.clone()), name: name.clone() });
-        }
-        
-        total_dependencies.append(&mut dependencies);
-        total_changes.append(&mut changes);
-
-        let mut warning = BTreeSet::new();
-        let mut error = BTreeSet::new();
-
-        for (parent_path, parent_address) in parent_mapping.iter() {
-            dependencies.push( AnalysisItem::Object { address: parent_address.clone() });
-            
-            let parent_object = self.memory.get_object(parent_address);
-            let mut opt_mappings = parent_object.get_attribute(name);
-
-            // copy the actual possible paths
-            // need the amount of actual paths to decide whether or not to send a warning
-            let mut actual_paths = Vec::new();
-            for (mut path, opt_address) in opt_mappings.iter() {
-                if parent_path.mergeable(&path){
-                    let mut new_path = parent_path.clone();
-
-                    //todo can probably remove this clone
-                    new_path.merge_into(path.clone());
-                    actual_paths.push((new_path, opt_address));
-                }
-            }
-
-            let num_paths = actual_paths.len();
-                                
-            for (path, opt_address) in actual_paths.into_iter() {
-                if let &Some(address) = opt_address {	                    	
-                    mapping.add_mapping(path, address.clone());
-                } else {
-                    unresolved.insert(path.clone());
-                    
-                    if num_paths > 1 {
-                        // having a single None is fine
-                        // probably a class method then
-                        warning.insert(path);                        
-                    }
-                }
-            }
-            
-            // look for the attribute in its types
-            if unresolved.len() > 0 {
-                let types = parent_object.get_extension();
-                
-                if types.len() == 0 {
-                    for unmet in unresolved.iter() {
-                        //todo, add type information as well
-                        error.insert(unmet.clone());
-                    }
-                    continue;
-                }
-                
-                for tpe in types.iter() {
-                    for (path, opt_address) in self.load_object_attribute(tpe, name).into_iter() {
-                        for original in unresolved.iter() {
-                            let mut new_path = path.clone();
-                            for pls in original.iter() {
-                                new_path.add_node(pls.clone());
-                            }
-                            
-                            if opt_address.is_none() {
-                                //todo, add type information as well
-                                error.insert(new_path);
-                                continue;
-                            } else {
-                                mapping.add_mapping(new_path, opt_address.unwrap());
-                            }
-                        }
-                    }
-                }
-            } 
-        }
-
-        if warning.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in warning {
-                if error.contains(&path) {
-                    continue;
-                }
-                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-
-            if path_count > 0 {
-                let message = Message::Warning {
-                    source: self.nodes.last().unwrap().clone(),
-                    kind: WATTRIBUTE_UNSAFE,
-                    content: items,
-                };
-                &CHANNEL.publish(message);
-            }
-        }
-
-        if error.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in error {
-                items.insert(format!("path {}", path_count), MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-            
-            let message = Message::Error {
-                source: self.nodes.last().unwrap().clone(),
-                kind: EATTRIBUTE_INVALID,
-                content: items,
-            };
-            &CHANNEL.publish(message);
-        }
-        
-        return ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: total_dependencies,
-            changes: total_changes,
-            result: mapping,
-        };
-    }
-
-
-    fn assign(&mut self, targets: &Vec<GastNode>, value: &GastNode) -> ExecutionResult {
-        let value_execution = self.execute(value);
-
-        let mut total_changes = Vec::new();
-        let mut total_dependencies = Vec::new();
-
-        let mut value_changes = value_execution.changes;
-        let mut value_dependencies = value_execution.dependencies;
-        let mut value_mapping = value_execution.result;
-
-        total_changes.append(&mut value_changes);
-        total_dependencies.append(&mut value_dependencies);
-
-        for target in targets {
-            let target_result = self.assign_to_target(target, &value_mapping);
-            let mut target_dependencies = target_result.dependencies;
-            let mut target_changes = target_result.changes;
-
-            total_changes.append(&mut target_changes);
-            total_dependencies.append(&mut target_dependencies);
-        }
-
-        let mapping = Mapping::simple(Path::empty(), 
-            self.knowledge_base.constant("None"));
-
-        return ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: total_dependencies,
-            changes: total_changes,
-            result: mapping,
-        };
-    }
-
-    fn assign_to_target(&mut self, target: &GastNode, mapping: &Mapping) -> ExecutionResult {
-        match &target.kind {
-            &NodeType::Identifier { ref name } => self.assign_to_identifier(name, mapping),
-            &NodeType::List { ref content } |
-            &NodeType::Sequence { ref content } => self.assign_to_iterable(content, mapping),
-            &NodeType::Attribute { ref parent, ref attribute } => {
-                self.assign_to_attribute(parent, attribute, mapping)
-            },
-            // attribute
-            _ => panic!("unimplemented"),
-        }
-    }
-
-    fn assign_to_attribute(&mut self,
-                           parent: &GastNode,
-                           attribute: &String,
-                           mapping: &Mapping)
-                           -> ExecutionResult {
-        //todo get rid of clone
-        let mapping = mapping.clone().augment(
-            PathNode::Assignment(
-                *self.nodes.last().unwrap(), 
-                format!("{}.{}", parent.to_string(), attribute)));
-
-        let parent_result = self.execute(parent);
-
-        let result = parent_result.result;
-        let dependencies = parent_result.dependencies;
-        
-        let parent_mapping = result;
-        let mut changes = Vec::new();
-        
-        // add the attribute identifier changes
-        for dependency in dependencies.into_iter() {
-            changes.push(AnalysisItem::Attribute { parent: Box::new(dependency), name: attribute.clone() });
-        }
-
-        // add the object changes
-        // perform the assignment
-        for (_, parent_address) in parent_mapping.iter() {
-            changes.push( AnalysisItem::Object { address: parent_address.clone() });
-
-            //todo this clone shouldn't be here
-            let current_path = self.paths.last().unwrap().clone();
-            
-            let mut parent_object = self.memory.get_object_mut(parent_address);
-            parent_object.assign_attribute(attribute.clone(),
-                                            current_path,
-                                            mapping.clone())
-        }
-
-        //todo, resolving parent may have had changes/dependencies
-        return ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: changes,
-            result: Mapping::new(),
-        };
-    }
-
-    // todo rewrite
-    fn assign_to_iterable(&mut self, target: &Vec<GastNode>, mapping: &Mapping) -> ExecutionResult {
-
-        // for mapping in mappings {
-        // let ref assumption = mapping.assumption;
-        // let ref address = mapping.address;
-        // let object = self.memory.get_object(&address);
-        //
-        // match object.iterate() {
-        // Some(sub_address) => {
-        // new_mappings.push(Mapping::new(assumption.clone(), sub_address));
-        // }
-        // _ => panic!("object isn't iterable"),
-        // }
-        // }
-        //
-        // let mut new_changes = Vec::new();
-        //
-        // for sub_target in target {
-        // let sub_result = self.assign_to_target(sub_target, &new_mappings);
-        //
-        // match sub_result {
-        // ExecutionResult::Success { mut changes, .. } => {
-        // new_changes.append(&mut changes);
-        // }
-        // _ => (),
-        // }
-        // }
-
-        return ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![],
-            result: Mapping::new(),
-        };
-    }
-
-    fn assign_to_identifier(&mut self, target: &String, mapping: &Mapping) -> ExecutionResult {
-        //todo get rid of clone
-        let mapping = mapping.clone().augment(
-            PathNode::Assignment(
-                *self.nodes.last().unwrap_or(&0), 
-                target.clone()));
-
-        let mut scope = self.scopes.last_mut().unwrap();
-
-        scope.set_mapping(target.clone(),
-                            self.paths.last().unwrap().clone(),
-                            mapping.clone());
-
-        let mapping = Mapping::simple(Path::empty(), 
-            self.knowledge_base.constant("None"));
-
-        return ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier { name: target.clone() }],
-            result: mapping,
-        };
-    }
-
-    pub fn declare_new_constant(&mut self, target: &String, tpe: &String) -> ExecutionResult {
+    // todo, implement more generic
+    pub fn declare_new_constant(&mut self, name: &String, tpe: &String) -> ExecutionResult {
         let pointer = self.object_of_type(tpe);
         let mut scope = self.scopes.last_mut().unwrap();
         let mapping = Mapping::simple(Path::empty(), pointer);
-        scope.set_constant(target.clone(),
-                            self.paths.last().unwrap().clone(),
-                            mapping.clone());
-        self.knowledge_base.add_constant(target, &pointer);
-        let result = Mapping::simple(Path::empty(), 
-            self.knowledge_base.constant("None"));
+        scope.set_constant(name.clone(),
+                           self.paths.last().unwrap().clone(),
+                           mapping.clone());
+        self.knowledge_base.add_constant(name, &pointer);
+        let result = Mapping::simple(Path::empty(), self.knowledge_base.constant("None"));
         return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier { name: target.clone() }],
-            result: mapping,
+            changes: vec![AnalysisItem::Identifier { name: name.clone() }],
+            result: result,
         };
     }
 
+    // todo, implement more generic
     pub fn declare_simple_type(&mut self, name: &String) {
         let pointer = self.memory.new_object();
         {
             let mut object = self.memory.get_object_mut(&pointer);
             object.set_type(true);
         }
+        let mapping = Mapping::simple(Path::empty(), pointer);
+        let mut scope = self.scopes.last_mut().unwrap();
+        scope.set_mapping(name.clone(),
+                          self.paths.last().unwrap().clone(),
+                          mapping.clone());
         self.knowledge_base.add_type(name.clone(), pointer.clone());
-        self.assign_to_identifier(name, &Mapping::simple(Path::empty(), pointer));
     }
 
-    pub fn declare_sub_type(&mut self, name: &String, parent: &String) {
-        let result = self.load_identifier(parent).result;
+    pub fn declare_sub_type(&mut self, executors: &Executors, name: &String, parent: &String) {
+        let result = self.load_identifier(executors, parent).result;
         let (_, parent_pointer) = result.iter().next().unwrap();
 
         let new_pointer = self.memory.new_object();
@@ -954,8 +315,13 @@ impl VirtualMachine {
             object.extend(parent_pointer.clone());
         }
 
+        let mapping = Mapping::simple(Path::empty(), new_pointer.clone());
+        let mut scope = self.scopes.last_mut().unwrap();
+        scope.set_mapping(name.clone(),
+                          self.paths.last().unwrap().clone(),
+                          mapping.clone());
+
         self.knowledge_base.add_type(name.clone(), new_pointer.clone());
-        self.assign_to_identifier(name, &Mapping::simple(Path::empty(), new_pointer));
     }
 
     pub fn knowledge_base(&mut self) -> &mut KnowledgeBase {
@@ -964,6 +330,14 @@ impl VirtualMachine {
 
     pub fn new_scope(&mut self) {
         self.scopes.push(Scope::new());
+    }
+
+    pub fn get_object(&self, address: &Pointer) -> &Object {
+        self.memory.get_object(address)
+    }
+
+    pub fn get_object_mut(&mut self, address: &Pointer) -> &mut Object {
+        self.memory.get_object_mut(address)
     }
 
     pub fn ancestors(&self, pointer: &Pointer) -> Vec<Pointer> {
@@ -987,6 +361,18 @@ impl VirtualMachine {
         let second_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(second).into_iter());
 
         let intersection = &first_ancestors & &second_ancestors;
-        return intersection
+        return intersection;
+    }
+
+    pub fn current_node(&self) -> GastID {
+        self.nodes.last().unwrap_or(&0).clone()
+    }
+
+    pub fn knowledge(&self) -> &KnowledgeBase {
+        &self.knowledge_base
+    }
+
+    pub fn knowledge_mut(&mut self) -> &mut KnowledgeBase {
+        &mut self.knowledge_base
     }
 }

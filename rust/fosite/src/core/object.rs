@@ -78,13 +78,13 @@ impl Object {
     pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
         return self.composite_property.get_attribute(name);
     }
-    
+
     pub fn change_branch(&mut self) {
-    	self.composite_property.change_branch();
+        self.composite_property.change_branch();
     }
-    
+
     pub fn merge_branches(&mut self) {
-    	self.composite_property.merge_branches();
+        self.composite_property.merge_branches();
     }
 }
 
@@ -123,12 +123,12 @@ impl CompositeProperty {
     fn get_attribute(&self, name: &String) -> &OptionalMapping {
         self.namespace.resolve_optional_identifier(name)
     }
-    
+
     fn change_branch(&mut self) {
-    	self.namespace.change_branch();
+        self.namespace.change_branch();
     }
-    
+
     fn merge_branches(&mut self) {
-    	self.namespace.merge_branches();
+        self.namespace.merge_branches();
     }
 }

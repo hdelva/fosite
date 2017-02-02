@@ -1,15 +1,9 @@
 use super::{Path, PathNode};
 use super::{Mapping, OptionalMapping};
-use super::Pointer;
 
 use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-
-use term_painter::ToStyle;
-use term_painter::Color::*;
-use term_painter::Attr::*;
 
 #[derive(Debug)]
 struct Frame {
@@ -116,7 +110,7 @@ impl Scope {
     pub fn set_mapping(&mut self, name: String, path: Path, mapping: Mapping) {
         if self.constants.contains(&name) {
             // todo, throw error
-            return
+            return;
         }
 
         let mut count = 0 as usize;
@@ -126,45 +120,47 @@ impl Scope {
             let old_index = current_index;
 
             match node {
-                &PathNode::Condition(_, b) | &PathNode::Loop(_, b) => {
+                &PathNode::Condition(_, b) |
+                &PathNode::Loop(_, b) => {
                     count += 2;
                     if b {
                         current_index = count - 1;
                     } else {
                         current_index = count;
                     }
-                },
+                }
                 _ => {
                     count += 1;
-                    current_index = count; 
+                    current_index = count;
                 }
             }
 
             if current_index >= self.frames.len() {
                 match node {
-                    &PathNode::Condition(_, b) | &PathNode::Loop(_, b) => {
+                    &PathNode::Condition(_, b) |
+                    &PathNode::Loop(_, b) => {
                         if b {
                             self.path.push(1);
                         } else {
                             self.path.push(0);
                         }
-                    },
+                    }
                     _ => self.path.push(0),
                 }
 
                 match node {
-                    &PathNode::Condition(l, b) => {
+                    &PathNode::Condition(l, _) => {
                         let positive = PathNode::Condition(l, true);
                         self.frames.push(Frame::new(positive, Some(old_index.clone())));
                         let negative = PathNode::Condition(l, false);
                         self.frames.push(Frame::new(negative, Some(old_index.clone())));
-                    },
-                    &PathNode::Loop(l, b) => {
+                    }
+                    &PathNode::Loop(l, _) => {
                         let positive = PathNode::Loop(l, true);
                         self.frames.push(Frame::new(positive, Some(old_index.clone())));
                         let negative = PathNode::Loop(l, false);
                         self.frames.push(Frame::new(negative, Some(old_index.clone())));
-                    },
+                    }
                     _ => {
                         self.frames.push(Frame::new(node.clone(), Some(old_index.clone())));
                     }

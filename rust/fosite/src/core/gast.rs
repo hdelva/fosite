@@ -42,24 +42,28 @@ pub enum NodeType {
     List { content: Vec<GastNode> },
     Sequence { content: Vec<GastNode> },
     Block { content: Vec<GastNode> },
-    If { test: Box<GastNode>,
-    	 body: Box<GastNode>,
-    	 or_else: Box<GastNode>,
+    If {
+        test: Box<GastNode>,
+        body: Box<GastNode>,
+        or_else: Box<GastNode>,
     },
-    BinOp { left: Box<GastNode>,
-            right: Box<GastNode>,
-            op: String,
-            associative: bool,
+    BinOp {
+        left: Box<GastNode>,
+        right: Box<GastNode>,
+        op: String,
+        associative: bool,
     },
-    Boolean {value: bool},
+    Boolean { value: bool },
     Nil {},
 }
 
 impl NodeType {
     fn to_string(&self) -> String {
         match self {
-            &NodeType::Identifier {ref name} => name.clone(),
-            &NodeType::Attribute {ref parent, ref attribute} => format!("{}.{}", parent.kind.to_string(), attribute),
+            &NodeType::Identifier { ref name } => name.clone(),
+            &NodeType::Attribute { ref parent, ref attribute } => {
+                format!("{}.{}", parent.kind.to_string(), attribute)
+            }
             _ => panic!("Node {:?} doesn't have a string representation", self),
         }
     }
@@ -71,10 +75,10 @@ pub fn build(node: &Json) -> GastNode {
     let kind = kind.as_string().unwrap();
     let id = obj.get("id").unwrap();
     let id = id.as_i64().unwrap() as u16;
-    
+
     let line = obj.get("line");
     let col = obj.get("col");
-    
+
     let node = match kind {
         "block" => build_block(id, obj.get("content").unwrap()),
         "assign" => build_assign(id, node),
@@ -87,19 +91,19 @@ pub fn build(node: &Json) -> GastNode {
         "sequence" => build_sequence(id, node),
         "if" => build_if(id, node),
         "binop" => build_binop(id, node),
-        "nil" => build_nil(id, node),
+        "nil" => build_nil(id),
         "boolean" => build_bool(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
     if let (Some(line), Some(col)) = (line, col) {
-    	let message = Message::Input {
+        let message = Message::Input {
             source: id.clone(),
             line: line.as_i64().unwrap() as i16,
             col: col.as_i64().unwrap() as i16,
             node: node.clone(),
         };
-        
+
         &CHANNEL.publish(message);
     }
 
@@ -121,12 +125,13 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
     let json_ass = obj.get("associative").unwrap();
     let ass = json_ass.as_boolean().unwrap();
 
-    return GastNode::new(id, NodeType::BinOp {
-        left: left,
-        right: right,
-        op: op,
-        associative: ass,
-    })
+    return GastNode::new(id,
+                         NodeType::BinOp {
+                             left: left,
+                             right: right,
+                             op: op,
+                             associative: ass,
+                         });
 }
 
 fn build_bool(id: GastID, node: &Json) -> GastNode {
@@ -135,30 +140,31 @@ fn build_bool(id: GastID, node: &Json) -> GastNode {
     let json_value = obj.get("value").unwrap();
     let value = json_value.as_boolean().unwrap();
 
-    return GastNode::new(id, NodeType::Boolean {
-        value: value,
-    })
+    return GastNode::new(id, NodeType::Boolean { value: value });
 }
 
-fn build_nil(id: GastID, node: &Json) -> GastNode {
-    return GastNode::new(id, NodeType::Nil {
-
-    })
+fn build_nil(id: GastID) -> GastNode {
+    return GastNode::new(id, NodeType::Nil {});
 }
 
 fn build_if(id: GastID, node: &Json) -> GastNode {
-	let obj = node.as_object().unwrap();
-	
-	let json_test = obj.get("test").unwrap();
+    let obj = node.as_object().unwrap();
+
+    let json_test = obj.get("test").unwrap();
     let test = Box::new(build(json_test));
-    
+
     let json_body = obj.get("body").unwrap();
     let body = Box::new(build(json_body));
-    
+
     let json_orelse = obj.get("orElse").unwrap();
     let or_else = Box::new(build(json_orelse));
-    
-    return GastNode::new(id, NodeType::If {test: test, body: body, or_else: or_else});
+
+    return GastNode::new(id,
+                         NodeType::If {
+                             test: test,
+                             body: body,
+                             or_else: or_else,
+                         });
 }
 
 fn build_block(id: GastID, node: &Json) -> GastNode {
