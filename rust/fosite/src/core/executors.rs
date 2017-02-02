@@ -19,47 +19,47 @@ pub struct Executors {
 
 pub trait AssignExecutor {
     fn execute(&self,
-               mut env: Environment,
+               env: Environment,
                targets: &Vec<GastNode>,
                value: &GastNode)
                -> ExecutionResult;
 }
 
 pub trait DeclarationExecutor {
-    fn execute(&self, mut env: Environment, name: &String, kind: &String) -> ExecutionResult;
+    fn execute(&self, env: Environment, name: &String, kind: &String) -> ExecutionResult;
 }
 
 pub trait IntExecutor {
-    fn execute(&self, mut env: Environment) -> ExecutionResult;
+    fn execute(&self, env: Environment) -> ExecutionResult;
 }
 
 pub trait FloatExecutor {
-    fn execute(&self, mut env: Environment) -> ExecutionResult;
+    fn execute(&self, env: Environment) -> ExecutionResult;
 }
 
 pub trait StringExecutor {
-    fn execute(&self, mut env: Environment) -> ExecutionResult;
+    fn execute(&self, env: Environment) -> ExecutionResult;
 }
 
 pub trait BooleanExecutor {
-    fn execute(&self, mut env: Environment, value: bool) -> ExecutionResult;
+    fn execute(&self, env: Environment, value: bool) -> ExecutionResult;
 }
 
 pub trait AttributeExecutor {
-    fn execute(&self, mut env: Environment, parent: &GastNode, name: &String) -> ExecutionResult;
+    fn execute(&self, env: Environment, parent: &GastNode, name: &String) -> ExecutionResult;
 }
 
 pub trait IdentifierExecutor {
-    fn execute(&self, mut env: Environment, name: &String) -> ExecutionResult;
+    fn execute(&self, env: Environment, name: &String) -> ExecutionResult;
 }
 
 pub trait BlockExecutor {
-    fn execute(&self, mut env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
 }
 
 pub trait BinOpExecutor {
     fn execute(&self,
-               mut env: Environment,
+               env: Environment,
                left: &GastNode,
                op: &String,
                right: &GastNode)
@@ -68,7 +68,7 @@ pub trait BinOpExecutor {
 
 pub trait ConditionalExecutor {
     fn execute(&self,
-               mut env: Environment,
+               env: Environment,
                test: &GastNode,
                body: &GastNode,
                or_else: &GastNode)
