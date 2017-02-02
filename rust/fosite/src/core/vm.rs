@@ -179,7 +179,7 @@ impl VirtualMachine {
                 let env = Environment::new(self, executors);
                 assign.execute(env, targets, value)
             }
-            None => panic!("VM is not setup to execute declarations"),
+            None => panic!("VM is not setup to execute assignments"),
         }
     }
 
