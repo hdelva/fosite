@@ -53,6 +53,13 @@ pub enum NodeType {
         op: String,
         associative: bool,
     },
+    BoolOp {
+        left: Box<GastNode>,
+        op: String,
+        right: Box<GastNode>,
+        reversed: Option<String>,
+        negated: Option<String>,
+    },
     Boolean { value: bool },
     Nil {},
 }
@@ -93,6 +100,7 @@ pub fn build(node: &Json) -> GastNode {
         "binop" => build_binop(id, node),
         "nil" => build_nil(id),
         "boolean" => build_bool(id, node),
+        "boolop" => build_boolop(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -131,6 +139,42 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_boolop(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_left = obj.get("left").unwrap();
+    let left = Box::new(build(json_left));
+
+    let json_right = obj.get("right").unwrap();
+    let right = Box::new(build(json_right));
+
+    let json_op = obj.get("op").unwrap();
+    let op = json_op.as_string().unwrap().to_owned();
+
+    let json_reversed = obj.get("reverse").unwrap();
+    let reversed = if !json_reversed.is_null() {
+        Some(json_reversed.as_string().unwrap().to_owned())
+    } else {
+        None
+    };
+
+    let json_negated = obj.get("negate").unwrap();
+    let negated = if !json_negated.is_null() {
+        Some(json_negated.as_string().unwrap().to_owned())
+    } else {
+        None
+    };
+
+    return GastNode::new(id,
+                         NodeType::BoolOp {
+                             left: left,
+                             right: right,
+                             op: op,
+                             reversed: reversed,
+                             negated: negated,
                          });
 }
 

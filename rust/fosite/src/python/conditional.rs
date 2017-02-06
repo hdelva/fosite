@@ -17,7 +17,7 @@ impl ConditionalExecutor for PythonConditional {
         let Environment { vm, executors } = env;
 
         // todo execute the test properly
-        let _ = vm.execute(executors, test);
+        let pls = vm.execute(executors, test);
 
         let last_path = vm.pop_path();
 
@@ -131,7 +131,7 @@ impl PythonConditional {
                     for (tpe, paths) in all_types {
                         let type_name = vm.knowledge().get_type_name(&tpe);
                         items.insert(format!("type {}", type_count),
-                                     MessageItem::String(type_name.clone()));
+                                     MessageItem::String(type_name.to_owned()));
 
                         let mut path_count = 0;
                         for path in paths {

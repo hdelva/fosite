@@ -5,6 +5,7 @@ use super::KnowledgeBase;
 
 pub struct Executors {
     pub binop: Option<Box<BinOpExecutor>>,
+    pub boolop: Option<Box<BoolOpExecutor>>,
     pub conditional: Option<Box<ConditionalExecutor>>,
     pub block: Option<Box<BlockExecutor>>,
     pub identifier: Option<Box<IdentifierExecutor>>,
@@ -58,6 +59,15 @@ pub trait BlockExecutor {
 }
 
 pub trait BinOpExecutor {
+    fn execute(&self,
+               env: Environment,
+               left: &GastNode,
+               op: &String,
+               right: &GastNode)
+               -> ExecutionResult;
+}
+
+pub trait BoolOpExecutor {
     fn execute(&self,
                env: Environment,
                left: &GastNode,

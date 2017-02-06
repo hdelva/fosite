@@ -66,6 +66,21 @@ impl VirtualMachine {
         }
     }
 
+    pub fn boolop(&mut self,
+                 executors: &Executors,
+                 left: &GastNode,
+                 op: &String,
+                 right: &GastNode)
+                 -> ExecutionResult {
+        match executors.boolop {
+            Some(ref boolop) => {
+                let env = Environment::new(self, executors);
+                boolop.execute(env, left, op, right)
+            }
+            None => panic!("VM is not setup to execute boolean operations"),
+        }
+    }
+
     pub fn conditional(&mut self,
                        executors: &Executors,
                        test: &GastNode,
@@ -197,6 +212,9 @@ impl VirtualMachine {
             &NodeType::Nil {} => self.load_identifier(executors, &"None".to_owned()),
             &NodeType::BinOp { ref left, ref right, ref op, .. } => {
                 self.binop(executors, left, op, right)
+            }
+            &NodeType::BoolOp { ref left, ref right, ref op, .. } => {
+                self.boolop(executors, left, op, right)
             }
             &NodeType::If { ref test, ref body, ref or_else } => {
                 self.conditional(executors, test, body, or_else)

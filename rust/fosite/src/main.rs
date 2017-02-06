@@ -79,6 +79,7 @@ fn test_vm() {
         assign: Some(Box::new(PythonAssign {})),
         attribute: Some(Box::new(PythonAttribute {})),
         binop: Some(Box::new(PythonBinOp {})),
+        boolop: Some(Box::new(PythonBoolOp {})),
         block: Some(Box::new(PythonBlock {})),
         boolean: Some(Box::new(PythonBoolean {})),
         conditional: Some(Box::new(PythonConditional {})),
@@ -114,7 +115,7 @@ fn test_vm() {
     vm.declare_new_constant(&"True".to_owned(), &"bool".to_owned());
     vm.declare_new_constant(&"False".to_owned(), &"bool".to_owned());
 
-    vm.declare_simple_type(&"string".to_owned());
+    vm.declare_sub_type(&executors, &"string".to_owned(), &"object".to_owned());
 
     {
         let mut kb = vm.knowledge_base();
@@ -126,7 +127,26 @@ fn test_vm() {
         kb.add_arithmetic_type("number", "**");
         kb.add_arithmetic_type("number", "%");
 
+        // todo replace when collections are a thing
         kb.add_arithmetic_type("string", "+");
+
+        kb.add_arithmetic_type("number", "<");
+        kb.add_arithmetic_type("number", ">");
+        kb.add_arithmetic_type("number", "<=");
+        kb.add_arithmetic_type("number", ">=");
+
+        kb.add_arithmetic_type("object", "is");
+        kb.add_arithmetic_type("object", "is not");
+        kb.add_arithmetic_type("object", "==");
+        kb.add_arithmetic_type("object", "!=");
+
+        // == on None is _not_ a valid operation
+        kb.add_arithmetic_type("NoneType", "is");
+        kb.add_arithmetic_type("NoneType", "is not");
+
+        // todo replace when collections are a thing
+        kb.add_arithmetic_type("string", "in");
+        kb.add_arithmetic_type("string", "not in");
     }
 
     // global scope

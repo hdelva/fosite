@@ -30,10 +30,12 @@ impl Worker {
         logger.add_warning_handler(WIDENTIFIER_UNSAFE, Box::new(IdentifierUnsafe::new()));
         logger.add_warning_handler(WIDENTIFIER_POLY_TYPE, Box::new(PolyType::new()));
         logger.add_warning_handler(WATTRIBUTE_POLY_TYPE, Box::new(PolyType::new()));
+        logger.add_warning_handler(WBOOLOP, Box::new(BoolopIncompatible::new()));
 
         logger.add_error_handler(EATTRIBUTE_INVALID, Box::new(AttributeInvalid::new()));
         logger.add_error_handler(EIDENTIFIER_INVALID, Box::new(IdentifierInvalid::new()));
         logger.add_error_handler(EBINOP, Box::new(BinopInvalid::new()));
+        logger.add_error_handler(EBOOLOP, Box::new(BinopInvalid::new()));
 
         let thread = {
             spawn(move || logger.message_loop())
@@ -540,6 +542,62 @@ impl ErrorHandler for BinopInvalid {
             println!("  Combination {}: {}",
                      comb_count,
                      Bold.paint(format!("{} {} {}", left_type, operator, right_type)));
+
+            let mut ass_count = 0;
+            let mut current_left_ass = format!("combination {} left {}", comb_count, ass_count);
+            println!("    Left side has type {}", left_type);
+            while let Some(left_ass) = content.get(&current_left_ass) {
+                self.print_path(sources, &left_ass.to_path().unwrap(), "      ");
+                println!("");
+
+                ass_count += 1;
+                current_left_ass = format!("combination {} left {}", comb_count, ass_count);
+            }
+
+            let mut ass_count = 0;
+            let mut current_right_ass = format!("combination {} right {}", comb_count, ass_count);
+            println!("    Right side has type {}", right_type);
+            while let Some(right_ass) = content.get(&current_right_ass) {
+                self.print_path(sources, &right_ass.to_path().unwrap(), "      ");
+                println!("");
+
+                ass_count += 1;
+                current_right_ass = format!("combination {} right {}", comb_count, ass_count);
+            }
+
+            comb_count += 1;
+            current_left_comb = format!("combination {} left", comb_count);
+            current_right_comb = format!("combination {} right", comb_count);
+        }
+    }
+}
+
+struct BoolopIncompatible { }
+
+impl BoolopIncompatible {
+    pub fn new() -> BoolopIncompatible {
+        BoolopIncompatible {}
+    }
+}
+
+impl WarningHandler for BoolopIncompatible {
+    fn handle(&mut self, node: GastID, sources: &Sources, content: &Content) {
+        self.preamble(sources, node);
+
+        println!("  Comparing objects of incompatible types");
+        println!("  The following combinations exist:");
+
+        let mut comb_count = 0;
+        let mut current_left_comb = format!("combination {} left", comb_count);
+        let mut current_right_comb = format!("combination {} right", comb_count);
+        while let Some(left_type) = content.get(&current_left_comb) {
+            let right_type = content.get(&current_right_comb).unwrap();
+            let left_type = left_type.to_string().unwrap();
+            let right_type = right_type.to_string().unwrap();
+
+            println!("  Combination {}: {}",
+                     comb_count,
+                     Bold.paint(format!("{} and {}", left_type, right_type)));
 
             let mut ass_count = 0;
             let mut current_left_ass = format!("combination {} left {}", comb_count, ass_count);

@@ -16,6 +16,8 @@ pub const WIDENTIFIER_UNSAFE: MessageType = 6;
 pub const WATTRIBUTE_POLY_TYPE: MessageType = 7;
 pub const WIDENTIFIER_POLY_TYPE: MessageType = 8;
 pub const EBINOP: MessageType = 9;
+pub const EBOOLOP: MessageType = 10;
+pub const WBOOLOP: MessageType = 11;
 
 #[derive(Clone, Debug)]
 pub enum Message {

@@ -93,7 +93,7 @@ impl PathNode {
                 }
                 return true;
             }
-            _ => self.get_location() != other.get_location(),
+            _ => true, // other kinds of nodes can't contradict each other
         }
     }
 
