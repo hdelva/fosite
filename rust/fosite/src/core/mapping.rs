@@ -28,6 +28,10 @@ impl Mapping {
         return self.possibilities.iter();
     }
 
+    pub fn into_iter(self) -> IntoIter<Path, Pointer> {
+        return self.possibilities.into_iter();
+    }
+
     pub fn augment(self, node: PathNode) -> Mapping {
         let mut new_possibilities = HashMap::new();
         for (mut path, address) in self.possibilities.into_iter() {
@@ -35,6 +39,10 @@ impl Mapping {
             new_possibilities.insert(path.clone(), address);
         }
         return Mapping { possibilities: new_possibilities };
+    }
+
+    pub fn len(&self) -> usize {
+        return self.possibilities.len();
     }
 }
 

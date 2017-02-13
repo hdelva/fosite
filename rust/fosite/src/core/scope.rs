@@ -171,6 +171,70 @@ impl Scope {
         self.frames[current_index].set_mapping(name, mapping)
     }
 
+    pub fn lift_branches(&mut self) {
+        if self.frames.len() == 1 {
+            return;
+        }
+
+        let mut new_content = HashMap::new();
+
+        // first branch
+        {
+            let ref frame = self.frames[self.frames.len() - 1];
+            let cause = frame.get_cause();
+
+            for name in self.frames[self.frames.len() - 1].get_content().keys() {
+                let old_mapping = self.resolve_optional_identifier(name);
+                let mut new_mapping = OptionalMapping::new();
+
+                for (old_path, address) in old_mapping.iter() {
+                    let mut new_path = old_path.clone();
+                    new_path.add_node(cause.clone());
+                    new_mapping.add_mapping(new_path, address.clone());
+                }
+
+                new_content.insert(name.clone(), new_mapping);
+            }
+        }
+
+        // hard coded swap
+        {
+            let current = self.path.pop().unwrap();
+            self.path.push(current + 1);
+        }
+
+        // second branch
+        {
+            let ref frame = self.frames[self.frames.len() - 2];
+            let cause = frame.get_cause();
+
+            for name in self.frames[self.frames.len() - 2].get_content().keys() {
+                let old_mapping = self.resolve_optional_identifier(name);
+                let mut new_mapping = new_content.get_mut(name).unwrap();
+
+                for (old_path, address) in old_mapping.iter() {
+                    let mut new_path = old_path.clone();
+                    new_path.add_node(cause.clone());
+                    new_mapping.add_mapping(new_path, address.clone());
+                }
+            }
+        }
+
+        let _ = self.path.pop();
+        let _ = self.frames.pop();
+        let _ = self.frames.pop();
+
+        let mut current_index = self.frames.len() - 1;
+
+        current_index -= *self.path.last().unwrap();
+
+        let ref mut current_frame = self.frames[current_index];
+
+        for (name, mapping) in new_content.into_iter() {
+            current_frame.set_optional_mapping(name.clone(), mapping)
+        }
+    }
+
     pub fn set_constant(&mut self, name: String, path: Path, mapping: Mapping) {
         self.set_mapping(name.clone(), path, mapping);
         self.constants.insert(name);

@@ -16,13 +16,62 @@ impl ConditionalExecutor for PythonConditional {
                -> ExecutionResult {
         let Environment { vm, executors } = env;
 
-        // todo execute the test properly
-        let pls = vm.execute(executors, test);
+        let mut total_changes = Vec::new();
+        let mut total_dependencies = Vec::new();
+
+        let test_result = vm.execute(executors, test);
+
+        let mut no = Vec::new();
+        let mut yes = Vec::new();
+
+        for change in test_result.changes.into_iter() {
+            total_changes.push(change);
+        }
+
+        for dependency in test_result.dependencies.into_iter() {
+            total_dependencies.push(dependency);
+        }
+
+        let t = vm.knowledge().constant(&"True".to_owned());
+        let f = vm.knowledge().constant(&"False".to_owned());
+
+        let total = test_result.result.len();
+
+        // split up the test result into yes/no/maybe
+        for (path, address) in test_result.result.into_iter() {
+            if address == t {
+                yes.push(path);
+            } else if address == f {
+                no.push(path);
+            }
+        }
+
+        if no.len() == total {
+            return self.strict_negative(vm, executors, or_else, total_changes, total_dependencies)
+        } else if yes.len() == total {
+            return self.strict_positive(vm, executors, body, total_changes, total_dependencies)
+        } else {
+            return self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies)
+        }
+    }
+}
+
+impl PythonConditional {
+    fn branch(&self,
+              vm: &mut VirtualMachine,
+              executors: &Executors,
+              body: &GastNode,
+              or_else: &GastNode,
+              yes: Vec<Path>,
+              no: Vec<Path>,
+              c: Vec<AnalysisItem>,
+              d: Vec<AnalysisItem>) -> ExecutionResult {
+                          
+        let mut total_changes = HashSet::from_iter(c.into_iter());
+        // rust can't infer the type?
+        let mut total_dependencies: HashSet<_> = HashSet::from_iter(d.into_iter());
 
         let last_path = vm.pop_path();
-
-        let mut total_changes = HashSet::new();
-        let mut total_dependencies = HashSet::new();
 
         let mut positive = last_path.clone();
         positive.add_node(PathNode::Condition(vm.current_node(), true));
@@ -30,7 +79,9 @@ impl ConditionalExecutor for PythonConditional {
         negative.add_node(PathNode::Condition(vm.current_node(), false));
 
         vm.push_path(positive);
+        vm.add_restrictions(no);
         let body_result = vm.execute(executors, body);
+        vm.drop_restrictions();
         let _ = vm.pop_path();
 
         let mut identifier_changed = false;
@@ -53,7 +104,9 @@ impl ConditionalExecutor for PythonConditional {
         vm.change_branch(identifier_changed, &total_changes);
 
         vm.push_path(negative);
+        vm.add_restrictions(yes);
         let else_result = vm.execute(executors, or_else);
+        vm.drop_restrictions();
         let _ = vm.pop_path();
 
         let changes = else_result.changes;
@@ -61,10 +114,6 @@ impl ConditionalExecutor for PythonConditional {
 
         for change in &changes {
             total_changes.insert(change.clone());
-
-            if let &AnalysisItem::Identifier { .. } = change {
-                identifier_changed = true;
-            }
         }
 
         for dependency in &dependencies {
@@ -73,7 +122,7 @@ impl ConditionalExecutor for PythonConditional {
 
         vm.push_path(last_path);
 
-        vm.merge_branches(identifier_changed, &total_changes);
+        vm.merge_branches(&total_changes);
 
         self.check(vm, executors, &total_changes);
 
@@ -85,9 +134,74 @@ impl ConditionalExecutor for PythonConditional {
             result: Mapping::new(),
         };
     }
-}
 
-impl PythonConditional {
+    fn strict_positive(&self,
+                       vm: &mut VirtualMachine,
+                       executors: &Executors,
+                       body: &GastNode,
+                       changes: Vec<AnalysisItem>,
+                       dependencies: Vec<AnalysisItem>) -> ExecutionResult {
+        let last_path = vm.pop_path();
+
+        let mut positive = last_path.clone();
+        positive.add_node(PathNode::Condition(vm.current_node(), true));
+        vm.push_path(positive);
+
+        let result = self.strict(vm, executors, body, changes, dependencies);
+
+        let _ = vm.pop_path();
+        vm.push_path(last_path);
+
+        vm.lift_branches(&result.changes);
+
+        return result;
+    }
+
+    fn strict_negative(&self,
+                       vm: &mut VirtualMachine,
+                       executors: &Executors,
+                       body: &GastNode,
+                       changes: Vec<AnalysisItem>,
+                       dependencies: Vec<AnalysisItem>) -> ExecutionResult {
+        let last_path = vm.pop_path();
+
+        let mut negative = last_path.clone();
+        negative.add_node(PathNode::Condition(vm.current_node(), false));
+        vm.push_path(negative);
+
+        let result = self.strict(vm, executors, body, changes, dependencies);
+
+        let _ = vm.pop_path();
+        vm.push_path(last_path);
+
+        return result;
+    }
+
+    fn strict(&self, 
+              vm: &mut VirtualMachine, 
+              executors: &Executors, 
+              body: &GastNode,
+              mut changes: Vec<AnalysisItem>,
+              mut dependencies: Vec<AnalysisItem>) -> ExecutionResult {
+        
+        let result = vm.execute(executors, body);
+
+        for change in result.changes.into_iter() {
+            changes.push(change);
+        }
+
+        for dependency in result.dependencies.into_iter() {
+            dependencies.push(dependency);
+        }
+
+        return ExecutionResult {
+            changes: changes,
+            dependencies: dependencies,
+            flow: FlowControl::Continue,
+            result: Mapping::new(),
+        };
+    }
+
     fn check(&self,
              vm: &mut VirtualMachine,
              executors: &Executors,

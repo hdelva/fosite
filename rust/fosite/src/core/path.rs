@@ -97,6 +97,39 @@ impl PathNode {
         }
     }
 
+    // not the built-in eq() function
+    // this is used to check whether or a path is contained in another
+    fn equals(&self, other: &PathNode) -> bool {
+        match (self, other) {
+            (&PathNode::Condition(l1, n1), &PathNode::Condition(l2, n2)) => {
+                return l1 == l2 && n1 == n2;
+            }
+            (&PathNode::Loop(l1, t1), &PathNode::Loop(l2, t2)) => {
+                return l1 == l2 && t1 == t2;
+            }
+            (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
+                for node in n2 {
+                    let original_opt = n1.get(node);
+                    if let Some(original) = original_opt {
+                        if !original.equals(node) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            (&PathNode::Return(l1), &PathNode::Return(l2)) => {
+                return l1 == l2;
+            }
+            (&PathNode::Assignment(l1, ..), &PathNode::Assignment(l2, ..)) => {
+                return l1 == l2;
+            }
+            _ => false,
+        }
+    }
+
     fn add_node(&mut self, other: PathNode) {
         match self {
             &mut PathNode::Frame(_, _, ref mut nodes) => {
@@ -159,6 +192,22 @@ impl Path {
         }
         return true;
     }
+
+    pub fn contains(&self, other: &Path) -> bool {
+        for node in other.get_nodes() {
+            let original_opt = self.nodes.get(node);
+            if let Some(original) = original_opt {
+                if !original.equals(node) {
+                    return false;
+                } 
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     pub fn add_node(&mut self, element: PathNode) {
         self.nodes.insert(element);

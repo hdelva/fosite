@@ -86,6 +86,10 @@ impl Object {
     pub fn merge_branches(&mut self) {
         self.composite_property.merge_branches();
     }
+
+    pub fn lift_branches(&mut self) {
+        self.composite_property.lift_branches();
+    }
 }
 
 /// Object Properties
@@ -130,5 +134,9 @@ impl CompositeProperty {
 
     fn merge_branches(&mut self) {
         self.namespace.merge_branches();
+    }
+
+    fn lift_branches(&mut self) {
+        self.namespace.lift_branches();
     }
 }

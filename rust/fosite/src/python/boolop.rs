@@ -74,13 +74,20 @@ impl BoolOpExecutor for PythonBoolOp {
 
                     // object is a common ancestor of all actual objects
                     // if this is the only common ancestor, the two objects can't be compared 
-                    if ancestors.len() == 1 && type_name != "NoneType".to_owned() {
+                    if ancestors.len() == 1  {
                         let left_object = vm.get_object(left_address);
                         let left_type = left_object.get_extension().first().unwrap();
                         let left_type_name = vm.knowledge().get_type_name(left_type).clone();
                         let right_object = vm.get_object(right_address);
                         let right_type = right_object.get_extension().first().unwrap();
                         let right_type_name = vm.knowledge().get_type_name(right_type).clone();
+
+                        // special case 
+                        // don't throw warning when people are checking for None
+                        if left_type_name  == "NoneType".to_owned() || 
+                           right_type_name == "NoneType".to_owned() {
+                               continue;
+                        }
 
                         match warning.entry((left_type_name, right_type_name)) {
                             Entry::Vacant(o) => {

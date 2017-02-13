@@ -16,6 +16,8 @@ pub struct VirtualMachine {
     // would require a way to shrink Paths
     paths: Vec<Path>,
     nodes: Vec<GastID>,
+
+    restrictions: Vec<Vec<Path>>,
 }
 
 impl VirtualMachine {
@@ -28,6 +30,7 @@ impl VirtualMachine {
             knowledge_base: knowledge,
             nodes: vec![],
             paths: vec![Path::empty()],
+            restrictions: Vec::new(),
         }
     }
 
@@ -49,6 +52,53 @@ impl VirtualMachine {
 
     pub fn current_path(&self) -> &Path {
         self.paths.last().unwrap()
+    }
+
+    pub fn add_restrictions(&mut self, mut new: Vec<Path>) {
+        let mut old = match self.restrictions.last() {
+            Some(o) => o.clone(),
+            _ => Vec::new(),
+        };
+
+        old.append(&mut new);
+
+        self.restrictions.push(old);
+    }
+
+    pub fn drop_restrictions(&mut self) {
+        self.restrictions.pop();
+    }
+
+    pub fn filter(&self, input: ExecutionResult) -> ExecutionResult {
+        if self.restrictions.len() == 0 {
+            return input;
+        }
+
+        let restrictions = self.restrictions.last().unwrap();
+
+        if restrictions.len() == 0 {
+            return input;
+        }
+
+        let mut new_mapping = Mapping::new();
+
+        'outer:
+        for (path, address) in input.result.into_iter() {
+            for restriction in restrictions {
+                if path.contains(restriction) {
+                    continue 'outer;
+                }
+            }
+
+            new_mapping.add_mapping(path, address);
+        }
+
+        return ExecutionResult {
+            flow: input.flow,
+            changes: input.changes,
+            dependencies: input.dependencies,
+            result: new_mapping,
+        }
     }
 
     pub fn binop(&mut self,
@@ -245,6 +295,8 @@ impl VirtualMachine {
 
         let _ = self.nodes.pop();
 
+        let result = self.filter(result);
+
         return result;
     }
 
@@ -261,16 +313,37 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_branches(&mut self, identifier_changed: bool, changes: &HashSet<AnalysisItem>) {
-        if identifier_changed {
-            self.scopes.last_mut().unwrap().merge_branches();
-        }
+    pub fn merge_branches(&mut self, changes: &HashSet<AnalysisItem>) {
+        let mut identifier_changed = false;
 
         for change in changes {
             if let &AnalysisItem::Object { ref address } = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_branches();
+            } else if let &AnalysisItem::Identifier { .. } = change {
+                identifier_changed = true;
             }
+        }
+
+        if identifier_changed {
+            self.scopes.last_mut().unwrap().merge_branches();
+        }
+    }
+
+    pub fn lift_branches(&mut self, changes: &Vec<AnalysisItem>) {
+        let mut identifier_changed = false;
+
+        for change in changes {
+            if let &AnalysisItem::Object { ref address } = change {
+                let mut object = self.memory.get_object_mut(address);
+                object.lift_branches();
+            } else if let &AnalysisItem::Identifier { .. } = change {
+                identifier_changed = true;
+            }
+        }
+
+        if identifier_changed {
+            self.scopes.last_mut().unwrap().lift_branches();
         }
     }
 
