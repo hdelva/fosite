@@ -466,9 +466,6 @@ class BoolOp(GastNode):
   def kind(self):
     return constants.BOOLOP
 
-  def items(self):
-    return [('left', self.left), ('op', self.op), ('right', self.right), ('line', self.line), ('col', self.col)]
-
 class UnOp(GastNode):
   def __init__(self, operation: 'str', value: 'Expression', line, col):
     self.operation = operation
