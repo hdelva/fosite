@@ -88,6 +88,7 @@ fn test_vm() {
         identifier: Some(Box::new(PythonIdentifier {})),
         int: Some(Box::new(PythonInt {})),
         string: Some(Box::new(PythonString {})),
+        while_loop: Some(Box::new(PythonWhile {})),
     };
 
     let mut s = String::new();
@@ -126,6 +127,16 @@ fn test_vm() {
         kb.add_arithmetic_type("number", "//");
         kb.add_arithmetic_type("number", "**");
         kb.add_arithmetic_type("number", "%");
+
+        // ints have their own implementation
+        // avoid coercion to float/number
+        kb.add_arithmetic_type("int", "+");
+        kb.add_arithmetic_type("int", "-");
+        //kb.add_arithmetic_type("int", "/");
+        kb.add_arithmetic_type("int", "*");
+        kb.add_arithmetic_type("int", "//");
+        kb.add_arithmetic_type("int", "**");
+        kb.add_arithmetic_type("int", "%");
 
         // todo replace when collections are a thing
         kb.add_arithmetic_type("string", "+");

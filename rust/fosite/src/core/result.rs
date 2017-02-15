@@ -1,6 +1,7 @@
 use super::Pointer;
 use super::Mapping;
 use super::{GastNode, NodeType};
+use super::Path;
 
 #[derive(Debug, Clone)]
 pub enum FlowControl {
@@ -20,7 +21,7 @@ pub struct ExecutionResult {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AnalysisItem {
     Identifier { name: String },
-    Object { address: Pointer },
+    Object { address: Pointer, path: Option<Path> }, // we need the path if an object changes
     Attribute {
         parent: Box<AnalysisItem>,
         name: String,
@@ -31,7 +32,7 @@ impl AnalysisItem {
     pub fn to_string(&self) -> String {
         match self {
             &AnalysisItem::Identifier { ref name } => name.clone(),
-            &AnalysisItem::Object { ref address } => format!("{}", address),
+            &AnalysisItem::Object { ref address, .. } => format!("{}", address),
             &AnalysisItem::Attribute { ref parent, ref name } => {
                 format!("{}.{}", parent.to_string(), name)
             }

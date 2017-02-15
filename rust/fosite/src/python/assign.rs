@@ -85,31 +85,39 @@ impl PythonAssign {
         let mut changes = Vec::new();
 
         // add the attribute identifier changes
-        for dependency in dependencies.into_iter() {
-            changes.push(AnalysisItem::Attribute {
-                parent: Box::new(dependency),
-                name: attribute.clone(),
-            });
+        for dependency in dependencies.iter() {
+            if !dependency.is_object() {
+                changes.push(AnalysisItem::Attribute {
+                    parent: Box::new(dependency.clone()),
+                    name: attribute.clone(),
+                });
+            }
         }
 
         // add the object changes
         // perform the assignment
         for (_, parent_address) in parent_mapping.iter() {
-            changes.push(AnalysisItem::Object { address: parent_address.clone() });
-
             // todo this clone shouldn't be necessary
             let current_path = vm.current_path().clone();
+
+            changes.push(AnalysisItem::Object { address: parent_address.clone(), path: Some(current_path.clone()) });
 
             let mut parent_object = vm.get_object_mut(parent_address);
             parent_object.assign_attribute(attribute.clone(), current_path, mapping.clone())
         }
 
-        // todo, resolving parent may have had changes/dependencies
+        // notify the vm a mapping has changed
+        // used to update watches
+        // dirty fix, assumes the first change is the relevant one
+        vm.notify_change(changes.first().unwrap().clone(), mapping.clone());
+
+        let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
+
         return ExecutionResult {
             flow: FlowControl::Continue,
-            dependencies: vec![],
+            dependencies: dependencies,
             changes: changes,
-            result: Mapping::new(),
+            result: result_mapping,
         };
     }
 
@@ -119,6 +127,8 @@ impl PythonAssign {
                             target: &String,
                             mapping: &Mapping)
                             -> ExecutionResult {
+        let changes = vec![AnalysisItem::Identifier { name: target.clone() }];
+
         // todo get rid of clone
         let mapping = mapping.clone()
             .augment(PathNode::Assignment(vm.current_node(), target.clone()));
@@ -130,13 +140,18 @@ impl PythonAssign {
             scope.set_mapping(target.clone(), path, mapping.clone());
         }
 
-        let mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
+        // notify the vm a mapping has changed
+        // used to update watches
+        // dirty fix, assumes the first change is the relevant one
+        vm.notify_change(changes.first().unwrap().clone(), mapping.clone());
+
+        let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
         return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier { name: target.clone() }],
-            result: mapping,
+            changes: changes,
+            result: result_mapping,
         };
     }
 }

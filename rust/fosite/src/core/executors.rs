@@ -16,6 +16,7 @@ pub struct Executors {
     pub float: Option<Box<FloatExecutor>>,
     pub declaration: Option<Box<DeclarationExecutor>>,
     pub assign: Option<Box<AssignExecutor>>,
+    pub while_loop: Option<Box<WhileExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -82,6 +83,14 @@ pub trait ConditionalExecutor {
                test: &GastNode,
                body: &GastNode,
                or_else: &GastNode)
+               -> ExecutionResult;
+}
+
+pub trait WhileExecutor {
+    fn execute(&self,
+               env: Environment,
+               test: &GastNode,
+               body: &GastNode)
                -> ExecutionResult;
 }
 

@@ -31,6 +31,7 @@ impl Worker {
         logger.add_warning_handler(WIDENTIFIER_POLY_TYPE, Box::new(PolyType::new()));
         logger.add_warning_handler(WATTRIBUTE_POLY_TYPE, Box::new(PolyType::new()));
         logger.add_warning_handler(WBOOLOP, Box::new(BoolopIncompatible::new()));
+        logger.add_warning_handler(WWHILE_LOOP, Box::new(WhileLoopChange::new()));
 
         logger.add_error_handler(EATTRIBUTE_INVALID, Box::new(AttributeInvalid::new()));
         logger.add_error_handler(EIDENTIFIER_INVALID, Box::new(IdentifierInvalid::new()));
@@ -624,6 +625,30 @@ impl WarningHandler for BoolopIncompatible {
             comb_count += 1;
             current_left_comb = format!("combination {} left", comb_count);
             current_right_comb = format!("combination {} right", comb_count);
+        }
+    }
+}
+
+struct WhileLoopChange { }
+
+impl WhileLoopChange {
+    pub fn new() -> Self {
+        WhileLoopChange { }
+    }
+}
+
+impl WarningHandler for WhileLoopChange {
+    fn handle(&mut self, node: GastID, sources: &Sources, content: &Content) {
+        self.preamble(sources, node);
+        println!("  Variables in the loop condition remain unchanged after an iteration");
+        println!("  Under the cases:");
+
+        let mut count = 0;
+        let mut c = format!("path {}", count);
+        while let Some(path) = content.get(&c) {
+            self.print_path(sources, &path.to_path().unwrap(), "    ");
+            count += 1;
+            c = format!("path {}", count);
         }
     }
 }

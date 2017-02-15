@@ -47,6 +47,10 @@ pub enum NodeType {
         body: Box<GastNode>,
         or_else: Box<GastNode>,
     },
+    While {
+        test: Box<GastNode>,
+        body: Box<GastNode>,
+    },
     BinOp {
         left: Box<GastNode>,
         right: Box<GastNode>,
@@ -97,6 +101,7 @@ pub fn build(node: &Json) -> GastNode {
         "list" => build_list(id, node),
         "sequence" => build_sequence(id, node),
         "if" => build_if(id, node),
+        "while" => build_while(id, node),
         "binop" => build_binop(id, node),
         "nil" => build_nil(id),
         "boolean" => build_bool(id, node),
@@ -208,6 +213,23 @@ fn build_if(id: GastID, node: &Json) -> GastNode {
                              test: test,
                              body: body,
                              or_else: or_else,
+                         });
+}
+
+fn build_while(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_test = obj.get("test").unwrap();
+    let test = Box::new(build(json_test));
+
+    let json_body = obj.get("body").unwrap();
+    let body = Box::new(build(json_body));
+
+
+    return GastNode::new(id,
+                         NodeType::While {
+                             test: test,
+                             body: body,
                          });
 }
 

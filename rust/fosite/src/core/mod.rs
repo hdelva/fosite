@@ -13,6 +13,7 @@ mod collection;
 mod mapping;
 mod channel;
 mod executors;
+mod watch;
 
 pub use super::Pointer;
 pub use super::FunctionDefinition;
@@ -33,3 +34,4 @@ pub use self::collection::*;
 pub use self::mapping::*;
 pub use self::channel::*;
 pub use self::executors::*;
+pub use self::watch::*;

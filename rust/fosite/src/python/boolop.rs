@@ -65,7 +65,7 @@ impl BoolOpExecutor for PythonBoolOp {
                     // reality is more complicated, and full of runtime type checks
                     let ancestors = vm.common_ancestor(left_address, right_address);
 
-                    for ancestor in &ancestors {
+                    for ancestor in ancestors.iter().rev() {
                         type_name = vm.knowledge().get_type_name(ancestor).clone();
                         if vm.knowledge().operation_supported(&type_name, &op.to_owned()) {
                             break;

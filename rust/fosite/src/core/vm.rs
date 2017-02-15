@@ -18,6 +18,7 @@ pub struct VirtualMachine {
     nodes: Vec<GastID>,
 
     restrictions: Vec<Vec<Path>>,
+    watches: Vec<Watch>,
 }
 
 impl VirtualMachine {
@@ -31,6 +32,26 @@ impl VirtualMachine {
             nodes: vec![],
             paths: vec![Path::empty()],
             restrictions: Vec::new(),
+            watches: Vec::new(),
+        }
+    }
+
+    pub fn start_watch(&mut self) {
+        self.watches.push(Watch::new());
+    }
+
+    pub fn toggle_watch(&mut self) {
+        self.watches.last_mut().unwrap().toggle();
+    }
+
+    pub fn pop_watch(&mut self) -> Watch {
+        self.watches.pop().unwrap()
+    }
+
+    //
+    pub fn notify_change(&mut self, identifier: AnalysisItem, mapping: Mapping) {
+        if let Some(watch) = self.watches.last_mut() {
+            watch.store(identifier, mapping);
         }
     }
 
@@ -146,6 +167,20 @@ impl VirtualMachine {
         }
     }
 
+    pub fn while_loop(&mut self,
+                       executors: &Executors,
+                       test: &GastNode,
+                       body: &GastNode)
+                       -> ExecutionResult {
+        match executors.while_loop {
+            Some(ref while_loop) => {
+                let env = Environment::new(self, executors);
+                while_loop.execute(env, test, body)
+            }
+            None => panic!("VM is not setup to execute while loops"),
+        }
+    }
+
     pub fn block(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
         match executors.block {
             Some(ref block) => {
@@ -159,8 +194,18 @@ impl VirtualMachine {
     pub fn load_identifier(&mut self, executors: &Executors, name: &String) -> ExecutionResult {
         match executors.identifier {
             Some(ref identifier) => {
-                let env = Environment::new(self, executors);
-                identifier.execute(env, name)
+                let result;
+                {
+                    let env = Environment::new(self, executors);
+                    result = identifier.execute(env, name);
+                }
+
+                if let Some(watch) = self.watches.last_mut() {
+                    // bit dirty, assumes that the relevant dependency is the first one
+                    watch.store(result.dependencies.first().unwrap().clone(), result.result.clone());
+                }
+
+                return result;
             }
             None => panic!("VM is not setup to execute identifiers"),
         }
@@ -173,8 +218,18 @@ impl VirtualMachine {
                           -> ExecutionResult {
         match executors.attribute {
             Some(ref attribute) => {
-                let env = Environment::new(self, executors);
-                attribute.execute(env, parent, name)
+                let result;
+                {
+                    let env = Environment::new(self, executors);
+                    result = attribute.execute(env, parent, name);
+                }
+
+                if let Some(watch) = self.watches.last_mut() {
+                    // bit dirty, assumes that the relevant dependency is the first one
+                    watch.store(result.dependencies.first().unwrap().clone(), result.result.clone());
+                }
+
+                return result;
             }
             None => panic!("VM is not setup to execute attributes"),
         }
@@ -278,6 +333,9 @@ impl VirtualMachine {
             &NodeType::Assignment { ref targets, ref value } => {
                 self.assign(executors, targets, value)
             }
+            &NodeType::While { ref test, ref body } => {
+                self.while_loop(executors, test, body)
+            }
             _ => panic!("Unsupported Operation"),
         };
 
@@ -306,7 +364,7 @@ impl VirtualMachine {
         }
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address } = change {
+            if let &AnalysisItem::Object { ref address, .. } = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.change_branch();
             }
@@ -317,7 +375,7 @@ impl VirtualMachine {
         let mut identifier_changed = false;
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address } = change {
+            if let &AnalysisItem::Object { ref address, .. } = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_branches();
             } else if let &AnalysisItem::Identifier { .. } = change {
@@ -334,7 +392,7 @@ impl VirtualMachine {
         let mut identifier_changed = false;
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address } = change {
+            if let &AnalysisItem::Object { ref address, .. } = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.lift_branches();
             } else if let &AnalysisItem::Identifier { .. } = change {

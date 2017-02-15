@@ -18,6 +18,8 @@ pub const WIDENTIFIER_POLY_TYPE: MessageType = 8;
 pub const EBINOP: MessageType = 9;
 pub const EBOOLOP: MessageType = 10;
 pub const WBOOLOP: MessageType = 11;
+pub const WTRIVIAL_LOOP: MessageType = 12;
+pub const WWHILE_LOOP: MessageType = 13;
 
 #[derive(Clone, Debug)]
 pub enum Message {

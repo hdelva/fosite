@@ -23,10 +23,14 @@ impl AttributeExecutor for PythonAttribute {
         let mut changes = parent_result.changes;
 
         for dependency in dependencies.iter() {
-            total_dependencies.push(AnalysisItem::Attribute {
-                parent: Box::new(dependency.clone()),
-                name: name.clone(),
-            });
+            // there should be exactly one of these in there
+            if !dependency.is_object() {
+                total_dependencies.push(AnalysisItem::Attribute {
+                    parent: Box::new(dependency.clone()),
+                    name: name.clone(),
+                });
+                break;
+            }
         }
 
         total_dependencies.append(&mut dependencies);
@@ -36,7 +40,7 @@ impl AttributeExecutor for PythonAttribute {
         let mut error = BTreeSet::new();
 
         for (parent_path, parent_address) in parent_mapping.iter() {
-            dependencies.push(AnalysisItem::Object { address: parent_address.clone() });
+            total_dependencies.push(AnalysisItem::Object { address: parent_address.clone(), path: None });
 
             let parent_object = vm.get_object(parent_address);
             let opt_mappings = parent_object.get_attribute(name);
