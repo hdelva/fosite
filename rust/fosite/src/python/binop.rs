@@ -48,7 +48,7 @@ impl BinOpExecutor for PythonBinOp {
                 // reality is more complicated, and full of runtime type checks
                 let mut ancestor_name = "None".to_owned();
 
-                for ancestor in vm.common_ancestor(left_address, right_address) {
+                for ancestor in vm.common_ancestor(left_address, right_address).iter().rev() {
                     ancestor_name = vm.knowledge().get_type_name(&ancestor).clone();
                     if vm.knowledge().operation_supported(&ancestor_name, op) {
                         break;
