@@ -10,7 +10,7 @@ pub enum PathNode {
     Assignment(GastID, String),
     Loop(GastID, bool),
     Return(GastID),
-    Frame(GastID, Option<String>, BTreeSet<PathNode>),
+    Frame(GastID, Option<String>, Box<Path>),
 }
 
 impl Ord for PathNode {
@@ -40,6 +40,32 @@ impl Hash for PathNode {
 }
 
 impl PathNode {
+    pub fn is_branch(&self) -> bool {
+        match self {
+            &PathNode::Condition(_, _) => true,
+            &PathNode::Assignment(_, _) => false,
+            &PathNode::Loop(_, _) => true,
+            &PathNode::Return(_) => false,
+            &PathNode::Frame(_, _, _) => false,
+        }
+    }
+
+    pub fn reverse(&self) -> Vec<PathNode> {
+        match self {
+            &PathNode::Condition(l, b) => vec!(PathNode::Condition(l, !b)),
+            &PathNode::Assignment(l, ref t) => vec!(PathNode::Assignment(l, t.clone())),
+            &PathNode::Loop(l, b) => vec!(PathNode::Loop(l, !b)),
+            &PathNode::Return(l) => vec!(PathNode::Return(l)),
+            &PathNode::Frame(l, ref t, ref c) => {
+                let mut result = Vec::new();
+                for r in c.reverse() {
+                    result.push(PathNode::Frame(l, t.clone(), Box::new(r)));
+                }
+                return result;
+            }
+        }
+    }
+
     pub fn get_location(&self) -> GastID {
         match self {
             &PathNode::Condition(location, _) => location,
@@ -53,22 +79,7 @@ impl PathNode {
     fn merge_into(&mut self, other: &PathNode) {
         match (self, other) {
             (&mut PathNode::Frame(_, _, ref mut n1), &PathNode::Frame(_, _, ref n2)) => {
-                for node in n2 {
-                    let new;
-
-                    {
-                        let original_opt = n1.get(&node);
-                        if let Some(original) = original_opt {
-                            let mut original = original.clone();
-                            original.merge_into(node);
-                            new = original
-                        } else {
-                            new = node.clone();
-                        }
-                    }
-
-                    n1.insert(new);
-                }
+                    n1.merge_into(n2.as_ref().clone());
             }
             _ => (),
         }
@@ -83,15 +94,7 @@ impl PathNode {
                 return l1 != l2 || t1 == t2;
             }
             (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
-                for node in n2 {
-                    let original_opt = n1.get(node);
-                    if let Some(original) = original_opt {
-                        if !original.mergeable(node) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
+                return n1.mergeable(n2);
             }
             _ => true, // other kinds of nodes can't contradict each other
         }
@@ -108,17 +111,7 @@ impl PathNode {
                 return l1 == l2 && t1 == t2;
             }
             (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
-                for node in n2 {
-                    let original_opt = n1.get(node);
-                    if let Some(original) = original_opt {
-                        if !original.equals(node) {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-                return true;
+                return n1.mergeable(n2);
             }
             (&PathNode::Return(l1), &PathNode::Return(l2)) => {
                 return l1 == l2;
@@ -133,7 +126,7 @@ impl PathNode {
     fn add_node(&mut self, other: PathNode) {
         match self {
             &mut PathNode::Frame(_, _, ref mut nodes) => {
-                nodes.insert(other);
+                nodes.add_node(other);
             }
             _ => unreachable!("Trying to add to something that isn't a Frame node"),
         }
@@ -211,5 +204,34 @@ impl Path {
 
     pub fn add_node(&mut self, element: PathNode) {
         self.nodes.insert(element);
+    }
+
+    pub fn reverse(&self) -> Vec<Path> {
+        let mut result = Vec::new();
+        let mut current = Path::empty();
+
+        for node in self.nodes.iter() {
+            if node.is_branch() {
+                for rev in node.reverse().into_iter() {
+                    let mut temp = current.clone();
+                    temp.add_node(rev);
+                    result.push(temp);
+                }
+            }
+
+            current.add_node(node.clone());
+        }
+        
+        return result;
+    } 
+
+    pub fn prune(&self, cutoff: GastID) -> Path {
+        let mut new = Path::empty();
+        for node in self.nodes.iter() {
+            if node.get_location() > cutoff {
+                new.add_node(node.clone());
+            }
+        }
+        return new;
     }
 }

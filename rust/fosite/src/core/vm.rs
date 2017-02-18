@@ -358,10 +358,13 @@ impl VirtualMachine {
         return result;
     }
 
-    pub fn change_branch(&mut self, identifier_changed: bool, changes: &HashSet<AnalysisItem>) {
+    pub fn change_branch(&mut self, identifier_changed: bool, changes: &Vec<AnalysisItem>) {
         if identifier_changed {
             self.scopes.last_mut().unwrap().change_branch();
         }
+
+        let set: HashSet<_> = changes.iter().collect(); // dedup
+        let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
             if let &AnalysisItem::Object { ref address, .. } = change {
@@ -371,8 +374,11 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_branches(&mut self, changes: &HashSet<AnalysisItem>) {
+    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
+
+        let set: HashSet<_> = changes.iter().collect(); // dedup
+        let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
             if let &AnalysisItem::Object { ref address, .. } = change {

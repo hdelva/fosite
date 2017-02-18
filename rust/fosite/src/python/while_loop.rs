@@ -1,12 +1,10 @@
 use core::*;
 
 use core::Path;
-use std::collections::HashSet;
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
+use std::collections::btree_map::Entry;
 use std::collections::BTreeSet;
 use std::collections::BTreeMap;
-use std::iter::FromIterator;
 
 pub struct PythonWhile { }
 
@@ -37,8 +35,6 @@ impl WhileExecutor for PythonWhile {
 
         let f = vm.knowledge().constant(&"False".to_owned());
 
-        let total = test_result.result.len();
-
         // split up the test result into yes/no/maybe
         for (path, address) in test_result.result.into_iter() {
             if address == f {
@@ -59,9 +55,8 @@ impl PythonWhile {
               c: Vec<AnalysisItem>,
               d: Vec<AnalysisItem>) -> ExecutionResult {
                           
-        let mut total_changes = HashSet::from_iter(c.into_iter());
-        // rust can't infer the type?
-        let mut total_dependencies: HashSet<_> = HashSet::from_iter(d.into_iter());
+        let mut total_changes = c;
+        let mut total_dependencies = d;
 
         let last_path = vm.pop_path();
 
@@ -82,7 +77,7 @@ impl PythonWhile {
         let dependencies = body_result.dependencies;
 
         for change in &changes {
-            total_changes.insert(change.clone());
+            total_changes.push(change.clone());
 
             if let &AnalysisItem::Identifier { .. } = change {
                 identifier_changed = true;
@@ -90,7 +85,7 @@ impl PythonWhile {
         }
 
         for dependency in &dependencies {
-            total_dependencies.insert(dependency.clone());
+            total_dependencies.push(dependency.clone());
         }
 
         vm.change_branch(identifier_changed, &total_changes);
@@ -105,24 +100,26 @@ impl PythonWhile {
 
         self.check_types(vm, executors, &total_changes);
 
-        // todo any way around the cloning?
         return ExecutionResult {
-            changes: Vec::from_iter(total_changes.into_iter()),
-            dependencies: Vec::from_iter(total_dependencies.into_iter()),
+            changes: total_changes,
+            dependencies: total_dependencies,
             flow: FlowControl::Continue,
             result: Mapping::new(),
         };
     }
 
-    fn check_changes(&self, vm: &mut VirtualMachine, changes: &HashSet<AnalysisItem>) {
+    fn check_changes(&self, vm: &mut VirtualMachine, changes: &Vec<AnalysisItem>) {
+        // we might need to prune some paths
+        let current_node = vm.current_node();
+
         let watch = vm.pop_watch();
         let Watch {before, after, ..} = watch;
 
         let mut relevant_objects = BTreeSet::new();
-        let mut changed_objects = BTreeSet::new();
+        let mut changed_objects = BTreeMap::new();
 
         for (_, mapping) in before.iter() {
-            for (path, address) in mapping.iter() {
+            for (_, address) in mapping.iter() {
                 relevant_objects.insert(address.clone());
             } 
         }
@@ -130,8 +127,19 @@ impl PythonWhile {
         for change in changes {
             if let &AnalysisItem::Object {address, ref path} = change {
                 if relevant_objects.contains(&address) {
-                    //todo, changed_objects should be Pointer->Vec<Path>
-                    changed_objects.insert(address.clone());
+                    match changed_objects.entry(address.clone()) {
+                        Entry::Vacant(v) => {
+                            // don't take ownership of the path 
+                            // create a cloned version 
+                            // that doesn't include the current node
+                            v.insert(vec![path.as_ref().unwrap().prune(current_node)]);
+                        }
+                        Entry::Occupied(mut o) => {
+                            // create a cloned version 
+                            // that doesn't include the current node
+                            o.get_mut().push(path.as_ref().unwrap().prune(current_node));
+                        }
+                    };
                 }
             }
         }
@@ -143,15 +151,34 @@ impl PythonWhile {
 
             let new_mapping = after.get(&identifier).unwrap();
 
+            // initialise an empty path as a problem path
+            // will get expanded everytime a variable is unchanged
             let mut problems = vec!(Path::empty());
+
+            // because the initial problem path is empty 
+            // it's only an actual problem if things get merged into it
+            let mut real_problem = false;
 
             for (_, address) in mapping.iter() {
                 // me too thanks
                 let mut same = Vec::new();
-
+                
                 for (new_path, new_address) in new_mapping.iter() {
-                    if address == new_address && !changed_objects.contains(address) {
-                        same.push(new_path.clone());
+                    if address == new_address {
+                        if let Some(paths) = changed_objects.get(address) {
+                            // address hasn't changed 
+                            // but the object at that address has changed under some conditions 
+                            let mut invariants = possible_invariants(new_path, paths);
+                            if invariants.len() > 0 {
+                                real_problem = true;
+                            }
+                            same.append(&mut invariants);
+                        } else {
+                            // address hasn't changed 
+                            // object at that address hasn't either
+                            real_problem = true;
+                            same.push(new_path.clone());
+                        }
                     }
                 }
 
@@ -170,30 +197,32 @@ impl PythonWhile {
                 problems = new_problems;
             }
 
-            let mut items = HashMap::new();
-            let mut count = 0;
-            for problem in problems.into_iter() {
-                items.insert(format!("path {}", count), MessageItem::Path(problem));
-                count += 1;
+            if real_problem {
+                let mut items = HashMap::new();
+                let mut count = 0;
+                for problem in problems.into_iter() {
+                    items.insert(format!("path {}", count), MessageItem::Path(problem));
+                    count += 1;
+                }
+
+                let message = Message::Warning {
+                    source: vm.current_node(),
+                    kind: WWHILE_LOOP,
+                    content: items,
+                };
+
+                &CHANNEL.publish(message);
             }
-
-            let message = Message::Warning {
-                source: vm.current_node(),
-                kind: WWHILE_LOOP,
-                content: items,
-            };
-
-            &CHANNEL.publish(message);
         }
     }
 
     fn check_types(&self,
              vm: &mut VirtualMachine,
              executors: &Executors,
-             changes: &HashSet<AnalysisItem>) {
+             changes: &Vec<AnalysisItem>) {
         for change in changes {
             if !change.is_object() {
-                let mut all_types = HashMap::new();
+                let mut all_types = BTreeMap::new();
 
                 let execution_result = match change {
                     &AnalysisItem::Identifier { ref name } => vm.load_identifier(executors, name),
@@ -258,4 +287,36 @@ impl PythonWhile {
             }
         }
     }
+}
+
+fn possible_invariants(parent_path: &Path, changes: &Vec<Path>) -> Vec<Path> {
+    // remove obsolete entries first, i.e.
+    // (1, 5) and (1, 5, 9)
+    let mut all_reversals = BTreeSet::new();
+
+    for change in changes {
+        let change_reversals = change.reverse();
+        for reversal in change_reversals.iter().rev() {
+            all_reversals.insert(reversal.clone());
+        }
+    }
+
+    let mut possibilities = Vec::new();
+    for reversal in all_reversals.into_iter() {
+        let mut legit = true;
+        for change in changes {
+            if reversal.contains(change) {
+                legit = false;
+                break;
+            }
+        }
+
+        if legit && parent_path.mergeable(&reversal) {
+            let mut new_path = parent_path.clone();
+            new_path.merge_into(reversal);
+            possibilities.push(new_path);
+        }
+    }
+
+    return possibilities;
 }

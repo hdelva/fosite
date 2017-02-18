@@ -1,9 +1,7 @@
 use core::*;
 
-use std::collections::HashSet;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::iter::FromIterator;
 
 pub struct PythonConditional { }
 
@@ -67,9 +65,8 @@ impl PythonConditional {
               c: Vec<AnalysisItem>,
               d: Vec<AnalysisItem>) -> ExecutionResult {
                           
-        let mut total_changes = HashSet::from_iter(c.into_iter());
-        // rust can't infer the type?
-        let mut total_dependencies: HashSet<_> = HashSet::from_iter(d.into_iter());
+        let mut total_changes = c;
+        let mut total_dependencies = d;
 
         let last_path = vm.pop_path();
 
@@ -90,7 +87,7 @@ impl PythonConditional {
         let dependencies = body_result.dependencies;
 
         for change in &changes {
-            total_changes.insert(change.clone());
+            total_changes.push(change.clone());
 
             if let &AnalysisItem::Identifier { .. } = change {
                 identifier_changed = true;
@@ -98,7 +95,7 @@ impl PythonConditional {
         }
 
         for dependency in &dependencies {
-            total_dependencies.insert(dependency.clone());
+            total_dependencies.push(dependency.clone());
         }
 
         vm.change_branch(identifier_changed, &total_changes);
@@ -113,11 +110,11 @@ impl PythonConditional {
         let dependencies = else_result.dependencies;
 
         for change in &changes {
-            total_changes.insert(change.clone());
+            total_changes.push(change.clone());
         }
 
         for dependency in &dependencies {
-            total_dependencies.insert(dependency.clone());
+            total_dependencies.push(dependency.clone());
         }
 
         vm.push_path(last_path);
@@ -126,10 +123,9 @@ impl PythonConditional {
 
         self.check(vm, executors, &total_changes);
 
-        // todo any way around the cloning?
         return ExecutionResult {
-            changes: Vec::from_iter(total_changes.into_iter()),
-            dependencies: Vec::from_iter(total_dependencies.into_iter()),
+            changes: total_changes,
+            dependencies: total_dependencies,
             flow: FlowControl::Continue,
             result: Mapping::new(),
         };
@@ -205,7 +201,7 @@ impl PythonConditional {
     fn check(&self,
              vm: &mut VirtualMachine,
              executors: &Executors,
-             changes: &HashSet<AnalysisItem>) {
+             changes: &Vec<AnalysisItem>) {
         for change in changes {
             if !change.is_object() {
                 let mut all_types = HashMap::new();

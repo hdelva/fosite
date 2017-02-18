@@ -21,7 +21,9 @@ pub struct ExecutionResult {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AnalysisItem {
     Identifier { name: String },
-    Object { address: Pointer, path: Option<Path> }, // we need the path if an object changes
+    // we need the path if an object changes
+    // but irrelevant if it's a dependency
+    Object { address: Pointer, path: Option<Path> },
     Attribute {
         parent: Box<AnalysisItem>,
         name: String,

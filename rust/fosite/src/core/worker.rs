@@ -641,14 +641,19 @@ impl WarningHandler for WhileLoopChange {
     fn handle(&mut self, node: GastID, sources: &Sources, content: &Content) {
         self.preamble(sources, node);
         println!("  Variables in the loop condition remain unchanged after an iteration");
-        println!("  Under the cases:");
+        println!("  In the following cases:");
 
         let mut count = 0;
         let mut c = format!("path {}", count);
         while let Some(path) = content.get(&c) {
             self.print_path(sources, &path.to_path().unwrap(), "    ");
+            println!("");
             count += 1;
             c = format!("path {}", count);
+        }
+
+        if count == 0 {
+            println!("    {}", Red.bold().paint("Always"));
         }
     }
 }

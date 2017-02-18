@@ -65,7 +65,7 @@ impl Scope {
         default.add_mapping(Path::empty(), None);
 
         Scope {
-            frames: vec![Frame::new(PathNode::Frame(0, None, BTreeSet::new()), None)],
+            frames: vec![Frame::new(PathNode::Frame(0, None, Box::new(Path::empty())), None)],
             default: default,
             path: vec![0],
             constants: BTreeSet::new(),
@@ -242,7 +242,7 @@ impl Scope {
 
     pub fn change_branch(&mut self) {
         let current = self.path.pop().unwrap();
-        self.path.push(current - 1);
+        self.path.push((current + 1) % 2);
     }
 
     // should only be called when the last frames are Conditions or Loops
