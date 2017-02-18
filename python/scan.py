@@ -8,6 +8,7 @@ from ast import *
 class Scan:
   def __init__(self):
     self.count = 0
+    self.loops = []
 
   def to_general_form(self, code):
     t = parse(code)
@@ -73,6 +74,10 @@ class Scan:
   def statement(self, code):
     if type(code) is Expr:
       return self.expression(code.value)
+    elif type(code) is Break:
+      return self.break_loop(code)
+    elif type(code) is Continue:
+      return self.continue_loop(code)
     elif type(code) is FunctionDef:
       return self.function(code)
     elif type(code) is AugAssign or type(code) is Assign:
@@ -460,27 +465,51 @@ class Scan:
     return gast.If(test, body, orElse, code.lineno, code.col_offset)
 
   def for_loop(self, code):
+    class Box:
+      pass
+
     source = self.expression(code.iter)
     target = self.expression(code.target)
 
     generator = gast.Generator(source, target, code.lineno, code.col_offset)
 
-    # todo add node id
-    body = self.block(code.body)
+    box = Box()
+    self.loops.append(box)
 
+    body = self.block(code.body)
     orElse = self.block(code.orelse)
 
-    return gast.ForEach(generator, body, orElse, code.lineno, code.col_offset)
+    self.loops = self.loops[:-1]
+
+    result = gast.While(test, body, orElse, code.lineno, code.col_offset)
+    box.target = result
+
+    return result
 
   def while_loop(self, code):
+    class Box:
+      pass
+
     test = self.expression(code.test)
 
-    # todo add node id
-    body = self.block(code.body)
+    box = Box()
+    self.loops.append(box)
 
+    body = self.block(code.body)
     orElse = self.block(code.orelse)
 
-    return gast.While(test, body, orElse, code.lineno, code.col_offset)
+    self.loops = self.loops[:-1]
+
+    result = gast.While(test, body, orElse, code.lineno, code.col_offset)
+    box.target = result
+
+    return result
+
+  def break_loop(self, code):
+    return gast.Break(self.loops[-1], code.lineno, code.col_offset)
+
+  def continue_loop(self, code):
+    return gast.Continue(self.loops[-1], code.lineno, code.col_offset)
 
   def try_except(self, code):
     # todo add node id

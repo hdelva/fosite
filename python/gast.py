@@ -491,6 +491,36 @@ class Return(GastNode):
   def kind(self):
     return constants.RETURN
 
+class Continue(GastNode):
+  def __init__(self, target, line, col):
+    global count
+    self.id = count
+    count += 1
+    self.line = line
+    self.col = col
+    self.target = target
+
+  def items(self):
+    return [('id', self.id), ('target', self.target.target.id), ('line', self.line), ('col', self.col)]
+
+  def kind(self):
+    return constants.CONTINUE
+
+class Break(GastNode):
+  def __init__(self, target, line, col):
+    global count
+    self.id = count
+    count += 1
+    self.line = line
+    self.col = col
+    self.target = target
+
+  def kind(self):
+    return constants.BREAK
+
+  def items(self):
+    return [('id', self.id), ('target', self.target.target.id), ('line', self.line), ('col', self.col)]
+
 class Yield(GastNode):
   def __init__(self, value: 'Expression', line, col):
     self.value = value
