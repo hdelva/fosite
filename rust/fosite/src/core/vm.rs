@@ -17,8 +17,15 @@ pub struct VirtualMachine {
     paths: Vec<Path>,
     nodes: Vec<GastID>,
 
+    // control flow might keep us into some paths
+    // even though the actual code branch is no longer being executed 
+    // sometimes we do need to know what the last code branch was
+    branches: Vec<GastID>,
+
     restrictions: Vec<Vec<Path>>,
     watches: Vec<Watch>,
+
+    
 }
 
 impl VirtualMachine {
@@ -31,9 +38,22 @@ impl VirtualMachine {
             knowledge_base: knowledge,
             nodes: vec![],
             paths: vec![Path::empty()],
+            branches: vec!(),
             restrictions: Vec::new(),
             watches: Vec::new(),
         }
+    }
+
+    pub fn push_branch(&mut self, node: GastID) {
+        self.branches.push(node);
+    }
+
+    pub fn pop_branch(&mut self) -> Option<GastID> {
+        self.branches.pop()
+    }
+
+    pub fn current_branch(&self) -> Option<&GastID> {
+        self.branches.last()
     }
 
     pub fn start_watch(&mut self) {
@@ -303,6 +323,26 @@ impl VirtualMachine {
         }
     }
 
+    pub fn break_loop(&mut self, executors: &Executors) -> ExecutionResult {
+        match executors.break_loop {
+            Some(ref break_loop) => {
+                let env = Environment::new(self, executors);
+                break_loop.execute(env)
+            }
+            None => panic!("VM is not setup to execute break statements"),
+        }
+    }
+
+    pub fn continue_loop(&mut self, executors: &Executors) -> ExecutionResult {
+        match executors.continue_loop {
+            Some(ref continue_loop) => {
+                let env = Environment::new(self, executors);
+                continue_loop.execute(env)
+            }
+            None => panic!("VM is not setup to execute continue statements"),
+        }
+    }
+
     pub fn execute(&mut self, executors: &Executors, node: &GastNode) -> ExecutionResult {
         let ref id = node.id;
         let ref kind = node.kind;
@@ -336,6 +376,12 @@ impl VirtualMachine {
             &NodeType::While { ref test, ref body } => {
                 self.while_loop(executors, test, body)
             }
+            &NodeType::Break {  } => {
+                self.break_loop(executors)
+            }
+            &NodeType::Continue {  } => {
+                self.continue_loop(executors)
+            }
             _ => panic!("Unsupported Operation"),
         };
 
@@ -358,23 +404,7 @@ impl VirtualMachine {
         return result;
     }
 
-    pub fn change_branch(&mut self, identifier_changed: bool, changes: &Vec<AnalysisItem>) {
-        if identifier_changed {
-            self.scopes.last_mut().unwrap().change_branch();
-        }
-
-        let set: HashSet<_> = changes.iter().collect(); // dedup
-        let changes: Vec<_> = set.into_iter().collect();
-
-        for change in changes {
-            if let &AnalysisItem::Object { ref address, .. } = change {
-                let mut object = self.memory.get_object_mut(address);
-                object.change_branch();
-            }
-        }
-    }
-
-    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn change_branch(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -383,15 +413,60 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object { ref address, .. } = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.merge_branches();
+                object.change_branch();
             } else if let &AnalysisItem::Identifier { .. } = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().merge_branches();
+            self.scopes.last_mut().unwrap().change_branch();
         }
+    }
+
+    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>) {
+        self.merge_once(changes, None)
+    }
+
+    fn merge_once(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<GastID>) {
+        let mut identifier_changed = false;
+
+        let set: HashSet<_> = changes.iter().collect(); // dedup
+        let changes: Vec<_> = set.into_iter().collect();
+
+        for change in changes {
+            if let &AnalysisItem::Object { ref address, .. } = change {
+                let mut object = self.memory.get_object_mut(address);
+                object.merge_until(cutoff);
+            } else if let &AnalysisItem::Identifier { .. } = change {
+                identifier_changed = true;
+            }
+        }
+
+        if identifier_changed {
+            self.scopes.last_mut().unwrap().merge_until(cutoff);
+        }
+    }
+
+    // merge branches as long as the last node's id is too big
+    // if there's no cutoff, collapse a single branch
+    pub fn merge_until(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<GastID>) {
+        if let Some(cutoff) = cutoff {
+            while let Some(path) = self.paths.pop() {
+                let mut id = 0;
+
+                if let Some(node) = path.iter().last() {
+                    id = node.get_location()
+                } 
+                
+                if cutoff >= id {
+                    self.paths.push(path);
+                    break;
+                }
+            }
+        } 
+
+        self.merge_once(changes, cutoff);
     }
 
     pub fn lift_branches(&mut self, changes: &Vec<AnalysisItem>) {

@@ -17,6 +17,8 @@ pub struct Executors {
     pub declaration: Option<Box<DeclarationExecutor>>,
     pub assign: Option<Box<AssignExecutor>>,
     pub while_loop: Option<Box<WhileExecutor>>,
+    pub break_loop: Option<Box<BreakExecutor>>,
+    pub continue_loop: Option<Box<ContinueExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -36,6 +38,14 @@ pub trait IntExecutor {
 }
 
 pub trait FloatExecutor {
+    fn execute(&self, env: Environment) -> ExecutionResult;
+}
+
+pub trait BreakExecutor {
+    fn execute(&self, env: Environment) -> ExecutionResult;
+}
+
+pub trait ContinueExecutor {
     fn execute(&self, env: Environment) -> ExecutionResult;
 }
 

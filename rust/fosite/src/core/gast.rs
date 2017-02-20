@@ -64,6 +64,8 @@ pub enum NodeType {
         reversed: Option<String>,
         negated: Option<String>,
     },
+    Break { },
+    Continue { },
     Boolean { value: bool },
     Nil {},
 }
@@ -106,6 +108,8 @@ pub fn build(node: &Json) -> GastNode {
         "nil" => build_nil(id),
         "boolean" => build_bool(id, node),
         "boolop" => build_boolop(id, node),
+        "break" => build_break(id),
+        "continue" => build_continue(id),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -190,6 +194,14 @@ fn build_bool(id: GastID, node: &Json) -> GastNode {
     let value = json_value.as_boolean().unwrap();
 
     return GastNode::new(id, NodeType::Boolean { value: value });
+}
+
+fn build_break(id: GastID) -> GastNode {
+    return GastNode::new(id, NodeType::Break { });
+}
+
+fn build_continue(id: GastID) -> GastNode {
+    return GastNode::new(id, NodeType::Continue { });
 }
 
 fn build_nil(id: GastID) -> GastNode {

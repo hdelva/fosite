@@ -14,6 +14,10 @@ impl ConditionalExecutor for PythonConditional {
                -> ExecutionResult {
         let Environment { vm, executors } = env;
 
+        // register this node as a branch
+        let id = vm.current_node().clone();
+        vm.push_branch(id);
+
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
 
@@ -44,13 +48,18 @@ impl ConditionalExecutor for PythonConditional {
             }
         }
 
-        if no.len() == total {
-            return self.strict_negative(vm, executors, or_else, total_changes, total_dependencies)
-        } else if yes.len() == total {
-            return self.strict_positive(vm, executors, body, total_changes, total_dependencies)
-        } else {
-            return self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies)
-        }
+        let result = if no.len() == total {
+                        self.strict_negative(vm, executors, or_else, total_changes, total_dependencies)
+                    } else if yes.len() == total {
+                        self.strict_positive(vm, executors, body, total_changes, total_dependencies)
+                    } else {
+                        self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies)
+                    };
+
+        // reregister this node as a branch
+        let _ = vm.pop_branch();
+
+        return result
     }
 }
 
@@ -68,43 +77,41 @@ impl PythonConditional {
         let mut total_changes = c;
         let mut total_dependencies = d;
 
-        let last_path = vm.pop_path();
+        let mut positive;
+        let mut negative;
+        {
+            let current_path = vm.current_path();
 
-        let mut positive = last_path.clone();
-        positive.add_node(PathNode::Condition(vm.current_node(), true));
-        let mut negative = last_path.clone();
-        negative.add_node(PathNode::Condition(vm.current_node(), false));
+            positive = current_path.clone();
+            positive.add_node(PathNode::Condition(vm.current_node(), true));
+            negative = current_path.clone();
+            negative.add_node(PathNode::Condition(vm.current_node(), false));
+        }
 
         vm.push_path(positive);
         vm.add_restrictions(no);
         let body_result = vm.execute(executors, body);
         vm.drop_restrictions();
-        let _ = vm.pop_path();
-
-        let mut identifier_changed = false;
+        let positive = vm.pop_path();
 
         let changes = body_result.changes;
         let dependencies = body_result.dependencies;
 
         for change in &changes {
             total_changes.push(change.clone());
-
-            if let &AnalysisItem::Identifier { .. } = change {
-                identifier_changed = true;
-            }
         }
 
         for dependency in &dependencies {
             total_dependencies.push(dependency.clone());
         }
 
-        vm.change_branch(identifier_changed, &total_changes);
+        vm.change_branch(&total_changes);
 
         vm.push_path(negative);
         vm.add_restrictions(yes);
         let else_result = vm.execute(executors, or_else);
         vm.drop_restrictions();
-        let _ = vm.pop_path();
+        let negative = vm.pop_path();
 
         let changes = else_result.changes;
         let dependencies = else_result.dependencies;
@@ -117,16 +124,33 @@ impl PythonConditional {
             total_dependencies.push(dependency.clone());
         }
 
-        vm.push_path(last_path);
-
-        vm.merge_branches(&total_changes);
-
-        self.check(vm, executors, &total_changes);
+        let flow;
+        match (body_result.flow, else_result.flow) {
+            (FlowControl::TerminateLoop, FlowControl::TerminateLoop) => {
+                flow = FlowControl::TerminateLoop;
+                vm.merge_branches(&total_changes);
+                self.check(vm, executors, &total_changes);
+            },
+            (FlowControl::TerminateLoop, FlowControl::Continue) => {
+                flow = FlowControl::Continue;
+                vm.push_path(negative);
+            },
+            (FlowControl::Continue, FlowControl::TerminateLoop) => {
+                flow = FlowControl::Continue;
+                vm.push_path(positive);
+                vm.change_branch(&total_changes);
+            },
+            _ => {
+                flow = FlowControl::Continue;
+                vm.merge_branches(&total_changes);
+                self.check(vm, executors, &total_changes);
+            }
+        }
 
         return ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
-            flow: FlowControl::Continue,
+            flow: flow,
             result: Mapping::new(),
         };
     }

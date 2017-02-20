@@ -1,5 +1,6 @@
 use super::{Path, PathNode};
 use super::{Mapping, OptionalMapping};
+use super::GastID;
 
 use std::collections::BTreeSet;
 use std::collections::HashSet;
@@ -245,8 +246,28 @@ impl Scope {
         self.path.push((current + 1) % 2);
     }
 
+    pub fn merge_until(&mut self, cutoff: Option<GastID>) {
+        if let Some(cutoff) = cutoff {
+            while self.frames.len() > 1 {
+                let mut id = 0;
+
+                if let Some(frame) = self.frames.last() {
+                    id = frame.cause.get_location().clone();
+                } 
+
+                if cutoff >= id {
+                    break;
+                }
+                    
+                self.merge_branches();
+            }
+        } else {
+            self.merge_branches();
+        }
+    }
+
     // should only be called when the last frames are Conditions or Loops
-    pub fn merge_branches(&mut self) {
+    fn merge_branches(&mut self) {
         if self.frames.len() == 1 {
             return;
         }
@@ -262,7 +283,6 @@ impl Scope {
         for name in self.frames[self.frames.len() - 1].get_content().keys() {
             identifiers.insert(name.clone());
         }
-
 
         // first branch
         {

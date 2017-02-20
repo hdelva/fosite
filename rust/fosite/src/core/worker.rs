@@ -199,7 +199,7 @@ trait WarningHandler {
 }
 
 struct AttributeUnsafe {
-    done: BTreeSet<BTreeSet<BTreeSet<GastID>>>,
+    done: BTreeSet<(String, String, GastID)>,
 }
 
 impl AttributeUnsafe {
@@ -207,31 +207,27 @@ impl AttributeUnsafe {
         AttributeUnsafe { done: BTreeSet::new() }
     }
 
-    fn message_id(&self, content: &Content) -> BTreeSet<BTreeSet<GastID>> {
-        let mut fingerprint = BTreeSet::new();
+    fn message_id(&self, content: &Content) -> (String, String, GastID) {
+        let parent = content.get(&"parent".to_owned()).unwrap().to_string().unwrap();
+        let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
+        let mut fingerprint = 0;
 
         let mut ass_count = 0;
         let mut current_ass = format!("path {}", ass_count);
         while let Some(path) = content.get(&current_ass) {
             let path = path.to_path().unwrap();
 
-            let mut set = BTreeSet::new();
             for node in path.iter() {
-                match node {
-                    &PathNode::Assignment(location, _) => {
-                        set.insert(location);
-                    }
-                    _ => (),
+                if node.get_location() > fingerprint {
+                    fingerprint = node.get_location()
                 }
             }
-
-            fingerprint.insert(set);
 
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
         }
 
-        return fingerprint;
+        return (parent, name, fingerprint);
     }
 }
 
@@ -250,10 +246,13 @@ impl WarningHandler for AttributeUnsafe {
         println!("  Object {} does not always have an attribute {}",
                  Bold.paint(parent),
                  Bold.paint(name));
+        println!("  In the following cases:");
 
         let mut ass_count = 0;
         let mut current_ass = format!("path {}", ass_count);
         while let Some(path) = content.get(&current_ass) {
+            println!("  Case {}",
+                     Bold.paint(format!("{}", ass_count + 1)));
             self.print_path(sources, &path.to_path().unwrap(), "    ");
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
@@ -263,7 +262,7 @@ impl WarningHandler for AttributeUnsafe {
 }
 
 struct IdentifierUnsafe {
-    done: BTreeSet<BTreeSet<BTreeSet<GastID>>>,
+    done: BTreeSet<(String, GastID)>,
 }
 
 impl IdentifierUnsafe {
@@ -271,31 +270,26 @@ impl IdentifierUnsafe {
         IdentifierUnsafe { done: BTreeSet::new() }
     }
 
-    fn message_id(&self, content: &Content) -> BTreeSet<BTreeSet<GastID>> {
-        let mut fingerprint = BTreeSet::new();
+    fn message_id(&self, content: &Content) -> (String, GastID) {
+        let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
+        let mut fingerprint = 0;
 
         let mut ass_count = 0;
         let mut current_ass = format!("path {}", ass_count);
         while let Some(path) = content.get(&current_ass) {
             let path = path.to_path().unwrap();
 
-            let mut set = BTreeSet::new();
             for node in path.iter() {
-                match node {
-                    &PathNode::Assignment(location, _) => {
-                        set.insert(location);
-                    }
-                    _ => (),
+                if node.get_location() > fingerprint {
+                    fingerprint = node.get_location()
                 }
             }
-
-            fingerprint.insert(set);
 
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
         }
 
-        return fingerprint;
+        return (name, fingerprint);
     }
 }
 
@@ -310,12 +304,15 @@ impl WarningHandler for IdentifierUnsafe {
 
         self.preamble(sources, node);
         let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
-        println!("  {} does not always exist at the of this",
+        println!("  {} does not always exist after evaluating this branch",
                  Bold.paint(name));
+        println!("  In the following cases:");
 
         let mut ass_count = 0;
         let mut current_ass = format!("path {}", ass_count);
         while let Some(path) = content.get(&current_ass) {
+            println!("  Case {}",
+                     Bold.paint(format!("{}", ass_count + 1)));
             self.print_path(sources, &path.to_path().unwrap(), "    ");
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
@@ -371,8 +368,10 @@ impl WarningHandler for PolyType {
         self.preamble(sources, node);
 
         let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
-        println!("  Identifier {} does not always have the same type after executing this",
+        println!("  Identifier {} does not always have the same type after this branch",
                  Bold.paint(name));
+        println!("  In the following cases:");
+
 
         let mut type_count = 0;
         let mut current_type = format!("type {}", type_count);
@@ -467,10 +466,13 @@ impl ErrorHandler for IdentifierInvalid {
 
         let name = content.get(&"name".to_owned()).unwrap().to_string().unwrap();
         println!("  {} does not exist", Bold.paint(name));
+        println!("  In the following cases:");
 
         let mut ass_count = 0;
         let mut current_ass = format!("path {}", ass_count);
         while let Some(path) = content.get(&current_ass) {
+            println!("  Case {}",
+                     Bold.paint(format!("{}", ass_count + 1)));
             self.print_path(sources, &path.to_path().unwrap(), "    ");
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
@@ -502,10 +504,14 @@ impl ErrorHandler for AttributeInvalid {
         println!("  Object {} does not have an attribute {}",
                  Bold.paint(parent),
                  Bold.paint(name));
+        println!("  In the following cases:");
+
 
         let mut ass_count = 0;
         let mut current_ass = format!("path {}", ass_count);
         while let Some(path) = content.get(&current_ass) {
+            println!("  Case {}",
+                     Bold.paint(format!("{}", ass_count + 1)));
             self.print_path(sources, &path.to_path().unwrap(), "    ");
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
@@ -646,6 +652,8 @@ impl WarningHandler for WhileLoopChange {
         let mut count = 0;
         let mut c = format!("path {}", count);
         while let Some(path) = content.get(&c) {
+            println!("  Case {}",
+                     Bold.paint(format!("{}", count + 1)));
             self.print_path(sources, &path.to_path().unwrap(), "    ");
             println!("");
             count += 1;

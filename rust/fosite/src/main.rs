@@ -89,6 +89,8 @@ fn test_vm() {
         int: Some(Box::new(PythonInt {})),
         string: Some(Box::new(PythonString {})),
         while_loop: Some(Box::new(PythonWhile {})),
+        break_loop: Some(Box::new(PythonBreak {})),
+        continue_loop: Some(Box::new(PythonContinue {})),
     };
 
     let mut s = String::new();

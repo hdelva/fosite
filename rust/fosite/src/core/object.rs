@@ -7,6 +7,7 @@ use super::Collection;
 use super::Representant;
 use super::Scope;
 use super::Mapping;
+use super::GastID;
 
 /// objects
 // Object is composed of several properties it may or may not have
@@ -83,8 +84,8 @@ impl Object {
         self.composite_property.change_branch();
     }
 
-    pub fn merge_branches(&mut self) {
-        self.composite_property.merge_branches();
+    pub fn merge_until(&mut self, cutoff: Option<GastID>) {
+        self.composite_property.merge_until(cutoff);
     }
 
     pub fn lift_branches(&mut self) {
@@ -132,8 +133,8 @@ impl CompositeProperty {
         self.namespace.change_branch();
     }
 
-    fn merge_branches(&mut self) {
-        self.namespace.merge_branches();
+    fn merge_until(&mut self, cutoff: Option<GastID>) {
+        self.namespace.merge_until(cutoff);
     }
 
     fn lift_branches(&mut self) {
