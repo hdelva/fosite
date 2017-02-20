@@ -1,17 +1,9 @@
 use super::Pointer;
 
 use std::hash::{Hash, Hasher};
-
-#[derive(Clone)]
-struct Branch {
-    content: Vec<Chunk>,
-}
-
-impl Branch {
-    fn new(original: Vec<Chunk>) -> Branch {
-        Branch { content: original.clone() }
-    }
-}
+use std::collections::hash_map::Entry;
+use std::cmp;
+use super::Mapping;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Representant {
@@ -28,7 +20,7 @@ impl Representant {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chunk {
     minimum: i16,
     maximum: i16,
@@ -45,284 +37,384 @@ impl Chunk {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+struct Branch {
+    content: Vec<Chunk>,
+}
+
+impl Branch {
+    pub fn new(content: Vec<Chunk>) -> Branch {
+        Branch { 
+            content: content,
+        }
+    }
+
+    pub fn insert(&mut self, element: Representant) {
+        let mut new_content = Vec::new();
+        let mut b = false;
+        for chunk in self.content {
+            let old_representant = &chunk.representant;
+            if element.kind == old_representant.kind {
+                let new_chunk = Chunk::new(chunk.min, chunk.max + 1, old_representant.clone());
+                new_content.push(new_chunk);
+                b = true;
+            } else {
+                if !b {
+                    let new_chunk = Chunk::new(0, 1, old_representant.clone());
+                    new_content.push(new_chunk);
+                } 
+                new_content.push(chunk.clone())
+                b = false;
+            }
+        }
+        self.content = new_content;
+    }
+
+    pub fn define(&mut self, definition: Vec<Representant>) {
+        let mut content = vec!();
+
+        for object in definition {
+            content.push(Chunk::new(1, 1, object))
+        }
+
+        self.content = content;
+    }
+
+    pub fn append(&mut self, definition: Representant, min: i16, max: i16) {
+        {
+            let last = self.content.last_mut();
+
+            if let Some(mut element) = last {
+                if element.representant.kind == definition.kind {
+                    element.minimum += min;
+                    element.maximum += max;
+                    return;
+                }
+            }     
+        }
+
+        self.content.push(Chunk::new(min, max, definition))
+    }
+
+    pub fn prepend(&mut self, definition: Representant, min: i16, max: i16) {
+        {
+            let first = self.content.first_mut();
+
+            if let Some(mut element) = first {
+                if element.representant.kind == definition.kind {
+                    element.minimum += min;
+                    element.maximum += max;
+                }
+            }
+        }
+
+        content.insert(0, Chunk::new(min, max, definition));
+    }
+
+    fn first_combinations(&self, n: i16) -> Vec<Vec<&Chunk>> {
+        let current = Vec::new();
+        return flatten(n, current, self.content, false);
+    }
+
+    fn last_combinations(&self, n: i16) -> Vec<Vec<&Chunk>> {
+        let current = Vec::new();
+        let mut result = flatten(n, current, self.content, true);
+        result.reverse();
+        return result;
+    }
+
+    pub fn iterate(&self) -> Vec<Pointer> {
+        let mut result = Vec::new();
+        for chunk in self.content {
+            result.push(chunk.object.clone());
+        }
+        return result;
+    }
+
+    pub fn get_first_n(&self, n: i16) -> Vec<Vec<Pointer>> {
+        let mut result = Vec::new();
+
+        let combinations = self.first_combinations(n);
+        let count = combinations.iter().fold(0, |acc, &x| cmp:max(acc, x));
+        for i in 0..count {
+            let element = Vec::new();
+            for combination in combinations {
+                let opt_chunk = combination.get(i);
+                if let Some(chunk) = opt_chunk {
+                    element.push(chunk.representant.object().clone())
+                } else {
+                    break;
+                }
+            }
+            result.push(element);
+        }
+    }
+
+    pub fn get_last_n(&self, n: 16) -> Vec<Vec<Pointer>> {
+        let mut result = Vec::new();
+
+        let combinations = self.last_combinations(n);
+        let count = combinations.iter().fold(0, |acc, &x| cmp:max(acc, x));
+        for i in 0..count {
+            let element = Vec::new();
+            for combination in combinations {
+                let opt_chunk = combination.get(i);
+                if let Some(chunk) = opt_chunk {
+                    element.push(chunk.representant.object().clone())
+                } else {
+                    break;
+                }
+            }
+            result.push(element);
+        }
+    }
+
+    pub fn slice(&self, start: i16, end: i16) -> Branch {
+        let mut min_counts = HashMap::new();
+        let mut max_counts = HashMap::new();
+
+        let head = self.get_first_n(start);
+
+        for possibility in head {
+            let pls = HashMap::new();
+            for chunk in possibility.iter() {
+                *pls.entry(chunk.clone()).or_insert(0) += 1;
+            }
+
+            for (chunk, count) in pls.iter() {
+                match min_counts.entry(chunk.clone()) {
+                    Occupied(mut c) => {
+                        *c.get_mut() = cmp::min(*c.get(), *count);
+                    },
+                    Vacant(mut c) => {
+                        c.insert(*count);
+                    }
+                }
+
+                match max_counts.entry(chunk.clone()) {
+                    Occupied(mut c) => {
+                        *c.get_mut() = cmp::max(*c.get(), *count);
+                    },
+                    Vacant(mut c) => {
+                        c.insert(*count);
+                    }
+                }
+            }
+        }
+
+        let tail = self.get_last_n(end);
+
+        for possibility in tail {
+            let pls = HashMap::new();
+            for chunk in possibility.iter() {
+                *pls.entry(chunk.clone()).or_insert(0) += 1;
+            }
+
+            for (chunk, count) in pls.iter() {
+                match min_counts.entry(chunk.clone()) {
+                    Occupied(mut c) => {
+                        *c.get_mut() = cmp::min(*c.get(), *count);
+                    },
+                    Vacant(mut c) => {
+                        c.insert(*count);
+                    }
+                }
+
+                match max_counts.entry(chunk.clone()) {
+                    Occupied(mut c) => {
+                        *c.get_mut() = cmp::max(*c.get(), *count);
+                    },
+                    Vacant(mut c) => {
+                        c.insert(*count);
+                    }
+                }
+            }
+        }
+
+        let mut new_content = Vec::new();
+
+        for chunk in self.content.iter() {
+            let new_min = chunk.min - min_counts.get(chunk).unwrap_or(0);
+            let new_max = chunk.max - max_counts.get(chunk).unwrap_or(0);
+
+            if new_max > 0 {
+                let new_chunk = Chunk::new(new_min, new_max, chunk.representant.clone());
+                new_content.push(new_chunk);
+            }
+        }
+
+        return Branch::new(new_content);
+    }
+}
+
+pub struct Thing {
+    pub branch: Branch,
+    pub path: Path,
+}
+
+impl Thing {
+    pub impl new(branch: Branch, path: Path) -> Self {
+        Thing {
+            branch: branch,
+            path: path,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Collection {
-    branches: Vec<Branch>,
-    id: i32,
+    frames: Vec<Frame>,
+    path: Vec<usize>,
 }
-
-impl Hash for Collection {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_i32(self.id)
-    }
-}
-
-impl PartialEq for Collection {
-    fn eq(&self, other: &Collection) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Eq for Collection {}
 
 
 impl Collection {
     pub fn empty() -> Collection {
         Collection {
-            branches: vec![Branch::new(vec![])],
-            id: 1,
+            frames: vec!(Frame::new()),
+            path: vec!(),
         }
     }
 
-    pub fn swap(&mut self) {
-        let last = self.branches.pop().unwrap();
-        let first = self.branches.pop().unwrap();
-        self.branches.push(last);
-        self.branches.push(first);
+    pub fn current_branch(&self, name: &String) -> &Branch {
+        // last possible frame
+        let mut index = self.frames.len() - 1;
+
+        // path describes offset from the last frame
+        index -= *self.path.last().unwrap();
+
+        return self.frames[index];
     }
 
-    pub fn merge(&mut self) {
-        let last = self.branches.pop().unwrap().content;
-        let first = self.branches.pop().unwrap().content;
-        let mut new_content = vec![];
+    pub fn current_branch_mut(&mut self, name: &String) -> &mut Branch {
+        // last possible frame
+        let mut index = self.frames.len() - 1;
 
-        let mut last_id = 0;
-        let mut first_id = 0;
+        // path describes offset from the last frame
+        index -= *self.path.last().unwrap();
 
-        while last_id < last.len() && first_id < first.len() {
-            let current_last = last[last_id].clone();
-            let current_first = first[first_id].clone();
+        return self.frames.get_mut(current_index);
+    }
 
-            if current_last == current_first {
-                new_content.push(current_last);
-                last_id += 1;
-                first_id += 1;
-            } else if last_id < first_id {
-                new_content.push(current_last);
-                last_id += 1;
-            } else if first_id < last_id {
-                new_content.push(current_first);
-                first_id += 1;
+    pub fn change_branches(&mut self) {
+        let current = self.path.pop().unwrap();
+        self.path.push((current + 1) % 2);
+    }
+
+    pub fn merge_until(&mut self, cutoff: Option<GastID>) {
+        if let Some(cutoff) = cutoff {
+            while self.frames.len() > 1 {
+                let mut id = 0;
+
+                if let Some(frame) = self.frames.last() {
+                    id = frame.cause.get_location().clone();
+                } 
+
+                if cutoff >= id {
+                    break;
+                }
+                    
+                self.merge_branches();
             }
+        } else {
+            self.merge_branches();
         }
     }
 
-    pub fn get_content(&self) -> &Vec<Chunk> {
-        match self.branches.last() {
-            Some(branch) => &branch.content,
-            _ => panic!("collection object has no content anymore"),
+    pub fn merge_branches(&mut self) {
+        if self.frames.len() == 1 {
+            return;
         }
-    }
 
-    pub fn get_content_mut(&mut self) -> &mut Vec<Chunk> {
-        match self.branches.last_mut() {
-            Some(branch) => &mut branch.content,
-            _ => panic!("collection object has no content anymore"),
-        }
+        let mut new_content = HashMap::new();
     }
 
     pub fn define(&mut self, definition: Vec<Representant>) {
-        let mut content = self.get_content_mut();
-
-        for object in definition {
-            content.push(Chunk::new(1, 1, object))
-        }
+        
     }
 
     pub fn append(&mut self, definition: Representant, min: i16, max: i16) {
-        let mut content = self.get_content_mut();
-        {
-            let last = content.last_mut();
-
-            match last {
-                Some(mut element) => {
-                    if element.representant.kind == definition.kind {
-                        element.minimum += min;
-                        element.maximum += max;
-                        return;
-                    }
-                }
-                _ => (),
-            }
-        }
-
-        content.push(Chunk::new(min, max, definition))
 
     }
 
     pub fn prepend(&mut self, definition: Representant, min: i16, max: i16) {
-        let mut content = self.get_content_mut();
-        {
-            let first = content.first_mut();
-
-            match first {
-                Some(mut element) => {
-                    if element.representant.kind == definition.kind {
-                        element.minimum += min;
-                        element.maximum += max;
-                    }
-                }
-                _ => (),
-            }
-        }
-
-        content.insert(0, Chunk::new(min, max, definition));
 
     }
 
     pub fn get_first_n(&self, n: i16) -> Vec<Vec<&Chunk>> {
-        let current = Vec::new();
-        let content = self.get_content();
-        return self.fuck(n, current, content, false);
+        
     }
 
     pub fn get_last_n(&self, n: i16) -> Vec<Vec<&Chunk>> {
-        let current = Vec::new();
-        let content = self.get_content();
-        let mut result = self.fuck(n, current, content, true);
-        result.reverse();
-        return result;
+
     }
 
+    /*
     // todo
     fn get_exact_n(&self, n: i16) {
 
         // return intersect
     }
+    */
 
     pub fn slice(&self, start: i16, end: i16) -> Vec<Vec<&Chunk>> {
-        let head = self.get_first_n(start);
-        let mut start_positions = Vec::new();
 
-        if head.len() == 0 {
-            start_positions.push(0);
-        }
+    }
+}
 
-        for possibility in head {
-            let last_head = possibility.last().unwrap();
+fn flatten<'a, 'b>(n: i16,
+                mut current: Vec<&'a Chunk>,
+                chunks: &'a [Chunk],
+                reverse: bool)
+                -> Vec<Vec<&'a Chunk>> {
+    let chunk;
+    let next_chunk;
 
-            let mut count = 0;
-            for chunk in possibility.iter().rev() {
-                if last_head == chunk {
-                    count += 1
-                } else {
-                    break;
-                }
-            }
-
-            let mut cloned = possibility.clone();
-            cloned.dedup();
-
-            if count < last_head.maximum {
-                start_positions.push(cloned.len() - 1);
-            } else {
-                start_positions.push(cloned.len());
-            }
-        }
-
-        let tail = self.get_last_n(end);
-        let mut end_positions = Vec::new();
-
-        let content = self.get_content();
-
-        if tail.len() == 0 {
-            end_positions.push(content.len())
-        }
-
-        for possibility in tail {
-            let first_tail = possibility.first().unwrap();
-
-            let mut count = 0;
-            for chunk in possibility.iter() {
-                if first_tail == chunk {
-                    count += 1
-                } else {
-                    break;
-                }
-            }
-
-            let mut cloned = possibility.clone();
-            cloned.dedup();
-
-            if count < first_tail.maximum {
-                end_positions.push(content.len() - cloned.len() + 1);
-            } else {
-                end_positions.push(content.len() - cloned.len());
-            }
-        }
-
-        let mut result = Vec::new();
-
-        for start in start_positions {
-            for end in &end_positions {
-                let mut temp = Vec::new();
-                for i in start..*end {
-                    temp.push(&content[i]);
-                }
-                result.push(temp);
-            }
-        }
-
-        return result;
+    if current.len() == n as usize {
+        return vec![];
     }
 
-    fn fuck<'a, 'b>(&'a self,
-                    n: i16,
-                    mut current: Vec<&'a Chunk>,
-                    chunks: &'a [Chunk],
-                    reverse: bool)
-                    -> Vec<Vec<&'a Chunk>> {
-        let chunk;
-        let next_chunk;
+    if reverse {
+        chunk = chunks.last();
+        next_chunk = &chunks[..chunks.len() - 1];
+    } else {
+        chunk = chunks.first();
+        next_chunk = &chunks[1..];
+    }
 
-        if current.len() == n as usize {
-            return vec![];
-        }
+    match chunk {
+        Some(element) => {
+            let mut result = Vec::new();
 
-        if reverse {
-            chunk = chunks.last();
-            next_chunk = &chunks[..chunks.len() - 1];
-        } else {
-            chunk = chunks.first();
-            next_chunk = &chunks[1..];
-        }
-
-        match chunk {
-            Some(element) => {
-                let mut result = Vec::new();
-
-                for _ in 0..element.minimum {
-                    current.push(&element);
-                    if current.len() >= n as usize {
-                        result.push(current);
-                        return result;
-                    }
+            for _ in 0..element.minimum {
+                current.push(&element);
+                if current.len() >= n as usize {
+                    result.push(current);
+                    return result;
                 }
-
-                // minimum has been reached, we can now move to the next chunk
-                let mut partial = self.fuck(n, current.clone(), next_chunk, reverse);
-                result.append(&mut partial);
-
-                // or rather than going to the next chunk,
-                // add more until we reach the maximum number
-                for _ in element.minimum..element.maximum {
-                    current.push(&element);
-
-                    if current.len() >= n as usize {
-                        result.push(current);
-                        return result;
-                    } else {
-                        let mut partial = self.fuck(n, current.clone(), next_chunk, reverse);
-                        result.append(&mut partial);
-                    }
-
-                }
-
-                return result;
             }
-            _ => panic!("not enough elements to unpack"),
+
+            // minimum has been reached, we can now move to the next chunk
+            let mut partial = flatten(n, current.clone(), next_chunk, reverse);
+            result.append(&mut partial);
+
+            // or rather than going to the next chunk,
+            // add more until we reach the maximum number
+            for _ in element.minimum..element.maximum {
+                current.push(&element);
+
+                if current.len() >= n as usize {
+                    result.push(current);
+                    return result;
+                } else {
+                    let mut partial = flatten(n, current.clone(), next_chunk, reverse);
+                    result.append(&mut partial);
+                }
+
+            }
+
+            return result;
         }
-
-
+        _ => panic!("not enough elements to unpack"),
     }
 }

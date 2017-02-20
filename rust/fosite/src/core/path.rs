@@ -11,6 +11,7 @@ pub enum PathNode {
     Loop(GastID, bool),
     Return(GastID),
     Frame(GastID, Option<String>, Box<Path>),
+    Element(GastID, i16),
 }
 
 impl Ord for PathNode {
@@ -43,10 +44,8 @@ impl PathNode {
     pub fn is_branch(&self) -> bool {
         match self {
             &PathNode::Condition(_, _) => true,
-            &PathNode::Assignment(_, _) => false,
             &PathNode::Loop(_, _) => true,
-            &PathNode::Return(_) => false,
-            &PathNode::Frame(_, _, _) => false,
+            _ => false,
         }
     }
 
@@ -62,7 +61,8 @@ impl PathNode {
                     result.push(PathNode::Frame(l, t.clone(), Box::new(r)));
                 }
                 return result;
-            }
+            },
+            &PathNode::Element(l, i) => vec!(PathNode::Element(l, i)),
         }
     }
 
@@ -73,6 +73,7 @@ impl PathNode {
             &PathNode::Loop(location, _) => location,
             &PathNode::Return(location) => location,
             &PathNode::Frame(location, _, _) => location,
+            &PathNode::Element(location, _) => location,
         }
     }
 
@@ -117,6 +118,9 @@ impl PathNode {
                 return l1 == l2;
             }
             (&PathNode::Assignment(l1, ..), &PathNode::Assignment(l2, ..)) => {
+                return l1 == l2;
+            }
+            (&PathNode::Element(l1, _), &PathNode::Element(l2, _)) => {
                 return l1 == l2;
             }
             _ => false,

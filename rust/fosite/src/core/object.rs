@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use super::Pointer;
 use super::OptionalMapping;
 use super::Path;
-use super::Collection;
-use super::Representant;
+//use super::Collection;
+//use super::Representant;
 use super::Scope;
 use super::Mapping;
 use super::GastID;
@@ -96,19 +96,23 @@ impl Object {
 /// Object Properties
 
 struct CollectionProperty {
-    collections: HashMap<Path, Collection>,
+    //collections: HashMap<Path, Collection>,
 }
 
 impl CollectionProperty {
     fn new() -> CollectionProperty {
-        CollectionProperty { collections: HashMap::new() }
+        CollectionProperty { 
+            //collections: HashMap::new() 
+        }
     }
 
+/*
     fn define(&mut self, content: Vec<Representant>) {
         let mut collection = Collection::empty();
         collection.define(content);
         self.collections.insert(Path::empty(), collection);
     }
+    */
 }
 
 struct CompositeProperty {

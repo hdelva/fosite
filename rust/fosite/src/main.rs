@@ -17,8 +17,8 @@ use core::build;
 use std::io::prelude::*;
 use std::fs::File;
 use core::Worker;
-use core::Collection;
-use core::Representant;
+//use core::Collection;
+//use core::Representant;
 use core::Executors;
 
 use python::*;
@@ -49,7 +49,7 @@ fn main() {
     let _ = worker.finalize();
     // test_collection();
 }
-
+/*
 fn test_collection() {
     let mut collection = Collection::empty();
     let mut definition = vec![];
@@ -72,6 +72,7 @@ fn test_collection() {
 
     println!("{:?}", collection.slice(1, 1));
 }
+*/
 
 
 fn test_vm() {
