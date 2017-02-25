@@ -524,7 +524,7 @@ impl VirtualMachine {
         let pointer = self.memory.new_object();
         {
             let mut object = self.memory.get_object_mut(&pointer);
-            object.set_type(true);
+            object.make_type(true);
         }
         let mapping = Mapping::simple(Path::empty(), pointer);
         let mut scope = self.scopes.last_mut().unwrap();
@@ -541,7 +541,7 @@ impl VirtualMachine {
         let new_pointer = self.memory.new_object();
         {
             let mut object = self.memory.get_object_mut(&new_pointer);
-            object.set_type(true);
+            object.make_type(true);
             object.extend(parent_pointer.clone());
         }
 

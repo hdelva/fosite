@@ -11,24 +11,39 @@ pub enum PathNode {
     Loop(GastID, bool),
     Return(GastID),
     Frame(GastID, Option<String>, Box<Path>),
-    Element(GastID, i16),
+    Element(GastID, i16, i16), // element x out of y elements
 }
 
 impl Ord for PathNode {
     fn cmp(&self, other: &PathNode) -> Ordering {
-        self.get_location().cmp(&other.get_location())
+        match (self, other) {
+            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+               (l1, i1).cmp( &(l2, i2) )
+            },
+            _ => self.get_location().cmp(&other.get_location())
+        }
     }
 }
 
 impl PartialOrd for PathNode {
     fn partial_cmp(&self, other: &PathNode) -> Option<Ordering> {
-        self.get_location().partial_cmp(&other.get_location())
+        match (self, other) {
+            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+               (l1, i1).partial_cmp( &(l2, i2) )
+            },
+            _ => self.get_location().partial_cmp(&other.get_location())
+        }
     }
 }
 
 impl PartialEq for PathNode {
     fn eq(&self, other: &PathNode) -> bool {
-        self.get_location() == other.get_location()
+        match (self, other) {
+            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+               (l1, i1) == (l2, i2)
+            },
+            _ => self.get_location() == other.get_location(),
+        }
     }
 }
 
@@ -36,7 +51,13 @@ impl Eq for PathNode {}
 
 impl Hash for PathNode {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_location().hash(state);
+        match self {
+            &PathNode::Element(l, i, _) => {
+                l.hash(state);
+                i.hash(state);
+            },
+            _ => self.get_location().hash(state),
+        }
     }
 }
 
@@ -62,7 +83,7 @@ impl PathNode {
                 }
                 return result;
             },
-            &PathNode::Element(l, i) => vec!(PathNode::Element(l, i)),
+            &PathNode::Element(l, i, t) => vec!(PathNode::Element(l, i, t)),
         }
     }
 
@@ -73,7 +94,7 @@ impl PathNode {
             &PathNode::Loop(location, _) => location,
             &PathNode::Return(location) => location,
             &PathNode::Frame(location, _, _) => location,
-            &PathNode::Element(location, _) => location,
+            &PathNode::Element(location, _, _) => location,
         }
     }
 
@@ -96,6 +117,9 @@ impl PathNode {
             }
             (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
                 return n1.mergeable(n2);
+            }
+            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+                return l1 != l2 || i1 == i2;
             }
             _ => true, // other kinds of nodes can't contradict each other
         }
@@ -120,8 +144,8 @@ impl PathNode {
             (&PathNode::Assignment(l1, ..), &PathNode::Assignment(l2, ..)) => {
                 return l1 == l2;
             }
-            (&PathNode::Element(l1, _), &PathNode::Element(l2, _)) => {
-                return l1 == l2;
+            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+                return l1 == l2 && i1 == i2;
             }
             _ => false,
         }

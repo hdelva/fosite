@@ -1,147 +1,149 @@
-use std::collections::HashMap;
-
 use super::Pointer;
 use super::OptionalMapping;
 use super::Path;
-//use super::Collection;
-//use super::Representant;
+use super::Collection;
+use super::Representant;
 use super::Scope;
 use super::Mapping;
 use super::GastID;
+use super::CollectionBranch;
+use super::CollectionChunk;
 
 /// objects
 // Object is composed of several properties it may or may not have
 pub struct Object {
-    type_property: bool,
+    is_type: bool,
 
     // todo remove, deprecated
-    parent_property: Option<Pointer>, // for method objects
+    parent: Option<Pointer>, // for method objects
 
-    // todo, keep optional?
-    collection_property: Option<CollectionProperty>, // for ... in x
+    extensions: Vec<Pointer>, // python-style inheritance
 
-    composite_property: CompositeProperty, // x.attrbitue
-    extension_property: Vec<Pointer>, // python-style inheritance
+    elements: Collection, // for ... in x -- and x[i]
+    attributes: Scope, // x.attrbitue
+
 }
 
 impl Object {
     pub fn new() -> Object {
         Object {
-            type_property: false,
-            extension_property: Vec::new(),
-            parent_property: None,
-            collection_property: None,
-            composite_property: CompositeProperty::new(),
+            is_type: false,
+            extensions: Vec::new(),
+            parent: None,
+            elements: Collection::new(),
+            attributes: Scope::new(),
         }
     }
 
-    pub fn set_type(&mut self, new: bool) {
-        self.type_property = new;
+    pub fn make_type(&mut self, new: bool) {
+        self.is_type = new;
     }
 
     pub fn is_type(&self) -> bool {
-        return self.type_property;
+        return self.is_type;
     }
 
     pub fn get_parent(&self) -> &Option<Pointer> {
-        return &self.parent_property;
+        return &self.parent;
     }
 
     pub fn set_parent(&mut self, parent: Pointer) {
-        self.parent_property = Some(parent);
+        self.parent = Some(parent);
     }
 
     pub fn extend(&mut self, tpe: Pointer) {
-        self.extension_property.push(tpe);
+        self.extensions.push(tpe);
     }
 
     pub fn get_extension(&self) -> &Vec<Pointer> {
-        return &self.extension_property;
+        return &self.extensions;
     }
 
     pub fn get_extension_mut(&mut self) -> &mut Vec<Pointer> {
-        return &mut self.extension_property;
-    }
-
-    pub fn iterate(&self) -> Option<Pointer> {
-        // todo
-        return None;
-    }
-
-    pub fn make_collection(&mut self) {
-        self.collection_property = Some(CollectionProperty::new());
-    }
-
-    pub fn assign_attribute(&mut self, name: String, path: Path, mapping: Mapping) {
-        self.composite_property.assign_attribute(name, path, mapping);
-    }
-
-    pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
-        return self.composite_property.get_attribute(name);
+        return &mut self.extensions;
     }
 
     pub fn change_branch(&mut self) {
-        self.composite_property.change_branch();
+        if self.attributes.num_frames() <= self.elements.num_frames() {
+            self.elements.change_branch()
+        } 
+        
+        if self.elements.num_frames() <= self.attributes.num_frames() {
+            self.attributes.change_branch()
+        } 
     }
 
     pub fn merge_until(&mut self, cutoff: Option<GastID>) {
-        self.composite_property.merge_until(cutoff);
+        if self.attributes.num_frames() <= self.elements.num_frames() {
+            self.elements.merge_until(cutoff)
+        } 
+        
+        if self.elements.num_frames() <= self.attributes.num_frames() {
+            self.attributes.merge_until(cutoff)
+        } 
     }
 
     pub fn lift_branches(&mut self) {
-        self.composite_property.lift_branches();
-    }
-}
-
-/// Object Properties
-
-struct CollectionProperty {
-    //collections: HashMap<Path, Collection>,
-}
-
-impl CollectionProperty {
-    fn new() -> CollectionProperty {
-        CollectionProperty { 
-            //collections: HashMap::new() 
-        }
+        if self.attributes.num_frames() <= self.elements.num_frames() {
+            self.elements.lift_branches()
+        } 
+        
+        if self.elements.num_frames() <= self.attributes.num_frames() {
+            self.attributes.lift_branches()
+        } 
     }
 
-/*
-    fn define(&mut self, content: Vec<Representant>) {
-        let mut collection = Collection::empty();
-        collection.define(content);
-        self.collections.insert(Path::empty(), collection);
-    }
-    */
-}
-
-struct CompositeProperty {
-    // todo split in private/public/(protected)
-    namespace: Scope,
-}
-
-impl CompositeProperty {
-    fn new() -> CompositeProperty {
-        CompositeProperty { namespace: Scope::new() }
+    // attributes
+    pub fn assign_attribute(&mut self, name: String, path: Path, mapping: Mapping) {
+        self.attributes.set_mapping(name, path, mapping);
     }
 
-    fn assign_attribute(&mut self, name: String, path: Path, mapping: Mapping) {
-        self.namespace.set_mapping(name, path, mapping);
+    pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
+        return self.attributes.resolve_optional_identifier(name);
     }
 
-    fn get_attribute(&self, name: &String) -> &OptionalMapping {
-        self.namespace.resolve_optional_identifier(name)
+    // elements
+    pub fn size_range(&self) -> Vec<(Path, Option<usize>, Option<usize>)> {
+        self.elements.size_range()
     }
 
-    fn change_branch(&mut self) {
-        self.namespace.change_branch();
+    pub fn is_reliable_collection(&self) -> Vec<(Path, bool)> {
+        self.elements.is_reliable()
     }
 
-    fn merge_until(&mut self, cutoff: Option<GastID>) {
-        self.namespace.merge_until(cutoff);
+    pub fn get_element(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+        self.elements.get_element(n, node)
     }
 
-    fn lift_branches(&mut self) {
-        self.namespace.lift_branches();
+    pub fn get_any_element(&self, node: &GastID) -> Vec<Mapping> {
+        self.elements.get_any_element(node)
+    }
+
+    pub fn get_first_n_elements(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+        self.elements.get_first_n(n, node)
+    }
+
+    pub fn get_last_n_elements(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+        self.elements.get_last_n(n, node)
+    }
+
+    pub fn slice_elements(&self, start: i16, end: i16) -> Vec<(Path, CollectionBranch)> {
+        self.elements.slice(start, end)
+    }
+
+    pub fn insert_element(&mut self, element: Representant, max: Option<usize>, path: Path) {
+        self.elements.insert(element, max, path)
+    }
+
+    pub fn define_elements(&mut self, content: Vec<CollectionChunk>, path: Path) {
+        self.elements.define(content, path);
+    }
+
+    pub fn append_element(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>, path: Path) {
+        self.elements.append(definition, min, max, path)
+    }
+
+    pub fn prepend_element(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>, path: Path) {
+        self.elements.prepend(definition, min, max, path)
     }
 }

@@ -73,6 +73,10 @@ impl Scope {
         }
     }
 
+    pub fn num_frames(&self) -> usize {
+        return self.frames.len();
+    }
+
     pub fn resolve_identifier(&self, name: &String) -> Mapping {
         let mut mapping = Mapping::new();
 
