@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="scripts/styles/xcode.css">
+<script src="scripts/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<head>
+	<title>Forsite</title>
+	<meta charset="utf-8">
+	<meta http-equiv="x-ua-compatible" content="ie=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<link rel="stylesheet" href="styles/screen-4x3.css">
+</head>
+<body class="shower list">
+	<header class="caption">
+		<h1>Static Analysis of Dynamic Languages</h1>
+		<p>Harm Delva</p>
+	</header>
+
+	<section class="slide">
+		<br/><br/><br/>
+		<h1>Static Analysis of Dynamic Languages</h1>
+		<p>Harm Delva</p>
+	</section>
+
+	<section class="slide">
+		<h2> Bad Code </h2>
+		<h3> Code Smells </h3>
+		<ul>
+			<li> Duplicated code </li>
+			<li> Large class </li>
+			<li> Inappropriate intimacy </li>
+			<li> ... </li>
+		</ul>
+	</section>
+
+	<section class="slide">
+		<h2> Bad Code </h2>
+		<h3> New Programmers </h3>
+		<p> Fighting the type system <br>
+			Unitialized Variables
+			<ul style="margin: -40px 60px 0 60px;">
+				<li> Python's function scoping </li>
+				<li> Forgetting to return in some branches </li>
+			</ul>
+			Weird logical constructions
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2> Code Samples </h2>
+		<h3> Forgetting to return </h3>
+		<pre>
+			<code class="python">	def foo():</code>
+			<code>		for ...:</code>
+			<code>			for ...:</code>
+			<code>				if ...:</code>
+			<code>					return ...</code>
+			<code class="python">				elif ...: </code>
+			<code>					return ...</code>
+		</pre>
+	</section>
+
+	<section class="slide">
+		<h2> Code Samples </h2>
+		<h3> Types </h3>
+
+		<pre>
+			<code class="python">	x = []</code>
+			<code>	...</code>
+			<code>	while tuple([0] * i) not in x:</code>
+			<code>		...</code>
+			<code>		x += tuple([0] * i)</code>
+		</pre>
+		<p>
+			<code> x</code> had type <code>List[Tuple[int]]</code>
+			<br/>
+			Became <code>List[Union[int, Tuple[int]]]</code>
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2> Code Samples </h2>
+		<h3> Logical Constructions </h3>
+		<pre>
+			<code>	def change(x, d = None):</code>
+			<code>		list1 = ''</code>
+			<code>		list2 = []</code>
+			<code>		for i in range(0, len(x)):</code>
+			<code>			while x[i] != ' ':</code>
+			<code>				list2 += x[i]</code>
+			<code>			list1 += translate(list2[0], d)</code>
+			<code>			list2 = []</code>
+			<code>		return list1
+		</pre>
+	</section>
+
+	<section class="slide">
+		<h2>Forseti</h2>
+		<blockquote>His is the best of courts; all those who come before him leave reconciled</blockquote>
+
+		God of justice and mediation
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Point out flaws with detailed explanation</h3>
+
+		<p> Students can tell something is wrong
+		<br> They want to know what and why </p>
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Strong connection to the code</h3>
+
+		<p>
+			Potentially generate corrected code
+		</p>
+		<p>
+			Less obvious than it sounds
+			<br>
+			Many duplication detection tools mangle the input
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Accuracy</h3>
+
+		<p>
+			False negatives are worse than false positives
+		</p>
+		<p>
+			Opposite of many available tools
+			<br>
+			We can't rely on manual validation
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Generalized Abstract Syntax Tree</h3>
+
+		<p>
+			Common format to support multiple languages
+		</p>
+
+		<p>
+			Superset of syntactic language features
+			<br>
+			i.e. both positional as keyword arguments
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Advanced analysis and feedback</h3>
+
+		<p>
+			Generation of a Program Dependence Graph (PDG)
+		</p>
+		<p>
+			Powerful starting point for refactoring
+			<br>
+			Used by GCC and LLVM
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Virtual Machine</h3>
+
+		<p> 
+			Working purely syntactic is hard
+			<br>
+			Flexible languages have too many edge cases
+		</p>
+
+		<p>
+			Forsite VM mimics all the ways the runtime VM <i> might</i> execute the program
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2>Forsite</h2>
+		<h3>Edge case</h3>
+		<pre>
+			<code>	def foo():</code>
+			<code>		if ... :</code>
+			<code>			x = 42</code>
+			<code>		print(x)</code>
+		</pre>
+	</section>
+
+	<section class="slide">
+		<h2>VM</h2>
+		<h3>Memory</h3>
+
+		<p>
+			Indexed using <code>Pointer</code>
+			<br>
+			Currently just 16 bit integers
+		</p>
+
+		<p>
+			No need for garbage collection
+		</p>
+	</section>
+
+	<section class="slide">
+		<h2>Virtual Machine</h2>
+		<h3>Object</h3>
+
+		<p>
+			Can extend other objects
+			<br>
+			Can contain attributes
+			<br>
+			Can contain elements
+		</p>
+
+	</section>
+
+	<section class="slide">
+		<h2>VM</h2>
+		<h3>Mapping</h3>
+		<p>
+		A <code>Pointer</code> value and a <code>Path</code> that describes how to get there
+		</p>
+		<center>
+			<img src="assets/mapping.svg " style="width: 40%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>VM</h2>
+		<h3>Path</h3>
+		<pre>
+			<code class="rust">enum PathNode {</code>
+			<code class="rust">    Condition { location: GastID, positive: bool },</code>
+    		<code class="rust">    Assignment { location: GastID, to: String },</code>
+			<code class="rust">    Loop { location: GastID, taken: bool },</code>
+    		<code class="rust">    Return { location: GastID },</code>
+			<code class="rust">    CallFrame { location: GastID, sub: Path },</code>
+			<code class="rust">    Element { location: GastID, element: i16 },</code>
+			<code class="rust">}</code>
+		</pre>
+	</section>
+
+	<section class="slide">
+		<h2>Scope</h2>
+		<center>
+			<img src="assets/scope1.svg " style="width: 70%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>VM</h2>
+		<h3>Branching</h3>
+		<p>Assume all branches can get executed</p>
+		<p>Execution of one branch does not influence the others</p>
+		<p>Branches get merged at the end</p>
+	</section>
+
+	<section class="slide">
+		<h2>Scope</h2>
+		<center>
+			<img src="assets/scope2.svg " style="width: 70%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>Scope</h2>
+		<center>
+			<img src="assets/scope3.svg " style="width: 70%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>Scope</h2>
+		<center>
+			<img src="assets/scope4.svg " style="width: 70%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>Name Resolution</h2>
+		<center>
+			<img src="assets/resolve.svg " style="width: 80%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>Name Resolution</h2>
+		<center>
+			<img src="assets/resolve2.svg " style="width: 80%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>Name Resolution</h2>
+		<center>
+			<img src="assets/resolve3.svg " style="width: 80%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+		<h2>Name Resolution</h2>
+		<center>
+			<img src="assets/resolve4.svg " style="width: 80%"/>
+		</center>
+	</section>
+
+	<section class="slide">
+	</section>
+	<div class="progress"></div>
+	<script src="scripts/shower.min.js"></script>
+</body>
+</html>
