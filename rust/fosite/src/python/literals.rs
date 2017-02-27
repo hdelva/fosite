@@ -43,7 +43,7 @@ impl StringExecutor for PythonString {
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![],
+            changes: vec!(AnalysisItem::Object {address: string_ptr, path: Some(path)}),
             result: mapping,
         };
 

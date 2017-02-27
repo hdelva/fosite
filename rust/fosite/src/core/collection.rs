@@ -511,7 +511,7 @@ impl Collection {
     pub fn new() -> Collection {
         Collection {
             frames: vec![Frame::new(PathNode::Frame(0, None, Box::new(Path::empty())), None, vec!())],
-            path: vec!(),
+            path: vec!(0),
         }
     }
 
