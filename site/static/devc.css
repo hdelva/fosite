@@ -1,0 +1,36 @@
+li {
+    display: inline;
+}
+
+
+
+#code {
+    margin: 12px 12px 12px 12px;
+    float: left;
+    min-height: 350px;
+    min-width: 200px;
+    width: 48%;
+    max-width: 48%;
+}
+
+#result {
+    float: left;   
+    max-height: 700px;
+    width: 49%;
+    overflow: scroll;
+}
+
+#text-code, #text-code-ace {
+    width: 100%;
+    min-height: 350px;
+    min-width: 200px;
+}
+
+#text-code-ace {
+    padding: 2px;
+    border: 1px solid rgb(169, 169, 169);
+}
+
+.hidden {
+    display: none;
+}
