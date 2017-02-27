@@ -10,10 +10,9 @@
 <body id="index" class="home">
 
 <ul id="dropdown1" class="dropdown-content">
-  <li><a href="#!">oneoneoneoneone</a></li>
-  <li><a href="#!">two</a></li>
-  <li class="divider"></li>
-  <li><a href="#!">three</a></li>
+  {% for example in examples%}
+    <li><a href="{{ url_for('run', code=example) }}">{{example}}</a></li>
+  {% endfor %}
 </ul>
 <nav>
   <div class="nav-wrapper blue">
@@ -26,8 +25,8 @@
 
     <!-- ************  CODING ZONE  ************ -->
     <div id="code">
-        <form method="post" action="{{ url_for(target) }}">
-            <button type="submit" class="btn-large waves-effect waves-light orange right">Submit</button>
+        <form method="post" >
+            <button id="launch-button" type="submit" class="btn-large waves-effect waves-light orange right">Submit</button>
             {% block code %}
             {% endblock %}
         </form>
@@ -37,53 +36,6 @@
     <div>
     <br><br><br>
     <div id="result">
-
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer a nibh eget nibh accumsan rutrum. Proin auctor, mi a bibendum iaculis, lectus justo facilisis orci, eu finibus dolor mauris et felis. Vestibulum id odio elit. 
-
-Vivamus in rutrum urna. Nam nec auctor lacus. Aliquam erat volutpat. Pellentesque in ornare enim. Ut id velit nec nisi consequat rutrum eget quis metus. Nunc luctus et justo vitae facilisis. Quisque efficitur ipsum non justo tempus, fringilla fringilla enim dignissim.
-
-Mauris pharetra feugiat augue, quis pulvinar odio gravida quis. In hac habitasse platea dictumst. Suspendisse consectetur semper quam. Donec ut leo rutrum, tincidunt 
-
-tellus quis, sollicitudin nisi. Sed mattis turpis ex, id ullamcorper orci rhoncus sit amet. Sed finibus, velit at mollis pulvinar, purus magna rutrum tellus, eu lobortis mauris dolor non nunc. Quisque sagittis dui sit amet eros ultrices, in iaculis nunc maximus.
-
-Cras metus libero, commodo tincidunt laoreet quis, condimentum eget velit. Nam ornare neque at interdum 
-
-vehicula. Duis id nibh lacinia, fermentum nunc quis, sagittis sem. Proin mollis lectus vel ultricies tempus. Proin venenatis fringilla lorem non hend
-
-rerit. Nulla vitae ipsum vel lacus euismod rutrum non id erat. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Vestibulum 
-
-felis tortor, bibendum non bibendum ac, fermentum eu enim. Aenean magna nulla, pretium ac ante quis, 
-
-scelerisque pretium urna. Sed blandit convallis quam id malesuada. Aliquam erat volutpat. Etiam dictum ac augue et efficitur. Integer porta ex orci, in bibendum nibh vestibulum eget. Vestibulum elementum erat lobortis 
-
-ligula iaculis aliquam. Etiam eu imperdiet velit, condimentum euismod lacus.
-
-Donec ut vestibulum ligula. Morbi at velit eu leo feugiat sollicitudin vitae a arcu. Proin maximus nulla dolor, vel blandit purus sagittis rutrum. Nam sit a
-
-met ipsum nec risus finibus rutrum vitae ac metus. Ut a molestie odio. Sed rhoncus metus a metus consequat, nec tempus lectus semper. Cras eleifend sed tortor ut consequat. Nullam eu nunc ut turpis auctor imperdiet sit amet auctor diam. Aenean pulvinar congue consequat. Pellentesque neque mauris, porta at laoreet id, sagittis id lectus. Quisque iaculis convallis mollis.
-
-Suspendisse sed eleifend nibh, nec porta enim. Duis quis 
-
-tellus magna. Proin vitae leo odio. Integer quis elit sem. Nam pharetra sollicitudin tellus sit amet dapibus. Vivamus rhoncus velit id nisi semper mattis. Quisque 
-pulvinar dictum elementum. Proin volutpat at lorem eget ornare. Pellentesque id blandit nibh. Pellen
-tesque vel erat nec risus cursus maximus. Sed nibh mauris, lacinia vitae fermentum sit amet, luctus in massa. Nulla eget tristique nisi, at ornare diam. Nunc ut lectus nec lectus molestie porta. Nulla arcu arcu, auctor eu sapien sed, sagittis iaculis erat. Phasellus pharetra odio sit amet ligula dictum iaculis. rerit. Nulla vitae ipsum vel lacus euismod rutrum non id erat. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Vestibulum 
-
-felis tortor, bibendum non bibendum ac, fermentum eu enim. Aenean magna nulla, pretium ac ante quis, 
-
-scelerisque pretium urna. Sed blandit convallis quam id malesuada. Aliquam erat volutpat. Etiam dictum ac augue et efficitur. Integer porta ex orci, in bibendum nibh vestibulum eget. Vestibulum elementum erat lobortis 
-
-ligula iaculis aliquam. Etiam eu imperdiet velit, condimentum euismod lacus.
-
-Donec ut vestibulum ligula. Morbi at velit eu leo feugiat sollicitudin vitae a arcu. Proin maximus nulla dolor, vel blandit purus sagittis rutrum. Nam sit a
-
-met ipsum nec risus finibus rutrum vitae ac metus. Ut a molestie odio. Sed rhoncus metus a metus consequat, nec tempus lectus semper. Cras eleifend sed tortor ut consequat. Nullam eu nunc ut turpis auctor imperdiet sit amet auctor diam. Aenean pulvinar congue consequat. Pellentesque neque mauris, porta at laoreet id, sagittis id lectus. Quisque iaculis convallis mollis.
-
-Suspendisse sed eleifend nibh, nec porta enim. Duis quis 
-
-tellus magna. Proin vitae leo odio. Integer quis elit sem. Nam pharetra sollicitudin tellus sit amet dapibus. Vivamus rhoncus velit id nisi semper mattis. Quisque 
-pulvinar dictum elementum. Proin volutpat at lorem eget ornare. Pellentesque id blandit nibh. Pellen
-tesque vel erat nec risus cursus maximus. Sed nibh mauris, lacinia vitae fermentum sit amet, luctus in massa. Nulla eget tristique nisi, at ornare diam. Nunc ut lectus nec lectus molestie porta. Nulla arcu arcu, auctor eu sapien sed, sagittis iaculis erat. Phasellus pharetra odio sit amet ligula dictum iaculis. 
         {% block run %}
         {% endblock %}
     </div>
@@ -102,6 +54,14 @@ tesque vel erat nec risus cursus maximus. Sed nibh mauris, lacinia vitae ferment
     editor.setTheme("ace/theme/tomorrow");
     var language = "python";
     editor.getSession().setMode("ace/mode/" + language);
+
+    editor.setOptions({
+      fontSize: "12pt"
+    });
+
+    document.getElementById("launch-button").addEventListener("click", function () {
+        editorElement.innerHTML = editor.getValue();
+    });
 </script>
 
 <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>

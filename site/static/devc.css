@@ -2,27 +2,27 @@ li {
     display: inline;
 }
 
-
-
 #code {
+    height: 60%;
     margin: 12px 12px 12px 12px;
     float: left;
     min-height: 350px;
     min-width: 200px;
     width: 48%;
-    max-width: 48%;
+    max-width: 500px;
 }
 
 #result {
     float: left;   
     max-height: 700px;
     width: 49%;
-    overflow: scroll;
+    overflow-y: scroll;
 }
 
 #text-code, #text-code-ace {
+    height: 100%;
     width: 100%;
-    min-height: 350px;
+    min-height: 700px;
     min-width: 200px;
 }
 

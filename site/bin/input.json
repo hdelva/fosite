@@ -1,0 +1,119 @@
+{
+    "content": [
+        {
+            "col": 0,
+            "id": 27,
+            "kind": "assign",
+            "line": 1,
+            "targets": [
+                {
+                    "col": 0,
+                    "id": 2,
+                    "kind": "identifier",
+                    "line": 1,
+                    "name": "y"
+                }
+            ],
+            "value": {
+                "col": 4,
+                "id": 0,
+                "kind": "int",
+                "line": 1,
+                "value": 5
+            }
+        },
+        {
+            "col": 0,
+            "id": 28,
+            "kind": "assign",
+            "line": 2,
+            "targets": [
+                {
+                    "col": 0,
+                    "id": 7,
+                    "kind": "identifier",
+                    "line": 2,
+                    "name": "x"
+                }
+            ],
+            "value": {
+                "col": 4,
+                "id": 5,
+                "kind": "identifier",
+                "line": 2,
+                "name": "y"
+            }
+        },
+        {
+            "after": null,
+            "before": null,
+            "body": {
+                "content": [
+                    {
+                        "col": 1,
+                        "id": 32,
+                        "kind": "assign",
+                        "line": 5,
+                        "targets": [
+                            {
+                                "attribute": "attr",
+                                "col": 1,
+                                "id": 13,
+                                "kind": "attribute",
+                                "line": 5,
+                                "of": {
+                                    "col": 1,
+                                    "id": 12,
+                                    "kind": "identifier",
+                                    "line": 5,
+                                    "name": "y"
+                                }
+                            }
+                        ],
+                        "value": {
+                            "col": 10,
+                            "id": 10,
+                            "kind": "int",
+                            "line": 5,
+                            "value": 9
+                        }
+                    }
+                ],
+                "id": 31,
+                "kind": "block"
+            },
+            "col": 0,
+            "id": 29,
+            "kind": "if",
+            "line": 4,
+            "orElse": {
+                "content": [],
+                "id": 33,
+                "kind": "block"
+            },
+            "test": {
+                "col": 3,
+                "id": 30,
+                "kind": "string",
+                "line": 4,
+                "value": "cond"
+            }
+        },
+        {
+            "attribute": "attr",
+            "col": 0,
+            "id": 34,
+            "kind": "attribute",
+            "line": 7,
+            "of": {
+                "col": 0,
+                "id": 24,
+                "kind": "identifier",
+                "line": 7,
+                "name": "x"
+            }
+        }
+    ],
+    "id": 26,
+    "kind": "block"
+}
