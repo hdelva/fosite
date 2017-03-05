@@ -3,6 +3,8 @@ use std::collections::btree_set::Iter;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
+use std::collections::btree_set::IntoIter;
+
 
 #[derive(Clone, Debug)]
 pub enum PathNode {
@@ -181,6 +183,10 @@ impl Path {
 
     pub fn iter(&self) -> Iter<PathNode> {
         return self.nodes.iter();
+    }
+
+    pub fn into_iter(self) -> IntoIter<PathNode> {
+        return self.nodes.into_iter();
     }
 
     pub fn merge_into(&mut self, other: Path) {

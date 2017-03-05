@@ -92,6 +92,8 @@ fn test_vm() {
         while_loop: Some(Box::new(PythonWhile {})),
         break_loop: Some(Box::new(PythonBreak {})),
         continue_loop: Some(Box::new(PythonContinue {})),
+        list: Some(Box::new(PythonList {})),
+        sequence: None,
     };
 
     let mut s = String::new();
@@ -119,7 +121,24 @@ fn test_vm() {
     vm.declare_new_constant(&"True".to_owned(), &"bool".to_owned());
     vm.declare_new_constant(&"False".to_owned(), &"bool".to_owned());
 
-    vm.declare_sub_type(&executors, &"string".to_owned(), &"object".to_owned());
+    // cpython doesn't really have a collection type, still convenient
+    // all iterable things
+    vm.declare_sub_type(&executors, &"collection".to_owned(), &"object".to_owned());
+
+    vm.declare_sub_type(&executors, &"set".to_owned(), &"collection".to_owned());
+    vm.declare_sub_type(&executors, &"dict".to_owned(), &"collection".to_owned());
+
+    // sequences have are ordered
+    vm.declare_sub_type(&executors, &"sequence".to_owned(), &"collection".to_owned());
+
+    vm.declare_sub_type(&executors, &"immutable_sequence".to_owned(), &"sequence".to_owned());
+    vm.declare_sub_type(&executors, &"string".to_owned(), &"immutable_sequence".to_owned());
+    vm.declare_sub_type(&executors, &"tuple".to_owned(), &"immutable_sequence".to_owned());
+    vm.declare_sub_type(&executors, &"byte".to_owned(), &"immutable_sequence".to_owned());
+
+    vm.declare_sub_type(&executors, &"mutable_sequence".to_owned(), &"sequence".to_owned());
+    vm.declare_sub_type(&executors, &"list".to_owned(), &"mutable_sequence".to_owned());
+    vm.declare_sub_type(&executors, &"byte_array".to_owned(), &"mutable_sequence".to_owned());
 
     {
         let mut kb = vm.knowledge_base();
@@ -141,9 +160,6 @@ fn test_vm() {
         kb.add_arithmetic_type("int", "**");
         kb.add_arithmetic_type("int", "%");
 
-        // todo replace when collections are a thing
-        kb.add_arithmetic_type("string", "+");
-
         kb.add_arithmetic_type("number", "<");
         kb.add_arithmetic_type("number", ">");
         kb.add_arithmetic_type("number", "<=");
@@ -159,8 +175,11 @@ fn test_vm() {
         kb.add_arithmetic_type("NoneType", "is not");
 
         // todo replace when collections are a thing
-        kb.add_arithmetic_type("string", "in");
-        kb.add_arithmetic_type("string", "not in");
+        kb.add_arithmetic_type("collection", "in");
+        kb.add_arithmetic_type("collection", "not in");
+
+        // todo replace when collections are a thing
+        kb.add_arithmetic_type("string", "+");
     }
 
     // global scope

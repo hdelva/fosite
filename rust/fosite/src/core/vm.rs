@@ -211,6 +211,26 @@ impl VirtualMachine {
         }
     }
 
+    pub fn list(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+        match executors.list {
+            Some(ref list) => {
+                let env = Environment::new(self, executors);
+                list.execute(env, content)
+            }
+            None => panic!("VM is not setup to execute list literals"),
+        }
+    }
+
+    pub fn sequence(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+        match executors.sequence {
+            Some(ref sequence) => {
+                let env = Environment::new(self, executors);
+                sequence.execute(env, content)
+            }
+            None => panic!("VM is not setup to execute sequence literals"),
+        }
+    }
+
     pub fn load_identifier(&mut self, executors: &Executors, name: &String) -> ExecutionResult {
         match executors.identifier {
             Some(ref identifier) => {
@@ -381,6 +401,12 @@ impl VirtualMachine {
             }
             &NodeType::Continue {  } => {
                 self.continue_loop(executors)
+            }
+            &NodeType::List { ref content } => {
+                self.list(executors, content)
+            }
+            &NodeType::Sequence {ref content } => {
+                self.sequence(executors, content)
             }
             _ => panic!("Unsupported Operation"),
         };

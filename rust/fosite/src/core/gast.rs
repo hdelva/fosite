@@ -68,6 +68,7 @@ pub enum NodeType {
     Continue { },
     Boolean { value: bool },
     Nil {},
+    UnOp { op: String, value: Box<GastNode> }
 }
 
 impl NodeType {
@@ -110,6 +111,7 @@ pub fn build(node: &Json) -> GastNode {
         "boolop" => build_boolop(id, node),
         "break" => build_break(id),
         "continue" => build_continue(id),
+        "unop" => build_unop(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -148,6 +150,22 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_unop(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_value = obj.get("value").unwrap();
+    let value = Box::new(build(json_value));
+
+    let json_op = obj.get("op").unwrap();
+    let op = json_op.as_string().unwrap().to_owned();
+
+    return GastNode::new(id,
+                         NodeType::UnOp {
+                             value: value,
+                             op: op,
                          });
 }
 

@@ -111,19 +111,19 @@ impl Object {
         self.elements.is_reliable()
     }
 
-    pub fn get_element(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+    pub fn get_element(&self, n: i16, node: &GastID) -> Mapping {
         self.elements.get_element(n, node)
     }
 
-    pub fn get_any_element(&self, node: &GastID) -> Vec<Mapping> {
+    pub fn get_any_element(&self, node: &GastID) -> Mapping {
         self.elements.get_any_element(node)
     }
 
-    pub fn get_first_n_elements(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+    pub fn get_first_n_elements(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         self.elements.get_first_n(n, node)
     }
 
-    pub fn get_last_n_elements(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+    pub fn get_last_n_elements(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         self.elements.get_last_n(n, node)
     }
 
@@ -131,19 +131,23 @@ impl Object {
         self.elements.slice(start, end)
     }
 
-    pub fn insert_element(&mut self, element: Representant, max: Option<usize>, path: Path) {
-        self.elements.insert(element, max, path)
+    pub fn insert_element(&mut self, element: CollectionChunk, path: Path) {
+        self.elements.insert(element, path)
     }
 
     pub fn define_elements(&mut self, content: Vec<CollectionChunk>, path: Path) {
         self.elements.define(content, path);
     }
 
-    pub fn append_element(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>, path: Path) {
-        self.elements.append(definition, min, max, path)
+    pub fn append_element(&mut self, element: CollectionChunk, path: Path) {
+        self.elements.append(element, path)
     }
 
-    pub fn prepend_element(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>, path: Path) {
-        self.elements.prepend(definition, min, max, path)
+    pub fn prepend_element(&mut self, element: CollectionChunk, path: Path) {
+        self.elements.prepend(element, path)
+    }
+
+    pub fn set_elements(&mut self, content: Vec<(Path, CollectionBranch)>) {
+        self.elements.set_content(content)
     }
 }

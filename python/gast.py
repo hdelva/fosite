@@ -468,7 +468,7 @@ class BoolOp(GastNode):
 
 class UnOp(GastNode):
   def __init__(self, operation: 'str', value: 'Expression', line, col):
-    self.operation = operation
+    self.op = operation
     self.value = value
     global count
     self.id = count

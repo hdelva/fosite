@@ -11,36 +11,62 @@ use std::slice::Iter;
 use std::vec::IntoIter;
 use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::btree_map;
+use std::collections::LinkedList;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Representant {
     object: Pointer,
     kind: Pointer,
+    minimum: Option<usize>,
+    maximum: Option<usize>,
 }
 
 impl Representant {
-    pub fn new(object: Pointer, kind: Pointer) -> Representant {
+    pub fn new(object: Pointer, kind: Pointer, min: Option<usize>, max: Option<usize>) -> Representant {
         Representant {
             object: object,
             kind: kind,
+            minimum: min,
+            maximum: max,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CollectionChunk {
-    pub minimum: Option<usize>,
-    pub maximum: Option<usize>,
-    pub representant: Representant,
+    min_size: Option<usize>,
+    max_size: Option<usize>,
+    representants: BTreeMap<Path, Representant>,
 }
 
 impl CollectionChunk {
-    pub fn new(min: Option<usize>, max: Option<usize>, repr: Representant) -> Self {
+    pub fn empty() -> Self {
         CollectionChunk {
-            minimum: min,
-            maximum: max,
-            representant: repr,
+            min_size: Some(0),
+            max_size: Some(0),
+            representants: BTreeMap::new(),
         }
+    }
+
+    pub fn add_representant(&mut self, path: Path, repr: Representant)  {
+        self.min_size = self.min_size.and_then(|old| repr.minimum.map(|new| old + new));
+        self.max_size = self.max_size.and_then(|old| repr.maximum.map(|new| old + new));
+
+        self.representants.insert(path, repr);
+    }
+
+    pub fn into_iter(self) -> btree_map::IntoIter<Path, Representant> {
+        self.representants.into_iter()
+    }
+
+    pub fn iter(&self) -> btree_map::Iter<Path, Representant> {
+        self.representants.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.representants.len()
     }
 }
 
@@ -65,8 +91,8 @@ impl CollectionBranch {
         let mut max_size = Some(0);
 
         for chunk in content.iter() {
-            min_size = min_size.and_then(|old| chunk.minimum.map(|new| old + new));
-            max_size = max_size.and_then(|old| chunk.maximum.map(|new| old + new));
+            min_size = min_size.and_then(|old| chunk.min_size.map(|new| old + new));
+            max_size = max_size.and_then(|old| chunk.max_size.map(|new| old + new));
         }
 
         CollectionBranch { 
@@ -84,116 +110,88 @@ impl CollectionBranch {
         return self.min_size.is_some() && self.max_size.is_some();
     }
 
-    pub fn insert(&mut self, element: Representant, max: Option<usize>) {
-        let mut new_content = Vec::new();
-        let mut b = false;
-        for chunk in self.content.iter() {
-            let old_representant = &chunk.representant;
-            if element.kind == old_representant.kind {
-                let new_chunk = CollectionChunk::new(chunk.minimum, 
-                    chunk.maximum.and_then(|old| max.map(|new| old + new)), 
-                    old_representant.clone());
-                new_content.push(new_chunk);
-                b = true;
-            } else {
-                if !b {
-                    let new_chunk = CollectionChunk::new(Some(0), max.clone(), old_representant.clone());
-                    new_content.push(new_chunk);
-                } 
-                new_content.push(chunk.clone());
-                b = false;
-            }
+    pub fn insert(&mut self, new_chunk: CollectionChunk) {
+        self.max_size = self.max_size.and_then(|old| new_chunk.max_size.map(|new| old + new));
+        self.min_size = self.min_size.and_then(|old| new_chunk.min_size.map(|new| old + new));
 
-            self.max_size = self.max_size.and_then(|old| max.map(|new| old + new));
+        let mut new_content = vec!(new_chunk.clone());
+
+        for chunk in self.content.iter() {
+            new_content.push(chunk.clone());
+            new_content.push(new_chunk.clone());
         }
 
         self.content = new_content;
     }
 
-    pub fn append(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>) {
-        self.min_size = self.min_size.and_then(|old| min.map(|new| old + new));
-        self.max_size = self.max_size.and_then(|old| max.map(|new| old + new));
+    pub fn append(&mut self, new_chunk: CollectionChunk) {
+        self.min_size = self.min_size.and_then(|old| new_chunk.min_size.map(|new| old + new));
+        self.max_size = self.max_size.and_then(|old| new_chunk.max_size.map(|new| old + new));
 
-        {
-            let last = self.content.last_mut();
-
-            if let Some(mut element) = last {
-                if element.representant.kind == definition.kind {
-                    element.minimum = element.minimum.and_then(|old| min.map(|new| old + new));
-                    element.maximum = element.maximum.and_then(|old| max.map(|new| old + new));
-                    return;
-                }
-            }     
-        }
-
-        self.content.push(CollectionChunk::new(min, max, definition))
+        self.content.push(new_chunk);
     }
 
-    pub fn prepend(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>) {
-        self.min_size = self.min_size.and_then(|old| min.map(|new| old + new));
-        self.max_size = self.max_size.and_then(|old| max.map(|new| old + new));
+    pub fn prepend(&mut self, new_chunk: CollectionChunk) {
+        self.min_size = self.min_size.and_then(|old| new_chunk.min_size.map(|new| old + new));
+        self.max_size = self.max_size.and_then(|old| new_chunk.max_size.map(|new| old + new));
 
-        {
-            let first = self.content.first_mut();
-
-            if let Some(mut element) = first {
-                if element.representant.kind == definition.kind {
-                    element.minimum = element.minimum.and_then(|old| min.map(|new| old + new));
-                    element.maximum = element.maximum.and_then(|old| max.map(|new| old + new));
-                }
-            }
-        }
-
-        self.content.insert(0, CollectionChunk::new(min, max, definition));
+        self.content.insert(0, new_chunk);
     }
 
-    fn first_combinations(&self, n: i16) -> Vec<Vec<&CollectionChunk>> {
-        let current = Vec::new();
-        return flatten(n, current, &self.content, false);
+    fn first_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
+        return linearize(n as usize, &self.content, false);
     }
 
-    fn last_combinations(&self, n: i16) -> Vec<Vec<&CollectionChunk>> {
-        let current = Vec::new();
-        let mut result = flatten(n, current, &self.content, true);
+    fn last_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
+        let mut result = linearize(n as usize, &self.content, true);
         result.reverse();
         return result;
     }
 
-    pub fn get_element(&self, n: i16) -> Vec<Pointer> {
-        let mut result = HashSet::new();
+    pub fn get_element(&self, n: i16) -> Mapping {
+        let mut result = Mapping::new();
         
         if n < 0 {
             for possibility in self.last_combinations(-n) {
-                result.insert(possibility.first().unwrap().representant.object.clone());
+                // get the first mapping of the the last n for element -n
+                for (path, address) in possibility.front().unwrap().iter() {
+                    result.add_mapping(path.clone(), address.clone());
+                }
             }
         } else {
-            for possibility in self.first_combinations(-n) {
-                result.insert(possibility.last().unwrap().representant.object.clone());
+            // get the last mapping of the the first n for element n
+            for possibility in self.first_combinations(n) {
+                for (path, address) in possibility.front().unwrap().iter() {
+                    result.add_mapping(path.clone(), address.clone());
+                }
             }
         }
 
-        return Vec::from_iter(result.into_iter());
+        return result;
     }
 
-    pub fn get_any_element(&self) -> Vec<Pointer> {
-        let mut result = HashSet::new();
+    pub fn get_any_element(&self) -> Mapping {
+        let mut result = Mapping::new();
         for chunk in self.content.iter() {
-            result.insert(chunk.representant.object.clone());
+            for (path, repr) in chunk.iter() {
+                result.add_mapping(path.clone(), repr.object.clone());
+            }
         }
-        return Vec::from_iter(result.into_iter());
+        return result;
     }
 
-    pub fn get_first_n(&self, n: i16) -> Vec<Vec<Pointer>> {
+    pub fn get_first_n(&self, n: i16) -> Vec<Mapping> {
         let mut result = Vec::new();
 
-        let combinations = self.first_combinations(n);
-        //let count = combinations.iter().fold(0, |acc, &x| cmp::max(acc, x.len()));
+        let mut combinations = self.first_combinations(n);
         for i in 0..n {
-            let mut element = Vec::new();
-            for combination in combinations.iter() {
-                let opt_chunk = combination.get(i as usize);
-                if let Some(chunk) = opt_chunk {
-                    element.push(chunk.representant.object.clone())
+            let mut element = Mapping::new();
+            for mut combination in combinations.iter_mut() {
+                let mapping = combination.pop_front();
+                if let Some(mapping) = mapping {
+                    for (path, address) in mapping.into_iter() {
+                        element.add_mapping(path, address);
+                    }
                 } else {
                     break;
                 }
@@ -204,17 +202,18 @@ impl CollectionBranch {
         return result;
     }
 
-    pub fn get_last_n(&self, n: i16) -> Vec<Vec<Pointer>> {
+    pub fn get_last_n(&self, n: i16) -> Vec<Mapping> {
         let mut result = Vec::new();
 
-        let combinations = self.last_combinations(n);
-        //let count = combinations.iter().fold(0, |acc, &x| cmp::max(acc, x.len()));
+        let mut combinations = self.last_combinations(n);
         for i in 0..n {
-            let mut element = Vec::new();
-            for combination in combinations.iter() {
-                let opt_chunk = combination.get(i as usize);
-                if let Some(chunk) = opt_chunk {
-                    element.push(chunk.representant.object.clone())
+            let mut element = Mapping::new();
+            for mut combination in combinations.iter_mut() {
+                let mapping = combination.pop_front();
+                if let Some(mapping) = mapping {
+                    for (path, address) in mapping.into_iter() {
+                        element.add_mapping(path, address);
+                    }
                 } else {
                     break;
                 }
@@ -226,32 +225,33 @@ impl CollectionBranch {
     }
 
     pub fn slice(&self, start: i16, end: i16) -> CollectionBranch {
-        let mut min_counts: HashMap<CollectionChunk, usize> = HashMap::new();
-        let mut max_counts: HashMap<CollectionChunk, usize> = HashMap::new();
+        let mut min_counts: BTreeMap<Mapping, usize> = BTreeMap::new();
+        let mut max_counts: BTreeMap<Mapping, usize> = BTreeMap::new();
 
         let head = self.first_combinations(start);
 
         for possibilities in head {
-            let mut pls = HashMap::new();
-            for chunk in possibilities.iter() {
-                *pls.entry(chunk.clone()).or_insert(0) += 1;
+            // todo, make pls: HashMap<&Mapping, i32>
+            let mut pls = BTreeMap::new();
+            for mapping in possibilities.iter() {
+                *pls.entry(mapping.clone()).or_insert(0) += 1;
             }
 
-            for (chunk, count) in pls.into_iter() {
-                match min_counts.entry(chunk.clone()) {
-                    Entry::Occupied(mut c) => {
+            for (mapping, count) in pls.into_iter() {
+                match min_counts.entry(mapping.clone()) {
+                    btree_map::Entry::Occupied(mut c) => {
                         *c.get_mut() = cmp::min(c.get().clone(), count);
                     },
-                    Entry::Vacant(c) => {
+                    btree_map::Entry::Vacant(c) => {
                         c.insert(count);
                     }
                 }
 
-                match max_counts.entry(chunk.clone()) {
-                    Entry::Occupied(mut c) => {
+                match max_counts.entry(mapping) {
+                    btree_map::Entry::Occupied(mut c) => {
                         *c.get_mut() = cmp::max(c.get().clone(), count);
                     },
-                    Entry::Vacant(c) => {
+                    btree_map::Entry::Vacant(c) => {
                         c.insert(count);
                     }
                 }
@@ -261,26 +261,26 @@ impl CollectionBranch {
         let tail = self.last_combinations(end);
 
         for possibility in tail {
-            let mut pls = HashMap::new();
-            for chunk in possibility.iter() {
-                *pls.entry(chunk.clone()).or_insert(0) += 1;
+            let mut pls = BTreeMap::new();
+            for mapping in possibility.into_iter() {
+                *pls.entry(mapping.clone()).or_insert(0) += 1;
             }
 
-            for (chunk, count) in pls.into_iter() {
-                match min_counts.entry(chunk.clone()) {
-                    Entry::Occupied(mut c) => {
+            for (mapping, count) in pls.into_iter() {
+                match min_counts.entry(mapping.clone()) {
+                    btree_map::Entry::Occupied(mut c) => {
                         *c.get_mut() = cmp::min(c.get().clone(), count);
                     },
-                    Entry::Vacant(c) => {
+                    btree_map::Entry::Vacant(c) => {
                         c.insert(count);
                     }
                 }
 
-                match max_counts.entry(chunk.clone()) {
-                    Entry::Occupied(mut c) => {
+                match max_counts.entry(mapping) {
+                    btree_map::Entry::Occupied(mut c) => {
                         *c.get_mut() = cmp::max(c.get().clone(), count);
                     },
-                    Entry::Vacant(c) => {
+                    btree_map::Entry::Vacant(c) => {
                         c.insert(count);
                     }
                 }
@@ -289,12 +289,30 @@ impl CollectionBranch {
 
         let mut new_content = Vec::new();
 
+        // todo, this is an inaccurate way of updating the counts
+        // we'd need chunk information to update the representants of each chunk 
+        // every chunks get updated according to the whole branch's changes at the moment
+        //
+        // slicing a, *b, c = [x, x, x] is going to do weird things
         for chunk in self.content.iter() {
-            let new_min = chunk.minimum.and_then(|old| min_counts.get(chunk).map(|new| old - *new));
-            let new_max = chunk.maximum.and_then(|old| max_counts.get(chunk).map(|new| old - *new));
+            let mut new_chunk = CollectionChunk::empty();
+            for (path, repr) in chunk.iter() {
+                
+                // todo, this seems really inefficient
+                let dummy_mapping = Mapping::simple(path.clone(), repr.object.clone());
+                let delta_min = min_counts.get(&dummy_mapping);
+                let delta_max = max_counts.get(&dummy_mapping);
 
-            if new_max.unwrap_or(1) > 0 {
-                let new_chunk = CollectionChunk::new(new_min, new_max, chunk.representant.clone());
+                let new_min = repr.minimum.map(|old| old - *delta_min.unwrap_or(&0));
+                let new_max = repr.maximum.map(|old| old - *delta_max.unwrap_or(&0));
+
+                if new_max.unwrap_or(1) > 0 {
+                    let new_repr = Representant::new(repr.object.clone(), repr.kind.clone(), new_min, new_max);
+                    new_chunk.add_representant(path.clone(), new_repr);
+                }
+            }
+
+            if new_chunk.len() > 0 {
                 new_content.push(new_chunk);
             }
         }
@@ -384,10 +402,10 @@ impl Frame {
         return result;
     }
 
-    pub fn insert(&mut self, element: Representant, max: Option<usize>) {
+    pub fn insert(&mut self, element: CollectionChunk) {
         for mapping in self.content.iter_mut() {
             let &mut CollectionMapping {ref mut branch, ..} = mapping;
-            branch.insert(element.clone(), max);
+            branch.insert(element.clone());
         }
     }
 
@@ -397,95 +415,135 @@ impl Frame {
         self.content = vec!(mapping);
     }
 
-    pub fn append(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>) {
+    pub fn append(&mut self, element: CollectionChunk) {
         for mapping in self.content.iter_mut() {
             let &mut CollectionMapping {ref mut branch, ..} = mapping;
-            branch.append(definition.clone(), min, max);
+            branch.append(element.clone());
         }
     }
 
-    pub fn prepend(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>) {
+    pub fn prepend(&mut self, element: CollectionChunk) {
         for mapping in self.content.iter_mut() {
             let &mut CollectionMapping {ref mut branch, ..} = mapping;
-            branch.prepend(definition.clone(), min, max);
+            branch.prepend(element.clone());
         }
     }
 
-    pub fn get_element(&self, n: i16, node: &GastID) -> Vec<Mapping> {
-        let mut result = Vec::new();
+    pub fn get_element(&self, n: i16, node: &GastID) -> Mapping {
+        let mut result = Mapping::new();
+        let mut count = 0;
         for coll_mapping in self.content.iter() {
             let &CollectionMapping {ref path, ref branch} = coll_mapping;
-            let mut count = 0;
+            
             let possibilities = branch.get_element(n);
             let total = possibilities.len().clone() as i16;
-            for address in possibilities {
+            for (path, address) in possibilities.into_iter() {
                 let mut new_path = path.clone();
-                let new_node = PathNode::Element(node.clone(), count, total);
+
+                // add the element's path
+                new_path.merge_into(path);
+
+                // add the possibility counter 
+                let new_node = PathNode::Element(node.clone(), count, total); 
                 new_path.add_node(new_node);
-                result.push(Mapping::simple(new_path, address.clone()));
+
+                // combine it all into a new mapping
+                result.add_mapping(new_path, address.clone());
                 count += 1;
             }
         }
         return result;
     }
 
-    pub fn get_any_element(&self, node: &GastID) -> Vec<Mapping> {
-        let mut result = Vec::new();
+    pub fn get_any_element(&self, node: &GastID) -> Mapping {
+        let mut result = Mapping::new();
+        let mut count = 0;
         for coll_mapping in self.content.iter() {
             let &CollectionMapping {ref path, ref branch} = coll_mapping;
-            let mut count = 0;
+
             let possibilities = branch.get_any_element();
             let total = possibilities.len().clone() as i16;
-            for address in possibilities {
+            
+            for (element_path, address) in possibilities.into_iter() {
                 let mut new_path = path.clone();
-                let new_node = PathNode::Element(node.clone(), count, total);
+
+                // add the element's path
+                new_path.merge_into(element_path);
+
+                // add the possibility counter 
+                let new_node = PathNode::Element(node.clone(), count, total); 
                 new_path.add_node(new_node);
-                result.push(Mapping::simple(new_path, address.clone()));
+
+                // combine it all into a new mapping
+                result.add_mapping(new_path, address.clone());
                 count += 1;
             }
         }
         return result;
     }
 
-    pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+    pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         let mut result = Vec::new();
         for coll_mapping in self.content.iter() {
             let &CollectionMapping {ref path, ref branch} = coll_mapping;
-            let mut subresult = Vec::new();
-            for collection in branch.get_first_n(n) {
-                let total = collection.len().clone() as i16;
-                let mut count = 0;
-                for address in collection {
+
+            for (index, mapping) in branch.get_first_n(n).into_iter().enumerate() {
+                if result.len() <= index {
+                    result.push(Mapping::new());
+                }
+
+                let ref mut new_mapping = result[index]; 
+                let mut count = new_mapping.len() as i16;
+
+                for (element_path, address) in mapping.into_iter() {
                     let mut new_path = path.clone();
-                    let new_node = PathNode::Element(node.clone(), count, total);
+
+                    // add the element's path
+                    new_path.merge_into(element_path);
+
+                    // add the possibility counter 
+                    let new_node = PathNode::Element(node.clone(), count, 0); 
                     new_path.add_node(new_node);
-                    subresult.push(Mapping::simple(new_path, address.clone()));
+
+                    // combine it all into a new mapping
+                    new_mapping.add_mapping(new_path, address.clone());
                     count += 1;
                 }
             }
-            result.push(subresult)
         }
         return result;
     }
 
-    pub fn get_last_n(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+    pub fn get_last_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         let mut result = Vec::new();
         for coll_mapping in self.content.iter() {
             let &CollectionMapping {ref path, ref branch} = coll_mapping;
-            let mut subresult = Vec::new();
-            for collection in branch.get_last_n(n) {
-                let total = collection.len().clone() as i16;
-                let mut count = 0;
-                for address in collection {
+
+            for (index, mapping) in branch.get_last_n(n).into_iter().enumerate() {
+                if result.len() <= index {
+                    result.push(Mapping::new());
+                }
+
+                let ref mut new_mapping = result[index]; 
+                let mut count = new_mapping.len() as i16;
+
+                for (element_path, address) in mapping.into_iter() {
                     let mut new_path = path.clone();
-                    let new_node = PathNode::Element(node.clone(), count, total);
+
+                    // add the element's path
+                    new_path.merge_into(element_path);
+
+                    // add the possibility counter 
+                    let new_node = PathNode::Element(node.clone(), count, 0); 
                     new_path.add_node(new_node);
-                    subresult.push(Mapping::simple(new_path, address.clone()));
+
+                    // combine it all into a new mapping
+                    new_mapping.add_mapping(new_path, address.clone());
                     count += 1;
                 }
             }
-            result.push(subresult)
         }
+
         return result;
     }
 
@@ -513,6 +571,18 @@ impl Collection {
             frames: vec![Frame::new(PathNode::Frame(0, None, Box::new(Path::empty())), None, vec!())],
             path: vec!(0),
         }
+    }
+
+    pub fn set_content(&mut self, content: Vec<(Path, CollectionBranch)>) {
+        if self.frames.len() > 1 {
+            panic!("plsno");
+        }
+
+        let mut mappings = Vec::new();
+        for (path, branch) in content.into_iter() {
+            mappings.push(CollectionMapping::new(path, branch));
+        }
+        self.current_frame_mut(Path::empty()).set_content(mappings);
     }
 
     // collection things
@@ -665,19 +735,19 @@ impl Collection {
         self.current_frame().is_reliable()
     }
 
-    pub fn get_element(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+    pub fn get_element(&self, n: i16, node: &GastID) -> Mapping {
         self.current_frame().get_element(n, node)
     }
 
-    pub fn get_any_element(&self, node: &GastID) -> Vec<Mapping> {
+    pub fn get_any_element(&self, node: &GastID) -> Mapping {
         self.current_frame().get_any_element(node)
     }
 
-    pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+    pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         self.current_frame().get_first_n(n, node)
     }
 
-    pub fn get_last_n(&self, n: i16, node: &GastID) -> Vec<Vec<Mapping>> {
+    pub fn get_last_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         self.current_frame().get_last_n(n, node)
     }
 
@@ -685,32 +755,32 @@ impl Collection {
         self.current_frame().slice(start, end)
     }
 
-    pub fn insert(&mut self, element: Representant, max: Option<usize>, path: Path) {
-        self.current_frame_mut(path).insert(element, max)
+    pub fn insert(&mut self, element: CollectionChunk, path: Path) {
+        self.current_frame_mut(path).insert(element)
     }
 
     pub fn define(&mut self, definition: Vec<CollectionChunk>, path: Path) {
         self.current_frame_mut(path).define(definition)
     }
 
-    pub fn append(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>, path: Path) {
-        self.current_frame_mut(path).append(definition, min, max)
+    pub fn append(&mut self, element: CollectionChunk, path: Path) {
+        self.current_frame_mut(path).append(element)
     }
 
-    pub fn prepend(&mut self, definition: Representant, min: Option<usize>, max: Option<usize>, path: Path) {
-        self.current_frame_mut(path).prepend(definition, min, max)
+    pub fn prepend(&mut self, element: CollectionChunk, path: Path) {
+        self.current_frame_mut(path).prepend(element)
     }
 }
 
-fn flatten<'a, 'b>(n: i16,
-                mut current: Vec<&'a CollectionChunk>,
-                chunks: &'a [CollectionChunk],
+fn linearize(n: usize,
+                chunks: &[CollectionChunk],
                 reverse: bool)
-                -> Vec<Vec<&'a CollectionChunk>> {
+                -> Vec<LinkedList<Mapping>> {
     let chunk;
     let next_chunk;
 
-    if current.len() == n as usize {
+    if n <= 0 {
+        // safety net, should never be true
         return vec![];
     }
 
@@ -722,37 +792,60 @@ fn flatten<'a, 'b>(n: i16,
         next_chunk = &chunks[1..];
     }
 
+
     match chunk {
-        Some(element) => {
+        Some(chunk) => {
             let mut result = Vec::new();
 
-            for _ in 0..element.minimum.unwrap_or(n as usize) {
-                current.push(&element);
-                if current.len() >= n as usize {
-                    result.push(current);
-                    return result;
-                }
-            }
+            'representants:
+            for (path, repr) in chunk.iter() {
+                let mut pls: LinkedList<Mapping> = LinkedList::new();
 
-            // minimum has been reached, we can now move to the next chunk
-            let mut partial = flatten(n, current.clone(), next_chunk, reverse);
-            result.append(&mut partial);
-
-            // or rather than going to the next chunk,
-            // add more until we reach the maximum number
-            for _ in element.minimum.unwrap_or(0)..element.maximum.unwrap_or(n as usize) {
-                current.push(&element);
-
-                if current.len() >= n as usize {
-                    result.push(current);
-                    return result;
-                } else {
-                    let mut partial = flatten(n, current.clone(), next_chunk, reverse);
-                    result.append(&mut partial);
+                for _ in 0..repr.minimum.unwrap_or(0 as usize) {
+                    pls.push_front(Mapping::simple(path.clone(), repr.object.clone()));
+                    if pls.len() >= n as usize {
+                        // just adding the minimum amount of elements in enough 
+                        // no need for recursion in this case
+                        // move on to the next representant in this chunk
+                        result.push(pls);
+                        continue 'representants;
+                    }
                 }
 
-            }
+                // minimum has been reached, we can now move to the next chunk
+                // get all sequences of length `n - current_length`
+                let mut intermediate = linearize(n - pls.len(), next_chunk, reverse);
 
+                // add the current stuff
+                // length becomes `n` now
+                for mut sequence in intermediate.into_iter() {
+                    sequence.append(&mut pls.clone());
+                    result.push(sequence);
+                }
+
+                // or rather than going to the next chunk,
+                // add more until we reach the maximum number
+                for _ in repr.minimum.unwrap_or(0)..repr.maximum.unwrap_or(n as usize) {
+                    pls.push_front(Mapping::simple(path.clone(), repr.object.clone()));
+
+                    if pls.len() >= n as usize {
+                        // maximum length has been reached 
+                        // no need for recursion in this case
+                        // move on to the next representant in this chunk
+                        result.push(pls);
+                        continue 'representants;
+                    } 
+
+                    let mut intermediate = linearize(n - pls.len(), next_chunk, reverse);
+                    
+                    // add the current stuff
+                    // length becomes `n` now
+                    for mut sequence in intermediate.into_iter() {
+                        sequence.append(&mut pls.clone());
+                        result.push(sequence);
+                    }
+                }
+            }
             return result;
         }
         _ => panic!("not enough elements to unpack"),

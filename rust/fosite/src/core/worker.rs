@@ -187,6 +187,12 @@ trait WarningHandler {
                                  "Return at",
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
+                    &PathNode::Element(_, _, _) => {
+                        println!("{}{} {}",
+                                 padding,
+                                 "Element of the collection at",
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
+                    }
                     _ => {
                         println!("Frame?");
                     }
@@ -434,6 +440,12 @@ trait ErrorHandler {
                         println!("{}{} {}",
                                  padding,
                                  "Return at",
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
+                    }
+                    &PathNode::Element(_, _, _) => {
+                        println!("{}{} {}",
+                                 padding,
+                                 "Element of the collection at",
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
                     _ => {

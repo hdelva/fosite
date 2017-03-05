@@ -1,7 +1,8 @@
 use core::*;
 
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
+use std::collections::btree_map::Entry;
+use std::collections::BTreeMap;
 
 pub struct PythonConditional { }
 
@@ -228,7 +229,7 @@ impl PythonConditional {
              changes: &Vec<AnalysisItem>) {
         for change in changes {
             if !change.is_object() {
-                let mut all_types = HashMap::new();
+                let mut all_types = BTreeMap::new();
 
                 let execution_result = match change {
                     &AnalysisItem::Identifier { ref name } => vm.load_identifier(executors, name),

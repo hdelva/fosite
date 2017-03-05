@@ -19,6 +19,8 @@ pub struct Executors {
     pub while_loop: Option<Box<WhileExecutor>>,
     pub break_loop: Option<Box<BreakExecutor>>,
     pub continue_loop: Option<Box<ContinueExecutor>>,
+    pub list: Option<Box<ListExecutor>>,
+    pub sequence: Option<Box<SequenceExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -55,6 +57,14 @@ pub trait StringExecutor {
 
 pub trait BooleanExecutor {
     fn execute(&self, env: Environment, value: bool) -> ExecutionResult;
+}
+
+pub trait ListExecutor {
+    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+}
+
+pub trait SequenceExecutor {
+    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
 }
 
 pub trait AttributeExecutor {

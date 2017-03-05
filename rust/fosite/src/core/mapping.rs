@@ -1,21 +1,21 @@
 use super::Pointer;
 use super::{Path, PathNode};
 
-use std::collections::HashMap;
-use std::collections::hash_map::{Iter, IntoIter};
+use std::collections::BTreeMap;
+use std::collections::btree_map::{Iter, IntoIter};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Mapping {
-    possibilities: HashMap<Path, Pointer>,
+    possibilities: BTreeMap<Path, Pointer>,
 }
 
 impl Mapping {
     pub fn new() -> Mapping {
-        Mapping { possibilities: HashMap::new() }
+        Mapping { possibilities: BTreeMap::new() }
     }
 
     pub fn simple(path: Path, address: Pointer) -> Mapping {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         map.insert(path, address);
         Mapping { possibilities: map }
     }
@@ -33,7 +33,7 @@ impl Mapping {
     }
 
     pub fn augment(self, node: PathNode) -> Mapping {
-        let mut new_possibilities = HashMap::new();
+        let mut new_possibilities = BTreeMap::new();
         for (mut path, address) in self.possibilities.into_iter() {
             path.add_node(node.clone());
             new_possibilities.insert(path.clone(), address);
@@ -48,12 +48,12 @@ impl Mapping {
 
 #[derive(Debug, Clone)]
 pub struct OptionalMapping {
-    possibilities: HashMap<Path, Option<Pointer>>,
+    possibilities: BTreeMap<Path, Option<Pointer>>,
 }
 
 impl OptionalMapping {
     pub fn new() -> OptionalMapping {
-        OptionalMapping { possibilities: HashMap::new() }
+        OptionalMapping { possibilities: BTreeMap::new() }
     }
 
     pub fn add_mapping(&mut self, path: Path, address: Option<Pointer>) {
