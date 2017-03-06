@@ -142,6 +142,20 @@ impl VirtualMachine {
         }
     }
 
+    pub fn index(&mut self,
+                 executors: &Executors,
+                 target: &GastNode,
+                 index: &GastNode)
+                 -> ExecutionResult {
+        match executors.index {
+            Some(ref executor) => {
+                let env = Environment::new(self, executors);
+                executor.execute(env, target, index)
+            }
+            None => panic!("VM is not setup to execute indexing"),
+        }
+    }
+
     pub fn binop(&mut self,
                  executors: &Executors,
                  left: &GastNode,
@@ -407,6 +421,9 @@ impl VirtualMachine {
             }
             &NodeType::Sequence {ref content } => {
                 self.sequence(executors, content)
+            }
+            &NodeType::Index {ref target, ref index} => {
+                self.index(executors, target, index)
             }
             _ => panic!("Unsupported Operation"),
         };

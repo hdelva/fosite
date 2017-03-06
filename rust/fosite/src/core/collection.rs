@@ -161,8 +161,9 @@ impl CollectionBranch {
             }
         } else {
             // get the last mapping of the the first n for element n
-            for possibility in self.first_combinations(n) {
-                for (path, address) in possibility.front().unwrap().iter() {
+            // +1 because `first_combinations` starts at 1, not 0
+            for possibility in self.first_combinations(n+1) {
+                for (path, address) in possibility.back().unwrap().iter() {
                     result.add_mapping(path.clone(), address.clone());
                 }
             }

@@ -60,6 +60,9 @@ impl PythonAssign {
             &NodeType::Attribute { ref parent, ref attribute } => {
                 self.assign_to_attribute(vm, executors, parent, attribute, mapping)
             }
+            &NodeType::Index {ref target, ref index} => {
+                self.assign_to_index(vm, executors, target, index, mapping)
+            }
             _ => panic!("unimplemented"),
         }
     }
@@ -235,87 +238,67 @@ impl PythonAssign {
         };
     }
 
-/*
-    fn assign_to_iterable(&self, 
-                          vm: &mut VirtualMachine,
-                          executors: &Executors,
-                          content: &[GastNode], 
-                          mapping: &Mapping) 
-                          -> ExecutionResult {
-        let mut dependencies = Vec::new();
+    fn assign_to_index(&self,
+                           vm: &mut VirtualMachine,
+                           executors: &Executors,
+                           target: &GastNode,
+                           index: &GastNode,
+                           mapping: &Mapping)
+                           -> ExecutionResult {
+        // todo get rid of clone
+        let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node(),
+                                                                   format!("{}[{}]",
+                                                                           target.to_string(),
+                                                                           index.to_string())));
+
+        let target_result = vm.execute(executors, target);
+
+        let target_mapping = target_result.result;
+        let dependencies = target_result.dependencies;
+
         let mut changes = Vec::new();
 
-        let current_node = vm.current_node().clone();
+        // add the object changes
+        // perform the assignment
+        for (_, target_address) in target_mapping.iter() {
+            // todo this clone shouldn't be necessary
+            let current_path = vm.current_path().clone();
 
-        let num = content.len();
+            let mut chunk = CollectionChunk::empty();
 
-        let mut value_mappings = Vec::new();
-
-        let mut split = None;
-        for (index, target) in content.iter().enumerate() {
-            let &GastNode {ref kind, ..} = target;
-            if let &NodeType::UnOp { ref value, .. } = kind {
-                split = Some((index, value));
-            }
-        }
-
-
-        let mut fun = |obj: Object, num, node| {
-            obj.get_first_n_elements(num, node)
-        };
-
-
-        for (path, address) in mapping.iter() {
-            let object = vm.get_object(address);
-
-            for (_, min, max) in object.size_range() {
-                if let Some(max) = max {
-                    if max < num {
-                        //todo warning
-                        //blacklist this path
-                    }
-                } 
-
-                if let Some(min) = min {
-                    if min > num {
-                        //todo warning
-                        //blacklist this path
-                    }
+            let mut max = Some(1);
+            for node in current_path.iter().rev() {
+                match node {
+                    &PathNode::Loop(_, _) => {
+                        max = None;
+                        break;
+                    },
+                    &PathNode::Frame(_, _, _) => {
+                        break;
+                    },
+                    _ => ()
                 }
             }
 
-            // needs current node information to form the path
-            let possibilities = object.get_first_n_elements(num as i16, &current_node);
+            for (path, pointer) in mapping.iter() {
+                let value_obj = vm.get_object(pointer);
+                let kind = value_obj.get_extension().first().unwrap();
 
-            // iterate over all possible elements
-            // combine the elements's path with the object's path 
-            // store the results in value_mappings 
-            //
-            // maintain the same order
-            // the first element of value_mappings contains 
-            // the the mapping for the first assign target
-            for (index, mapping) in possibilities.into_iter().enumerate() {
-                if value_mappings.len() <= index {
-                    value_mappings.push(Mapping::new());
-                }
-
-                let ref mut new_mapping = value_mappings[index];
-
-                for (path, address) in mapping.into_iter() {
-                    let mut new_path = path.clone();
-                    for node in path.into_iter() {
-                        new_path.add_node(node);
-                    }
-                    new_mapping.add_mapping(new_path, address);
-                }
+                chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
             }
+
+            changes.push(AnalysisItem::Object { address: target_address.clone(), path: Some(current_path.clone()) });
+
+            let mut parent_object = vm.get_object_mut(target_address);
+
+            
+            parent_object.insert_element(chunk, current_path);
         }
 
-        for (target, target_mapping) in content.iter().zip(value_mappings) {
-            let mut partial_result = self.assign_to_target(vm, executors, target, &target_mapping);
-            changes.append(&mut partial_result.changes);
-            dependencies.append(&mut partial_result.dependencies);
-        }
+        // notify the vm a mapping has changed
+        // used to update watches
+        // dirty fix, assumes the first change is the relevant one
+        vm.notify_change(changes.first().unwrap().clone(), mapping.clone());
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
@@ -326,7 +309,7 @@ impl PythonAssign {
             result: result_mapping,
         };
     }
-*/
+
     fn assign_to_attribute(&self,
                            vm: &mut VirtualMachine,
                            executors: &Executors,

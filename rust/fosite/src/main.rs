@@ -93,7 +93,8 @@ fn test_vm() {
         break_loop: Some(Box::new(PythonBreak {})),
         continue_loop: Some(Box::new(PythonContinue {})),
         list: Some(Box::new(PythonList {})),
-        sequence: None,
+        sequence: Some(Box::new(PythonTuple {})),
+        index: Some(Box::new(PythonIndex {})),
     };
 
     let mut s = String::new();

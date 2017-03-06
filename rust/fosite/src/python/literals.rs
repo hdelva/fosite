@@ -106,6 +106,7 @@ impl StringExecutor for PythonString {
         let type_name = "string".to_owned();
 
         let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+
         let string_ptr = vm.object_of_type(&type_name);
         let character_ptr = vm.object_of_type(&type_name);
 

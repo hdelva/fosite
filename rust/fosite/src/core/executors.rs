@@ -21,6 +21,7 @@ pub struct Executors {
     pub continue_loop: Option<Box<ContinueExecutor>>,
     pub list: Option<Box<ListExecutor>>,
     pub sequence: Option<Box<SequenceExecutor>>,
+    pub index: Option<Box<IndexExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -28,6 +29,14 @@ pub trait AssignExecutor {
                env: Environment,
                targets: &Vec<GastNode>,
                value: &GastNode)
+               -> ExecutionResult;
+}
+
+pub trait IndexExecutor {
+    fn execute(&self,
+               env: Environment,
+               target: &GastNode,
+               index: &GastNode)
                -> ExecutionResult;
 }
 

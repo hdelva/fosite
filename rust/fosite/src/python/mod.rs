@@ -9,6 +9,7 @@ mod boolop;
 mod while_loop;
 mod break_loop;
 mod continue_loop;
+mod index;
 
 pub use self::block::*;
 pub use self::binop::*;
@@ -21,3 +22,4 @@ pub use self::boolop::*;
 pub use self::while_loop::*;
 pub use self::break_loop::*;
 pub use self::continue_loop::*;
+pub use self::index::*;

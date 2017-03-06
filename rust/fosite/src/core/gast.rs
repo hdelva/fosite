@@ -68,7 +68,11 @@ pub enum NodeType {
     Continue { },
     Boolean { value: bool },
     Nil {},
-    UnOp { op: String, value: Box<GastNode> }
+    UnOp { op: String, value: Box<GastNode> },
+    Index {
+        target: Box<GastNode>,
+        index: Box<GastNode>,
+    }
 }
 
 impl NodeType {
@@ -78,7 +82,16 @@ impl NodeType {
             &NodeType::Attribute { ref parent, ref attribute } => {
                 format!("{}.{}", parent.kind.to_string(), attribute)
             }
-            _ => panic!("Node {:?} doesn't have a string representation", self),
+            &NodeType::Int {ref value} => {
+                format!("{}", value)
+            }
+            &NodeType::Float {ref value} => {
+                format!("{}", value)
+            }
+            &NodeType::String {ref value} => {
+                format!("{}", value)
+            }
+            _ => format!("Node {:?} doesn't have a string representation", self),
         }
     }
 }
@@ -112,6 +125,7 @@ pub fn build(node: &Json) -> GastNode {
         "break" => build_break(id),
         "continue" => build_continue(id),
         "unop" => build_unop(id, node),
+        "index" => build_index(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -150,6 +164,22 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_index(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_target = obj.get("target").unwrap();
+    let target = Box::new(build(json_target));
+
+    let json_index = obj.get("index").unwrap();
+    let index = Box::new(build(json_index));
+
+    return GastNode::new(id,
+                         NodeType::Index {
+                             target: target,
+                             index: index,
                          });
 }
 
