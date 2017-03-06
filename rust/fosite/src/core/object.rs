@@ -147,7 +147,11 @@ impl Object {
         self.elements.prepend(element, path)
     }
 
-    pub fn set_elements(&mut self, content: Vec<(Path, CollectionBranch)>) {
-        self.elements.set_content(content)
+    pub fn set_elements(&mut self, content: Collection) {
+        self.elements = content;
+    }
+
+    pub fn get_elements(&self) -> &Collection {
+        return &self.elements;
     }
 }

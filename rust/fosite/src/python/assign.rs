@@ -124,7 +124,7 @@ impl PythonAssign {
             }
         }
 
-        for (target, target_mapping) in content.iter().zip(value_mappings) {
+        for (target_mapping, target) in value_mappings.iter().zip(content) {
             let mut partial_result = self.assign_to_target(vm, executors, target, &target_mapping);
             changes.append(&mut partial_result.changes);
             dependencies.append(&mut partial_result.dependencies);
@@ -162,7 +162,9 @@ impl PythonAssign {
             let slice_ptr = vm.object_of_type(&type_name);
             {
                 let mut object = vm.get_object_mut(&slice_ptr);
-                object.set_elements(elements);
+                let mut collection = Collection::new();
+                collection.set_content(elements);
+                object.set_elements(collection);
             }
 
             result_mapping.add_mapping(path.clone(), slice_ptr);
@@ -218,7 +220,7 @@ impl PythonAssign {
                 obj.get_first_n_elements(num as i16, &current_node)
             };
 
-            let mut partial_result = self._assign_to_iterable(vm, executors, &content[..num], mapping, num, fun);
+            let mut partial_result = self._assign_to_iterable(vm, executors, content, mapping, num, fun);
             changes.append(&mut partial_result.changes);
             dependencies.append(&mut partial_result.dependencies);
         }

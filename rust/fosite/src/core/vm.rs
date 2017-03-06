@@ -596,6 +596,19 @@ impl VirtualMachine {
         self.memory.get_object_mut(address)
     }
 
+    pub fn is_subtype(&self, type_name1: &String, type_name2: &String) -> bool {
+        if type_name1 == type_name2 {
+            return true;
+        }
+        let type_pointer1 = self.knowledge_base.get_type(type_name1);
+        return self.is_instance(type_pointer1.unwrap(), type_name2);
+    }
+
+    pub fn is_instance(&self, object: &Pointer, type_name: &String) -> bool {
+        let type_pointer = self.knowledge_base.get_type(&type_name);
+        return self.ancestors(object).contains(type_pointer.unwrap());
+    }
+
     pub fn ancestors(&self, pointer: &Pointer) -> Vec<Pointer> {
         let object = self.memory.get_object(pointer);
 

@@ -61,9 +61,24 @@ impl BinOpExecutor for PythonBinOp {
                         _ => ancestor_name,
                     };
 
-                    let new_object = vm.object_of_type(&new_type);
+                    let new_ptr = vm.object_of_type(&new_type);
 
-                    result.add_mapping(new_path, new_object);
+                    result.add_mapping(new_path, new_ptr);
+
+                    if op == &"+".to_owned() && vm.is_subtype(&new_type, &"collection".to_owned()) {
+                        let new_col;
+                        {
+                            let new_obj = vm.get_object(&new_ptr);
+                            let left_obj = vm.get_object(left_address);
+                            let right_obj = vm.get_object(right_address);
+                            let left_col = left_obj.get_elements();
+                            let right_col = right_obj.get_elements();
+                            new_col = left_col.concatenate(right_col);
+                        }
+
+                        let mut new_object = vm.get_object_mut(&new_ptr);
+                        new_object.set_elements(new_col);
+                    }                 
                 } else {
                     let left_object = vm.get_object(left_address);
                     let left_type = left_object.get_extension().first().unwrap();

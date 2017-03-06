@@ -139,12 +139,13 @@ impl CollectionBranch {
     }
 
     fn first_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
-        return linearize(n as usize, &self.content, false);
+        let mut result = linearize(n as usize, &self.content, false);
+        // todo, make efficient pls
+        return result.iter().cloned().map(|x| x.iter().cloned().rev().collect()).collect();
     }
 
     fn last_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
         let mut result = linearize(n as usize, &self.content, true);
-        result.reverse();
         return result;
     }
 
@@ -318,6 +319,12 @@ impl CollectionBranch {
         }
 
         return CollectionBranch::new(new_content);
+    }
+
+    pub fn concatenate(&mut self, other: CollectionBranch) {
+        for chunk in other.content.into_iter() {
+            self.append(chunk);
+        }
     }
 }
 
@@ -571,6 +578,25 @@ impl Collection {
             frames: vec![Frame::new(PathNode::Frame(0, None, Box::new(Path::empty())), None, vec!())],
             path: vec!(0),
         }
+    }
+
+    pub fn concatenate(&self, other: &Collection) -> Collection {
+        let mut new = Collection::new();
+        let mut new_content = Vec::new();
+
+        for mapping in self.current_frame().get_content().iter() {
+            for other_mapping in other.current_frame().get_content().iter() {
+                let mut new_path = mapping.path.clone();
+                new_path.merge_into(other_mapping.path.clone());
+                let mut new_branch = mapping.branch.clone();
+                new_branch.concatenate(other_mapping.branch.clone());
+
+                new_content.push((new_path, new_branch));
+            }
+        }
+
+        new.set_content(new_content);
+        return new;
     }
 
     pub fn set_content(&mut self, content: Vec<(Path, CollectionBranch)>) {

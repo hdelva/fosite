@@ -179,7 +179,7 @@ fn test_vm() {
         kb.add_arithmetic_type("collection", "not in");
 
         // todo replace when collections are a thing
-        kb.add_arithmetic_type("string", "+");
+        kb.add_arithmetic_type("collection", "+");
     }
 
     // global scope
