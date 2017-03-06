@@ -1,11 +1,11 @@
-x = 'string'
+a = [1, 2, 3, 4]
 
-while 'str' in x:
+while 1 in a:
 	if 'cond1':
 		#x.attr = 'invalidated'
 		if 'cond2':
 			pass
 		else:
-			x.attr = 'invalidated'
+			a[1] = 'invalidated'
 	else:
-		x.attr = 'invalidated'
+		a[1] = 'invalidated'

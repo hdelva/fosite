@@ -55,9 +55,14 @@ impl BoolOpExecutor for PythonBoolOp {
                 if op == "in" || op == "not in" {
                     let object = vm.get_object(right_address);
 
-                    // objects only have a single type in python
-                    let type_address = object.get_extension().first().unwrap();
-                    type_name = vm.knowledge().get_type_name(type_address).clone(); 
+                    let ancestors = vm.ancestors(right_address);
+
+                    for ancestor in ancestors.iter().rev() {
+                        type_name = vm.knowledge().get_type_name(ancestor).clone();
+                        if vm.knowledge().operation_supported(&type_name, &op.to_owned()) {
+                            break;
+                        }
+                    }
                 } else {
                     // todo, bit of a hack
                     // concludes that if the most recently defined type supports addition
