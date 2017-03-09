@@ -32,6 +32,7 @@ impl Worker {
         logger.add_warning_handler(WATTRIBUTE_POLY_TYPE, Box::new(PolyType::new()));
         logger.add_warning_handler(WBOOLOP, Box::new(BoolopIncompatible::new()));
         logger.add_warning_handler(WWHILE_LOOP, Box::new(WhileLoopChange::new()));
+        logger.add_warning_handler(WINDEX_BOUNDS, Box::new(OutOfBounds::new()));
 
         logger.add_error_handler(EATTRIBUTE_INVALID, Box::new(AttributeInvalid::new()));
         logger.add_error_handler(EIDENTIFIER_INVALID, Box::new(IdentifierInvalid::new()));
@@ -262,6 +263,69 @@ impl WarningHandler for AttributeUnsafe {
             self.print_path(sources, &path.to_path().unwrap(), "    ");
             ass_count += 1;
             current_ass = format!("path {}", ass_count);
+            println!("");
+        }
+    }
+}
+
+struct OutOfBounds {
+    done: BTreeSet<(String, Path)>,
+}
+
+impl OutOfBounds {
+    pub fn new() -> Self {
+        OutOfBounds { done: BTreeSet::new() }
+    }
+
+    fn message_id(&self, content: &Content) -> (String, Path) {
+        let target = content.get(&"target".to_owned()).unwrap().to_string().unwrap();
+
+        let mut fingerprint = Path::empty();
+
+        let mut path_count = 0;
+        let mut current_path = format!("path {}", path_count);
+        while let Some(path) = content.get(&current_path) {
+            let path = path.to_path().unwrap();
+
+            if path > fingerprint {
+                fingerprint = path.clone();
+            }
+
+            path_count += 1;
+            current_path = format!("path {}", path_count);
+        }
+
+        return (target, fingerprint);
+    }
+}
+
+impl WarningHandler for OutOfBounds {
+    fn handle(&mut self, node: GastID, sources: &Sources, content: &Content) {
+        let identifier = self.message_id(content);
+        if self.done.contains(&identifier) {
+            return;
+        }
+
+        self.done.insert(identifier);
+
+        self.preamble(sources, node);
+        let target = content.get(&"target".to_owned()).unwrap().to_string().unwrap();
+        println!("  Index might be out of bounds");
+        println!("  {} does not always have enough elements",
+                 Bold.paint(target.clone()));
+        println!("  In the following cases:");
+
+        let mut path_count = 0;
+        let mut current_path = format!("path {}", path_count);
+        let mut current_max = format!("path {} max", path_count);
+        while let Some(path) = content.get(&current_path) {
+            println!("  Case {}",
+                     Bold.paint(format!("{}", path_count + 1)));
+            println!("    {} has {} elements", target, content.get(&current_max).unwrap().to_number().unwrap());
+            self.print_path(sources, &path.to_path().unwrap(), "    ");
+            path_count += 1;
+            current_path = format!("path {}", path_count);
+            current_max = format!("path {} max", path_count);
             println!("");
         }
     }

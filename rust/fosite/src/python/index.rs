@@ -38,6 +38,9 @@ impl IndexExecutor for PythonIndex {
         // target object b here
         let target_mapping = target_result.result;
 
+        // index out of bounds warnings
+        let mut warnings = Vec::new();
+
         for (target_path, target_address) in target_mapping.iter() {
             // we obviously depend on the target object
             total_dependencies.push(AnalysisItem::Object { address: target_address.clone(), path: None });
@@ -48,7 +51,23 @@ impl IndexExecutor for PythonIndex {
             // getting a fixed value can be done more accurately
             match &index.kind {
                 &NodeType::Int {ref value} => {
-                    value_mappings = target_object.get_element(*value as i16, &current_node);
+                    let adjusted_value;
+                    if *value >= 0 {
+                        // +1 because `Collection::first_combinations` starts at 1, not 0
+                        adjusted_value = *value + 1;
+                    } else {
+                        adjusted_value = *value;
+                    }
+
+                    for (path, _, max) in target_object.size_range().into_iter() {
+                        println!("{:?}, {:?}", path, max);
+                        if let Some(max) = max {
+                            if adjusted_value.abs() as usize > max {
+                                warnings.push((path, max as i16));
+                            }
+                        }
+                    }
+                    value_mappings = target_object.get_element(adjusted_value as i16, &current_node);
                 },
                 _ => {
                     value_mappings = target_object.get_any_element(&current_node);
@@ -66,6 +85,10 @@ impl IndexExecutor for PythonIndex {
                     result_mapping.add_mapping(new_path, *address);
                 }
             }
+        }
+
+        if warnings.len() > 0 {
+            SIGNALER.out_of_bounds(vm.current_node(), target.to_string(), warnings);
         }
         
         let execution_result = ExecutionResult {

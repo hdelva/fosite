@@ -44,15 +44,15 @@ pub struct CollectionChunk {
 impl CollectionChunk {
     pub fn empty() -> Self {
         CollectionChunk {
-            min_size: Some(0),
-            max_size: Some(0),
+            min_size: Some(1),
+            max_size: Some(1),
             representants: BTreeMap::new(),
         }
     }
 
     pub fn add_representant(&mut self, path: Path, repr: Representant)  {
-        self.min_size = self.min_size.and_then(|old| repr.minimum.map(|new| old + new));
-        self.max_size = self.max_size.and_then(|old| repr.maximum.map(|new| old + new));
+        self.min_size = self.min_size.and_then(|old| repr.minimum.map(|new| cmp::min(old, new)));
+        self.max_size = self.max_size.and_then(|old| repr.maximum.map(|new| cmp::max(old, new)));
 
         self.representants.insert(path, repr);
     }
@@ -151,7 +151,7 @@ impl CollectionBranch {
 
     pub fn get_element(&self, n: i16) -> Mapping {
         let mut result = Mapping::new();
-        
+
         if n < 0 {
             for possibility in self.last_combinations(-n) {
                 // get the first mapping of the the last n for element -n
@@ -161,8 +161,7 @@ impl CollectionBranch {
             }
         } else {
             // get the last mapping of the the first n for element n
-            // +1 because `first_combinations` starts at 1, not 0
-            for possibility in self.first_combinations(n+1) {
+            for possibility in self.first_combinations(n) {
                 for (path, address) in possibility.back().unwrap().iter() {
                     result.add_mapping(path.clone(), address.clone());
                 }
@@ -806,7 +805,7 @@ fn linearize(n: usize,
     let chunk;
     let next_chunk;
 
-    if n <= 0 {
+    if n <= 0 || chunks.len() == 0 {
         // safety net, should never be true
         return vec![];
     }
@@ -818,7 +817,6 @@ fn linearize(n: usize,
         chunk = chunks.first();
         next_chunk = &chunks[1..];
     }
-
 
     match chunk {
         Some(chunk) => {

@@ -20,6 +20,7 @@ pub const EBOOLOP: MessageType = 10;
 pub const WBOOLOP: MessageType = 11;
 pub const WTRIVIAL_LOOP: MessageType = 12;
 pub const WWHILE_LOOP: MessageType = 13;
+pub const WINDEX_BOUNDS: MessageType = 14;
 
 #[derive(Clone, Debug)]
 pub enum Message {

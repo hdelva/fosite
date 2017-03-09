@@ -82,6 +82,9 @@ impl NodeType {
             &NodeType::Attribute { ref parent, ref attribute } => {
                 format!("{}.{}", parent.kind.to_string(), attribute)
             }
+            &NodeType::Index { ref target, ref index } => {
+                format!("{}[{}]", target.to_string(), index.to_string())
+            }
             &NodeType::Int {ref value} => {
                 format!("{}", value)
             }
