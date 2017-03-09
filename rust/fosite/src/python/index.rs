@@ -60,7 +60,6 @@ impl IndexExecutor for PythonIndex {
                     }
 
                     for (path, _, max) in target_object.size_range().into_iter() {
-                        println!("{:?}, {:?}", path, max);
                         if let Some(max) = max {
                             if adjusted_value.abs() as usize > max {
                                 warnings.push((path, max as i16));
@@ -88,7 +87,12 @@ impl IndexExecutor for PythonIndex {
         }
 
         if warnings.len() > 0 {
-            SIGNALER.out_of_bounds(vm.current_node(), target.to_string(), warnings);
+            let content = OutOfBounds::new(target.to_string(), warnings);
+            let message = Message::Output {
+                source: vm.current_node(),
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
         }
         
         let execution_result = ExecutionResult {

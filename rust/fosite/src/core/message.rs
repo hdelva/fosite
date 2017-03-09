@@ -1,38 +1,21 @@
 use super::GastID;
 use super::Path;
 use super::GastNode;
+use super::PathNode;
 
+use term_painter::ToStyle;
+use term_painter::Color::*;
+use term_painter::Attr::*;
 
 use std::collections::HashMap;
 
-pub type MessageType = i16;
+type Sources = HashMap<GastID, (i16, i16)>;
+type Nodes = HashMap<GastID, GastNode>;
 
-pub const EATTRIBUTE_INVALID: MessageType = 1;
-pub const WATTRIBUTE_UNSAFE: MessageType = 2;
-pub const NPROCESSING_NODE: MessageType = 3;
-pub const NPROCESSED_NODE: MessageType = 4;
-pub const EIDENTIFIER_INVALID: MessageType = 5;
-pub const WIDENTIFIER_UNSAFE: MessageType = 6;
-pub const WATTRIBUTE_POLY_TYPE: MessageType = 7;
-pub const WIDENTIFIER_POLY_TYPE: MessageType = 8;
-pub const EBINOP: MessageType = 9;
-pub const EBOOLOP: MessageType = 10;
-pub const WBOOLOP: MessageType = 11;
-pub const WTRIVIAL_LOOP: MessageType = 12;
-pub const WWHILE_LOOP: MessageType = 13;
-pub const WINDEX_BOUNDS: MessageType = 14;
-
-#[derive(Clone, Debug)]
 pub enum Message {
-    Error {
+    Output {
         source: GastID,
-        kind: i16,
-        content: HashMap<String, MessageItem>,
-    },
-    Warning {
-        source: GastID,
-        kind: i16,
-        content: HashMap<String, MessageItem>,
+        content: Box<MessageContent>,
     },
     Input {
         source: GastID,
@@ -40,40 +23,71 @@ pub enum Message {
         col: i16,
         node: GastNode,
     },
-    Notification {
-        source: GastID,
-        kind: i16,
-        content: HashMap<String, MessageItem>,
-    },
     Terminate,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum MessageItem {
-    Number(i16),
-    String(String),
-    Path(Path),
-}
+pub trait MessageContent: Send {
+    fn hash(&self) -> u64;
 
-impl MessageItem {
-    pub fn to_number(&self) -> Option<i16> {
-        match self {
-            &MessageItem::Number(content) => Some(content),
-            _ => None,
+    fn print_warning_preamble(&self, sources: &Sources, node: GastID) {
+        let &(row, col) = sources.get(&node).unwrap();
+        println!("{}",
+            Custom(220).bold().paint(format!("Warning at row {}, column {}", row, col + 1)));
+    }
+
+    fn print_error_preamble(&self,  sources: &Sources, node: GastID) {
+        let &(row, col) = sources.get(&node).unwrap();
+        println!("{}",
+            Red.bold().paint(format!("Error at row {}, column {}", row, col + 1)));
+    }
+
+    fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {
+        if path.len() != 0 {
+            for node in path.iter() {
+                let &(row, col) = sources.get(&node.get_location()).unwrap();
+
+                match node {
+                    &PathNode::Condition(_, b) => {
+                        let condition = if b { "true" } else { "false" };
+                        println!("{}{} {} is {}",
+                                 padding,
+                                 "Condition at",
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)),
+                                 Bold.paint(format!("{}", condition)));
+                    }
+                    &PathNode::Loop(_, b) => {
+                        let taken = if b { "executed" } else { "not executed" };
+                        println!("{}{} {} is {}",
+                                 padding,
+                                 "Loop at",
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)),
+                                 Bold.paint(format!("{}", taken)));
+                    }
+                    &PathNode::Assignment(_, ref name) => {
+                        println!("{}Assignment to {} at {}",
+                                 padding,
+                                 Bold.paint(format!("{}", name)),
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
+                    }
+                    &PathNode::Return(_) => {
+                        println!("{}{} {}",
+                                 padding,
+                                 "Return at",
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
+                    }
+                    &PathNode::Element(_, _, _) => {
+                        println!("{}{} {}",
+                                 padding,
+                                 "Element of the collection at",
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
+                    }
+                    _ => {
+                        println!("Frame?");
+                    }
+                }
+            }
         }
     }
 
-    pub fn to_string(&self) -> Option<String> {
-        match self {
-            &MessageItem::String(ref content) => Some(content.clone()),
-            _ => None,
-        }
-    }
-
-    pub fn to_path(&self) -> Option<Path> {
-        match self {
-            &MessageItem::Path(ref content) => Some(content.clone()),
-            _ => None,
-        }
-    }
+    fn print_message(&self, source: &Sources, nodes: &Nodes, node: GastID);
 }

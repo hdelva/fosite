@@ -247,7 +247,9 @@ impl PythonConditional {
                     let object = vm.get_object(address);
                     let tpe = object.get_extension()[0];
 
-                    match all_types.entry(tpe.clone()) {
+                    let type_name = vm.knowledge().get_type_name(&tpe);
+
+                    match all_types.entry(type_name.clone()) {
                         Entry::Vacant(v) => {
                             v.insert(vec![path.clone()]);
                         }
@@ -258,37 +260,11 @@ impl PythonConditional {
                 }
 
                 if all_types.len() > 1 {
-                    let mut items = HashMap::new();
-
-                    items.insert("name".to_owned(), MessageItem::String(change.to_string()));
-
-                    let mut type_count = 0;
-                    for (tpe, paths) in all_types {
-                        let type_name = vm.knowledge().get_type_name(&tpe);
-                        items.insert(format!("type {}", type_count),
-                                     MessageItem::String(type_name.to_owned()));
-
-                        let mut path_count = 0;
-                        for path in paths {
-                            items.insert(format!("type {} path {}", type_count, path_count),
-                                         MessageItem::Path(path.clone()));
-                            path_count += 1;
-                        }
-                        type_count += 1;
-                    }
-
-                    let kind = if change.is_identifier() {
-                        WIDENTIFIER_POLY_TYPE
-                    } else {
-                        WATTRIBUTE_POLY_TYPE
-                    };
-
-                    let message = Message::Warning {
+                    let content = TypeUnsafe::new(change.to_string(), all_types);
+                    let message = Message::Output { 
                         source: vm.current_node(),
-                        kind: kind,
-                        content: items,
+                        content: Box::new(content),
                     };
-
                     &CHANNEL.publish(message);
                 }
             }

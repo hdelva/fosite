@@ -1,0 +1,76 @@
+use super::Path;
+use super::MessageContent;
+
+use term_painter::ToStyle;
+use term_painter::Color::*;
+use term_painter::Attr::*;
+
+use std::collections::HashMap;
+use super::GastID;
+use super::GastNode;
+
+use std::hash::{Hash, Hasher, SipHasher};
+
+type Sources = HashMap<GastID, (i16, i16)>;
+type Nodes = HashMap<GastID, GastNode>;
+
+pub struct OutOfBounds {
+    target: String,
+    cases: Vec<(Path, i16)>,
+}
+
+impl OutOfBounds {
+    pub fn new(target: String, cases: Vec<(Path, i16)>) -> Self {
+        OutOfBounds {
+            target: target,
+            cases: cases,
+        }
+    }
+}
+
+
+impl MessageContent for OutOfBounds {
+    fn hash(&self) -> u64 {
+        let mut s = SipHasher::new();
+
+        let mut fingerprint = Path::empty();
+
+        for &(ref path, _) in self.cases.iter() {
+            if path > &fingerprint {
+                fingerprint = path.clone();
+            }
+        }
+
+        self.target.hash(&mut s);
+        fingerprint.hash(&mut s);
+        s.finish()
+    }
+
+    fn print_message(&self, sources: &Sources, nodes: &Nodes, node: GastID) {
+        self.print_warning_preamble(sources, node);
+        println!("  Index might be out of bounds");
+        println!("  {} does not always have enough elements",
+                 Bold.paint(self.target.clone()));
+        println!("  In the following cases:");
+
+        if self.cases.len() == 1 {
+            // empty path 
+            // always the case
+            if let Some(&(ref path, max)) = self.cases.first() {
+                if path.len() == 0 {
+                    println!("    {} always has {} elements", self.target, max);
+                    println!("    {}", Red.bold().paint("Always"));
+                    println!("");
+                }
+            }
+        } else {
+            for (index, &(ref path, max)) in self.cases.iter().enumerate() {
+                println!("  Case {}",
+                        Bold.paint(format!("{}", index + 1)));
+                println!("    {} has {} elements", self.target, max);
+                self.print_path(sources, &path, "    ");
+                println!("");
+            }
+        }
+    }
+}

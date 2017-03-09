@@ -109,48 +109,19 @@ impl AttributeExecutor for PythonAttribute {
         }
 
         if warning.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in warning {
-                if error.contains(&path) {
-                    continue;
-                }
-                items.insert(format!("path {}", path_count),
-                             MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-
-            if path_count > 0 {
-                let message = Message::Warning {
-                    source: vm.current_node(),
-                    kind: WATTRIBUTE_UNSAFE,
-                    content: items,
-                };
-                &CHANNEL.publish(message);
-            }
+            let content = AttributeUnsafe::new(parent.to_string(), name.clone(), warning);
+            let message = Message::Output {
+                source: vm.current_node(), 
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
         }
 
         if error.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("parent".to_owned(), MessageItem::String(parent.to_string()));
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in error {
-                items.insert(format!("path {}", path_count),
-                             MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-
-            let message = Message::Error {
-                source: vm.current_node(),
-                kind: EATTRIBUTE_INVALID,
-                content: items,
+            let content = AttributeInvalid::new(parent.to_string(), name.clone(), error);
+            let message = Message::Output { 
+                source: vm.current_node(), 
+                content: Box::new(content),
             };
             &CHANNEL.publish(message);
         }

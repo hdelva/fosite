@@ -1,8 +1,8 @@
 use core::*;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::hash_map::Entry;
+use std::collections::btree_map::Entry;
 
 pub struct PythonBinOp { }
 
@@ -29,7 +29,7 @@ impl BinOpExecutor for PythonBinOp {
         total_changes.append(&mut right_result.changes);
         total_dependencies.append(&mut right_result.dependencies);
 
-        let mut error = HashMap::new();
+        let mut error = BTreeMap::new();
 
         for (left_path, left_address) in left_mapping.iter() {
             for (right_path, right_address) in right_mapping.iter() {
@@ -106,43 +106,10 @@ impl BinOpExecutor for PythonBinOp {
         }
 
         if error.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("operation".to_owned(), MessageItem::String(op.clone()));
-
-            let mut comb_count = 0;
-            for (types, paths) in error {
-                let (left_type, right_type) = types;
-
-                items.insert(format!("combination {} left", comb_count),
-                             MessageItem::String(left_type.clone()));
-                items.insert(format!("combination {} right", comb_count),
-                             MessageItem::String(right_type.clone()));
-
-                let (left_paths, right_paths) = paths;
-
-                let mut path_count = 0;
-                for path in left_paths.into_iter() {
-                    items.insert(format!("combination {} left {}", comb_count, path_count),
-                                 MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                let mut path_count = 0;
-                for path in right_paths.into_iter() {
-                    items.insert(format!("combination {} right {}", comb_count, path_count),
-                                 MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                comb_count += 1;
-            }
-
-            let message = Message::Error {
+            let content = BinOpInvalid::new(op.clone(), error);
+            let message = Message::Output { 
                 source: vm.current_node(),
-                kind: EBINOP,
-                content: items,
-            };
+                content: Box::new(content)};
             &CHANNEL.publish(message);
         }
 

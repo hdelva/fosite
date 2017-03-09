@@ -1,8 +1,8 @@
 use core::*;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::hash_map::Entry;
+use std::collections::btree_map::Entry;
 
 pub struct PythonBoolOp { }
 
@@ -29,8 +29,7 @@ impl BoolOpExecutor for PythonBoolOp {
         total_changes.append(&mut right_result.changes);
         total_dependencies.append(&mut right_result.dependencies);
 
-        let mut error = HashMap::new();
-        let mut warning = HashMap::new();
+        let mut error = BTreeMap::new();
 
         let t = vm.knowledge().constant(&"True".to_owned());
         let f = vm.knowledge().constant(&"False".to_owned());
@@ -76,39 +75,6 @@ impl BoolOpExecutor for PythonBoolOp {
                             break;
                         }
                     }
-
-                    // object is a common ancestor of all actual objects
-                    // if this is the only common ancestor, the two objects can't be compared 
-                    if ancestors.len() == 1  {
-                        let left_object = vm.get_object(left_address);
-                        let left_type = left_object.get_extension().first().unwrap();
-                        let left_type_name = vm.knowledge().get_type_name(left_type).clone();
-                        let right_object = vm.get_object(right_address);
-                        let right_type = right_object.get_extension().first().unwrap();
-                        let right_type_name = vm.knowledge().get_type_name(right_type).clone();
-
-                        // special case 
-                        // don't throw warning when people are checking for None
-                        if left_type_name  == "NoneType".to_owned() || 
-                           right_type_name == "NoneType".to_owned() {
-                               continue;
-                        }
-
-                        match warning.entry((left_type_name, right_type_name)) {
-                            Entry::Vacant(o) => {
-                                let mut left_set = BTreeSet::new();
-                                let mut right_set = BTreeSet::new();
-                                left_set.insert(left_path.clone());
-                                right_set.insert(right_path.clone());
-                                o.insert((left_set, right_set));
-                            }
-                            Entry::Occupied(mut entry) => {
-                                let &mut (ref mut left_set, ref mut right_set) = entry.get_mut();
-                                left_set.insert(left_path.clone());
-                                right_set.insert(right_path.clone());
-                            }
-                        }
-                    } 
                 }
 
                 if vm.knowledge().operation_supported(&type_name, &op.to_owned()) {
@@ -157,82 +123,11 @@ impl BoolOpExecutor for PythonBoolOp {
             }
         }
 
-        if warning.len() > 0 {
-            let mut items = HashMap::new();
-
-            let mut comb_count = 0;
-            for (types, paths) in warning {
-                let (left_type, right_type) = types;
-
-                items.insert(format!("combination {} left", comb_count),
-                             MessageItem::String(left_type.to_owned()));
-                items.insert(format!("combination {} right", comb_count),
-                             MessageItem::String(right_type.to_owned()));
-
-                let (left_paths, right_paths) = paths;
-
-                let mut path_count = 0;
-                for path in left_paths.into_iter() {
-                    items.insert(format!("combination {} left {}", comb_count, path_count),
-                                 MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                let mut path_count = 0;
-                for path in right_paths.into_iter() {
-                    items.insert(format!("combination {} right {}", comb_count, path_count),
-                                 MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                comb_count += 1;
-            }
-
-            let message = Message::Warning {
-                source: vm.current_node(),
-                kind: WBOOLOP,
-                content: items,
-            };
-            &CHANNEL.publish(message);
-        }
-
         if error.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("operation".to_owned(), MessageItem::String(op.to_owned()));
-
-            let mut comb_count = 0;
-            for (types, paths) in error {
-                let (left_type, right_type) = types;
-
-                items.insert(format!("combination {} left", comb_count),
-                             MessageItem::String(left_type.to_owned()));
-                items.insert(format!("combination {} right", comb_count),
-                             MessageItem::String(right_type.to_owned()));
-
-                let (left_paths, right_paths) = paths;
-
-                let mut path_count = 0;
-                for path in left_paths.into_iter() {
-                    items.insert(format!("combination {} left {}", comb_count, path_count),
-                                 MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                let mut path_count = 0;
-                for path in right_paths.into_iter() {
-                    items.insert(format!("combination {} right {}", comb_count, path_count),
-                                 MessageItem::Path(path));
-                    path_count += 1;
-                }
-
-                comb_count += 1;
-            }
-
-            let message = Message::Error {
+            let content = BinOpInvalid::new(op.to_owned(), error);
+            let message = Message::Output {
                 source: vm.current_node(),
-                kind: EBOOLOP,
-                content: items,
+                content: Box::new(content),
             };
             &CHANNEL.publish(message);
         }

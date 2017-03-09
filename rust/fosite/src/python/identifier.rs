@@ -7,6 +7,8 @@ pub struct PythonIdentifier { }
 
 impl IdentifierExecutor for PythonIdentifier {
     fn execute(&self, env: Environment, name: &String) -> ExecutionResult {
+        let Environment { vm, executors } = env;
+
         let mut unresolved = BTreeSet::new();
         unresolved.insert(Path::empty());
 
@@ -14,7 +16,7 @@ impl IdentifierExecutor for PythonIdentifier {
 
         let mut warning = BTreeSet::new();
 
-        for scope in env.vm().scopes().rev() {
+        for scope in vm.scopes().rev() {
             let opt_mappings = scope.resolve_optional_identifier(&name);
 
             let mut new_unresolved = BTreeSet::new();
@@ -45,41 +47,19 @@ impl IdentifierExecutor for PythonIdentifier {
         }
 
         if warning.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in warning {
-                items.insert(format!("path {}", path_count),
-                             MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-
-            let message = Message::Warning {
-                source: env.vm().current_node(),
-                kind: WIDENTIFIER_UNSAFE,
-                content: items,
+            let content = IdentifierUnsafe::new(name.clone(), warning);
+            let message = Message::Output {
+                source: vm.current_node(), 
+                content: Box::new(content),
             };
             &CHANNEL.publish(message);
         }
 
         if unresolved.len() > 0 {
-            let mut items = HashMap::new();
-
-            items.insert("name".to_owned(), MessageItem::String(name.clone()));
-
-            let mut path_count = 0;
-            for path in unresolved {
-                items.insert(format!("path {}", path_count),
-                             MessageItem::Path(path.clone()));
-                path_count += 1;
-            }
-
-            let message = Message::Error {
-                source: env.vm().current_node(),
-                kind: EIDENTIFIER_INVALID,
-                content: items,
+            let content = IdentifierInvalid::new(name.clone(), unresolved);
+            let message = Message::Output {
+                source: vm.current_node(), 
+                content: Box::new(content),
             };
             &CHANNEL.publish(message);
         }
@@ -92,6 +72,5 @@ impl IdentifierExecutor for PythonIdentifier {
         };
 
         return execution_result;
-
     }
 }

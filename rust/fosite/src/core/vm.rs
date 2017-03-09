@@ -428,18 +428,6 @@ impl VirtualMachine {
             _ => panic!("Unsupported Operation"),
         };
 
-        {
-            let mut items = HashMap::new();
-            items.insert("node".to_owned(),
-                         MessageItem::String(format!("{:?}", result)));
-            let message = Message::Notification {
-                source: id.clone(),
-                kind: NPROCESSED_NODE,
-                content: items,
-            };
-            &CHANNEL.publish(message);
-        }
-
         let _ = self.nodes.pop();
 
         let result = self.filter(result);
