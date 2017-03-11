@@ -95,6 +95,7 @@ fn test_vm() {
         list: Some(Box::new(PythonList {})),
         sequence: Some(Box::new(PythonTuple {})),
         index: Some(Box::new(PythonIndex {})),
+        set: Some(Box::new(PythonSet {})),
     };
 
     let mut s = String::new();
@@ -175,12 +176,14 @@ fn test_vm() {
         kb.add_arithmetic_type("NoneType", "is");
         kb.add_arithmetic_type("NoneType", "is not");
 
-        // todo replace when collections are a thing
         kb.add_arithmetic_type("collection", "in");
         kb.add_arithmetic_type("collection", "not in");
 
-        // todo replace when collections are a thing
-        kb.add_arithmetic_type("collection", "+");
+        kb.add_arithmetic_type("list", "+");
+        kb.add_arithmetic_type("tuple", "+");
+        kb.add_arithmetic_type("string", "+");
+
+        kb.add_arithmetic_type("set", "-");
     }
 
     // global scope

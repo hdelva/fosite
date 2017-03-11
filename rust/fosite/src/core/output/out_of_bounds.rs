@@ -9,7 +9,8 @@ use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
 
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
@@ -31,7 +32,7 @@ impl OutOfBounds {
 
 impl MessageContent for OutOfBounds {
     fn hash(&self) -> u64 {
-        let mut s = SipHasher::new();
+        let mut s = DefaultHasher::new();
 
         let mut fingerprint = Path::empty();
 
@@ -46,11 +47,11 @@ impl MessageContent for OutOfBounds {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, nodes: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
         self.print_warning_preamble(sources, node);
         println!("  Index might be out of bounds");
         println!("  {} does not always have enough elements",
-                 Bold.paint(self.target.clone()));
+                 Bold.paint(&self.target));
         println!("  In the following cases:");
 
         if self.cases.len() == 1 {

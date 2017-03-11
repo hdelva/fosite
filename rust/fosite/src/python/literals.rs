@@ -48,7 +48,49 @@ impl SequenceExecutor for PythonTuple {
     fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
-        let type_name = "list".to_owned();
+        let type_name = "tuple".to_owned();
+        let obj_ptr = vm.object_of_type(&type_name);
+
+        let mut chunks = Vec::new();
+        for node in content {
+            let intermediate = vm.execute(executors, node);
+
+            let mut chunk = CollectionChunk::empty();
+
+            for (path, address) in intermediate.result.into_iter(){
+                let kind = vm.get_object(&address).get_extension().first().unwrap();
+                let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+                chunk.add_representant(path, repr);    
+            }
+            
+            chunks.push(chunk);
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&obj_ptr);
+            obj.define_elements(chunks, Path::empty());
+        }
+
+        let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: vec![],
+            changes: vec!(),
+            result: mapping,
+        };
+
+        return execution_result;
+    }
+}
+
+pub struct PythonSet {}
+
+impl SetExecutor for PythonSet {
+    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+        let Environment { vm, executors } = env;
+
+        let type_name = "set".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);
 
         let mut chunks = Vec::new();

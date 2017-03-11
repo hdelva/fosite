@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
 
-use std::hash::{Hash, Hasher, SipHasher};
-
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeSet;
 
 pub struct IdentifierInvalid {
@@ -33,13 +33,13 @@ impl IdentifierInvalid {
 
 impl MessageContent for IdentifierInvalid {
     fn hash(&self) -> u64 {
-        let mut s = SipHasher::new();
+        let mut s = DefaultHasher::new();
         self.name.hash(&mut s);
         self.paths.hash(&mut s);
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, nodes: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
         self.print_error_preamble(sources, node);
         println!("  {} does not exist",
                  Bold.paint(&self.name));

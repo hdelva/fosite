@@ -1,7 +1,6 @@
 use super::*;
 
 use std::collections::HashSet;
-use std::collections::HashMap;
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
 use std::slice::Iter;
@@ -235,6 +234,16 @@ impl VirtualMachine {
         }
     }
 
+    pub fn set(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+        match executors.set {
+            Some(ref set) => {
+                let env = Environment::new(self, executors);
+                set.execute(env, content)
+            }
+            None => panic!("VM is not setup to execute set literals"),
+        }
+    }
+
     pub fn sequence(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
         match executors.sequence {
             Some(ref sequence) => {
@@ -418,6 +427,9 @@ impl VirtualMachine {
             }
             &NodeType::List { ref content } => {
                 self.list(executors, content)
+            }
+            &NodeType::Set { ref content } => {
+                self.set(executors, content)
             }
             &NodeType::Sequence {ref content } => {
                 self.sequence(executors, content)

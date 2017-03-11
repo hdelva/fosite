@@ -1,13 +1,12 @@
 use core::*;
 
-use std::collections::HashMap;
 use std::collections::BTreeSet;
 
 pub struct PythonIdentifier { }
 
 impl IdentifierExecutor for PythonIdentifier {
     fn execute(&self, env: Environment, name: &String) -> ExecutionResult {
-        let Environment { vm, executors } = env;
+        let Environment { vm, .. } = env;
 
         let mut unresolved = BTreeSet::new();
         unresolved.insert(Path::empty());

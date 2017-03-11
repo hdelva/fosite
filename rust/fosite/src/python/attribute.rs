@@ -1,6 +1,5 @@
 use core::*;
 
-use std::collections::HashMap;
 use std::collections::BTreeSet;
 
 pub struct PythonAttribute { }

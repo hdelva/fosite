@@ -1,7 +1,8 @@
 use super::Path;
 use super::MessageContent;
 
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 
 use term_painter::ToStyle;
 use term_painter::Color::*;
@@ -33,7 +34,7 @@ impl IdentifierUnsafe {
 
 impl MessageContent for IdentifierUnsafe {
     fn hash(&self) -> u64 {
-        let mut s = SipHasher::new();
+        let mut s = DefaultHasher::new();
         let mut fingerprint = 0;
 
         for path in self.paths.iter() {
@@ -49,7 +50,7 @@ impl MessageContent for IdentifierUnsafe {
         s.finish()
     }
 
-    fn print_message(&self, source: &Sources, nodes: &Nodes, node: GastID) {
+    fn print_message(&self, source: &Sources, _: &Nodes, node: GastID) {
         self.print_warning_preamble(source, node);
         println!("  New variable {} doesn't always exist",
                  Bold.paint(&self.name));

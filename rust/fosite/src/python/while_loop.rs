@@ -1,7 +1,6 @@
 use core::*;
 
 use core::Path;
-use std::collections::HashMap;
 use std::collections::btree_map::Entry;
 use std::collections::BTreeSet;
 use std::collections::BTreeMap;
@@ -229,9 +228,7 @@ impl PythonWhile {
                 let result = execution_result.result;
                 for (path, address) in result.iter() {
                     let object = vm.get_object(address);
-                    let tpe = object.get_extension()[0];
-
-                    let type_name = vm.knowledge().get_type_name(&tpe);
+                    let type_name = object.get_type_name(vm.knowledge());
 
                     match all_types.entry(type_name.clone()) {
                         Entry::Vacant(v) => {

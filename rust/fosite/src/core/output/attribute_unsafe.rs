@@ -8,7 +8,8 @@ use term_painter::Attr::*;
 use super::GastID;
 use super::GastNode;
 
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::BTreeSet;
 
@@ -34,7 +35,7 @@ impl AttributeUnsafe {
 
 impl MessageContent for AttributeUnsafe {
     fn hash(&self) -> u64 {
-        let mut s = SipHasher::new();
+        let mut s = DefaultHasher::new();
 
         let mut fingerprint = 0;
 
@@ -52,7 +53,7 @@ impl MessageContent for AttributeUnsafe {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, nodes: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
         self.print_warning_preamble(sources, node);
         println!("  Object {} does not always have an attribute {}",
                  Bold.paint(&self.parent),

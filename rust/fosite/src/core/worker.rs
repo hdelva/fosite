@@ -3,20 +3,8 @@ use super::CHANNEL;
 use std::thread::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::BTreeSet;
-use std::collections::BTreeMap;
 use super::GastID;
-use super::{Path, PathNode};
 use super::GastNode;
-use super::NodeType;
-
-use std::hash::Hash;
-
-use term_painter::ToStyle;
-use term_painter::Color::*;
-use term_painter::Attr::*;
-
-const DEBUG: bool = false;
 
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;

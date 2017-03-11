@@ -3,17 +3,14 @@ use super::Path;
 use super::PathNode;
 use super::GastID;
 
-use std::collections::hash_map::Entry;
 use std::cmp;
 use super::Mapping;
-use std::iter::FromIterator;
 use std::slice::Iter;
 use std::vec::IntoIter;
-use std::collections::HashSet;
-use std::collections::HashMap;
 use std::collections::btree_map;
 use std::collections::LinkedList;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Representant {
@@ -139,13 +136,13 @@ impl CollectionBranch {
     }
 
     fn first_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
-        let mut result = linearize(n as usize, &self.content, false);
+        let result = linearize(n as usize, &self.content, false);
         // todo, make efficient pls
         return result.iter().cloned().map(|x| x.iter().cloned().rev().collect()).collect();
     }
 
     fn last_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
-        let mut result = linearize(n as usize, &self.content, true);
+        let result = linearize(n as usize, &self.content, true);
         return result;
     }
 
@@ -181,11 +178,21 @@ impl CollectionBranch {
         return result;
     }
 
+    pub fn get_types(&self) -> BTreeSet<Pointer> {
+        let mut result = BTreeSet::new();
+        for chunk in self.content.iter() {
+            for (_, repr) in chunk.iter() {
+                result.insert(repr.kind.clone());
+            }
+        }
+        return result;
+    }
+
     pub fn get_first_n(&self, n: i16) -> Vec<Mapping> {
         let mut result = Vec::new();
 
         let mut combinations = self.first_combinations(n);
-        for i in 0..n {
+        for _ in 0..n {
             let mut element = Mapping::new();
             for mut combination in combinations.iter_mut() {
                 let mapping = combination.pop_front();
@@ -207,7 +214,7 @@ impl CollectionBranch {
         let mut result = Vec::new();
 
         let mut combinations = self.last_combinations(n);
-        for i in 0..n {
+        for _ in 0..n {
             let mut element = Mapping::new();
             for mut combination in combinations.iter_mut() {
                 let mapping = combination.pop_front();
@@ -440,7 +447,7 @@ impl Frame {
         let mut result = Mapping::new();
         let mut count = 0;
         for coll_mapping in self.content.iter() {
-            let &CollectionMapping {ref path, ref branch} = coll_mapping;
+            let &CollectionMapping {ref branch, ..} = coll_mapping;
             
             let possibilities = branch.get_element(n);
             let total = possibilities.len().clone() as i16;
@@ -485,6 +492,18 @@ impl Frame {
                 result.add_mapping(new_path, address.clone());
                 count += 1;
             }
+        }
+        return result;
+    }
+
+    pub fn get_types(&self) -> BTreeSet<Pointer> {
+        let mut result = BTreeSet::new();
+        for coll_mapping in self.content.iter() {
+            let &CollectionMapping {ref branch, ..} = coll_mapping;
+
+            let mut possibilities = branch.get_types();
+
+            result.append(&mut possibilities);
         }
         return result;
     }
@@ -769,6 +788,10 @@ impl Collection {
         self.current_frame().get_any_element(node)
     }
 
+    pub fn get_types(&self) -> BTreeSet<Pointer> {
+        self.current_frame().get_types()
+    }
+
     pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
         self.current_frame().get_first_n(n, node)
     }
@@ -839,7 +862,7 @@ fn linearize(n: usize,
 
                 // minimum has been reached, we can now move to the next chunk
                 // get all sequences of length `n - current_length`
-                let mut intermediate = linearize(n - pls.len(), next_chunk, reverse);
+                let intermediate = linearize(n - pls.len(), next_chunk, reverse);
 
                 // add the current stuff
                 // length becomes `n` now
@@ -861,7 +884,7 @@ fn linearize(n: usize,
                         continue 'representants;
                     } 
 
-                    let mut intermediate = linearize(n - pls.len(), next_chunk, reverse);
+                    let intermediate = linearize(n - pls.len(), next_chunk, reverse);
                     
                     // add the current stuff
                     // length becomes `n` now

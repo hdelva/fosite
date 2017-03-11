@@ -52,8 +52,6 @@ impl BoolOpExecutor for PythonBoolOp {
                 // the in operator isn't reflexive
                 // bit of an annoying special case
                 if op == "in" || op == "not in" {
-                    let object = vm.get_object(right_address);
-
                     let ancestors = vm.ancestors(right_address);
 
                     for ancestor in ancestors.iter().rev() {
@@ -98,14 +96,13 @@ impl BoolOpExecutor for PythonBoolOp {
 
                     result.add_mapping(new_path, new_object);
                 } else {
+                    let kb = vm.knowledge();
                     let left_object = vm.get_object(left_address);
-                    let left_type = left_object.get_extension().first().unwrap();
-                    let left_type_name = vm.knowledge().get_type_name(left_type).clone();
+                    let left_type = left_object.get_type_name(kb);
                     let right_object = vm.get_object(right_address);
-                    let right_type = right_object.get_extension().first().unwrap();
-                    let right_type_name = vm.knowledge().get_type_name(right_type).clone();
+                    let right_type = right_object.get_type_name(kb);
 
-                    match error.entry((left_type_name, right_type_name)) {
+                    match error.entry((left_type, right_type)) {
                         Entry::Vacant(o) => {
                             let mut left_set = BTreeSet::new();
                             let mut right_set = BTreeSet::new();

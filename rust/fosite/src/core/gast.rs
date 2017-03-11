@@ -40,6 +40,7 @@ pub enum NodeType {
     Float { value: f64 },
     String { value: String },
     List { content: Vec<GastNode> },
+    Set { content: Vec<GastNode> },
     Sequence { content: Vec<GastNode> },
     Block { content: Vec<GastNode> },
     If {
@@ -129,6 +130,7 @@ pub fn build(node: &Json) -> GastNode {
         "continue" => build_continue(id),
         "unop" => build_unop(id, node),
         "index" => build_index(id, node),
+        "set" => build_set(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -372,6 +374,18 @@ fn build_list(id: GastID, node: &Json) -> GastNode {
     }
 
     return GastNode::new(id, NodeType::List { content: content });
+}
+
+fn build_set(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    let array = obj.get("content").unwrap().as_array().unwrap();
+    let mut content = Vec::new();
+
+    for element in array {
+        content.push(build(element));
+    }
+
+    return GastNode::new(id, NodeType::Set { content: content });
 }
 
 fn build_sequence(id: GastID, node: &Json) -> GastNode {

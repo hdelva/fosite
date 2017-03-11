@@ -2,12 +2,13 @@ use super::Pointer;
 use super::OptionalMapping;
 use super::Path;
 use super::Collection;
-use super::Representant;
 use super::Scope;
 use super::Mapping;
 use super::GastID;
 use super::CollectionBranch;
 use super::CollectionChunk;
+use super::KnowledgeBase;
+
 
 /// objects
 // Object is composed of several properties it may or may not have
@@ -91,6 +92,34 @@ impl Object {
         if self.elements.num_frames() <= self.attributes.num_frames() {
             self.attributes.lift_branches()
         } 
+    }
+
+    pub fn get_type_name(&self, kb: &KnowledgeBase) -> String {
+        let mut types = Vec::new();
+
+        for t in self.extensions.iter() {
+            types.push(kb.get_type_name(t).clone());
+        }
+
+        let type_name = types.join(" & ");
+
+        // strings are technically collections
+        // but give them special treatment
+        if type_name == "string".to_owned() {
+            return type_name;
+        }
+
+        if self.is_type() {
+            return format!("subtype of {}", type_name);
+        }
+
+        let element_types: Vec<String> = self.elements.get_types().iter().map(|x| kb.get_type_name(x).clone()).collect();
+
+        if element_types.len() > 0 {
+            return format!("{}[{}]", type_name, element_types.join(&", ".to_owned()));
+        }
+
+        return type_name;
     }
 
     // attributes

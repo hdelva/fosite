@@ -14,7 +14,8 @@ use super::GastNode;
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 
 pub struct BinOpInvalid {
     operator: String,
@@ -32,16 +33,16 @@ impl BinOpInvalid {
 
 impl MessageContent for BinOpInvalid {
     fn hash(&self) -> u64 {
-        let mut s = SipHasher::new();
+        let mut s = DefaultHasher::new();
         self.operator.hash(&mut s);
         self.combinations.hash(&mut s);
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, nodes: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
         self.print_error_preamble(sources, node);
         println!("  Incompatible types for operation {}",
-                 Bold.paint(self.operator.clone()));
+            Bold.paint(&self.operator));
         println!("  The following combinations exist:");
 
         for (index, (types, paths)) in self.combinations.iter().enumerate() {
