@@ -55,6 +55,25 @@ impl BinOpExecutor for PythonBinOp {
                     }
                 }
 
+                // multiplying sequences with an integer is an annoying special case
+                let tuple_type = vm.knowledge().get_type(&"tuple".to_owned()).unwrap().clone();  
+                let list_type = vm.knowledge().get_type(&"list".to_owned()).unwrap().clone();  
+                let string_type = vm.knowledge().get_type(&"string".to_owned()).unwrap().clone();  
+                let int_type = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();    
+
+                let left_ancestors = vm.ancestors(left_address);
+                let right_ancestors = vm.ancestors(right_address);
+
+                let b1 = left_ancestors.contains(&tuple_type) 
+                    || left_ancestors.contains(&list_type)
+                    || left_ancestors.contains(&string_type);
+                let b2 = right_ancestors.contains(&tuple_type) 
+                    || right_ancestors.contains(&list_type)
+                    || right_ancestors.contains(&string_type); 
+                let b3 = right_ancestors.contains(&int_type);
+                let b4 = left_ancestors.contains(&int_type);            
+
+                // normal multiplication 
                 if vm.knowledge().operation_supported(&ancestor_name, op) {
                     let new_type = match &ancestor_name[..] {
                         "number" => "float".to_owned(),
@@ -81,6 +100,32 @@ impl BinOpExecutor for PythonBinOp {
                         let mut new_object = vm.get_object_mut(&new_ptr);
                         new_object.set_elements(new_col);
                     }                 
+                } else if b1 && b3 {
+                    let old_type;
+                    let collection;
+                    {
+                        let old_object = vm.get_object(left_address);
+                        old_type = old_object.get_extension().first().unwrap().clone();
+                        collection = old_object.get_elements().clone();
+                    }
+
+                    let new_ptr = vm.object_of_type_pointer(&old_type);
+                    result.add_mapping(new_path, new_ptr);
+                    let mut new_object = vm.get_object_mut(&new_ptr);
+                    new_object.set_elements(collection); 
+                } else if b2 && b4 {
+                    let old_type;
+                    let collection;
+                    {
+                        let old_object = vm.get_object(right_address);
+                        old_type = old_object.get_extension().first().unwrap().clone();
+                        collection = old_object.get_elements().clone();
+                    }
+
+                    let new_ptr = vm.object_of_type_pointer(&old_type);
+                    result.add_mapping(new_path, new_ptr);
+                    let mut new_object = vm.get_object_mut(&new_ptr);
+                    new_object.set_elements(collection); 
                 } else {
                     let kb = vm.knowledge();
                     let left_object = vm.get_object(left_address);

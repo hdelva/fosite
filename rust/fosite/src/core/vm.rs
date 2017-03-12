@@ -629,6 +629,14 @@ impl VirtualMachine {
         return pointer;
     }
 
+    pub fn object_of_type_pointer(&mut self, type_pointer: &Pointer) -> Pointer {
+        let pointer = self.memory.new_object();
+        let object = self.memory.get_object_mut(&pointer);
+        object.extend(type_pointer.clone());
+
+        return pointer;
+    }
+
     // todo, implement more generic
     pub fn declare_new_constant(&mut self, name: &String, tpe: &String) -> ExecutionResult {
         let pointer = self.object_of_type(tpe);
