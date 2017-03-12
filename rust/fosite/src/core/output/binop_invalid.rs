@@ -60,7 +60,7 @@ impl MessageContent for BinOpInvalid {
             println!("    Left side has type {}", left_type);
             println!("    In the following cases:");
 
-            if left_paths.len() == 0 {
+            if left_paths.iter().next().unwrap().len() == 0 {
                 println!("      {}", Red.bold().paint("Always"));
                 println!("");
             }
@@ -74,7 +74,7 @@ impl MessageContent for BinOpInvalid {
             println!("    Right side has type {}", right_type);
             println!("    In the following cases:");
 
-            if right_paths.len() == 0 {
+            if right_paths.iter().next().unwrap().len() == 0 {
                 println!("      {}", Red.bold().paint("Always"));
                 println!("");
             }

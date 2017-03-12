@@ -404,7 +404,7 @@ class Scan:
     source = self.expression(code.iter)
     conditions = [self.expression(condition) for condition in code.ifs]
 
-    generator = gast.Generator(source, target)
+    generator = gast.Generator(source, target, code.iter.lineno, code.iter.col_offset)
 
     if len(conditions) > 0:
       acc = conditions[0]
@@ -412,7 +412,7 @@ class Scan:
       for i in range(1, len(conditions)):
         acc = gast.BoolOp(acc, 'and', conditions[i], code.lineno, code.col_offset)
 
-      return gast.Filter(generator, acc)
+      return gast.Filter(generator, acc, code.iter.lineno, code.iter.col_offset)
 
     return generator
 
@@ -426,7 +426,7 @@ class Scan:
 
     fun = self.expression(code.elt)
 
-    mapped = gast.Map(acc, fun, code.lineno, code.col_offset)
+    mapped = [gast.Map(acc, fun, code.lineno, code.col_offset)]
     return gast.List(mapped, code.lineno, code.col_offset)
 
   def set_comprehension(self, code):
@@ -439,7 +439,7 @@ class Scan:
 
     fun = self.expression(code.elt)
 
-    mapped = gast.Map(acc, fun, code.lineno, code.col_offset)
+    mapped = [gast.Map(acc, fun, code.lineno, code.col_offset)]
     return gast.Set(mapped, code.lineno, code.col_offset)
 
   def generator_expression(self, code):
@@ -452,7 +452,7 @@ class Scan:
 
     fun = self.expression(code.elt)
 
-    mapped = gast.Map(acc, fun, code.lineno, code.col_offset)
+    mapped = [gast.Map(acc, fun, code.lineno, code.col_offset)]
     return mapped
 
   def conditional(self, code):
@@ -478,10 +478,9 @@ class Scan:
 
     body = self.block(code.body)
     orElse = self.block(code.orelse)
-
     self.loops = self.loops[:-1]
 
-    result = gast.While(test, body, orElse, code.lineno, code.col_offset)
+    result = gast.ForEach(generator, body, orElse, code.lineno, code.col_offset)
     box.target = result
 
     return result

@@ -23,6 +23,22 @@ class GastNode(object, metaclass=ABCMeta):
   def items(self):
     return self.__dict__.items()
 
+  def relabel(self):
+    global count
+    self.id = count
+    count += 1
+
+    for key in self.__dict__:
+      try:
+        child = self.__dict__[key]
+        child.relabel()
+      except:
+        try:
+          for pls in child:
+            pls.relabel()
+        except:
+          pass
+
   def str(self):
     result = 'Kind: ' + self.kind() + '\n'
 
@@ -596,7 +612,7 @@ class Stream(GastNode):
   pass
 
 class Generator(Stream):
-  def __init__(self, source: 'Iterable', target: 'Named', line=None, col=None):
+  def __init__(self, source: 'Iterable', target: 'Named', line, col):
     self.source = source
     self.target = target
     global count
@@ -605,12 +621,19 @@ class Generator(Stream):
     self.line = line
     self.col = col
 
-
   def kind(self):
     return constants.GENERATOR
 
+  def relabel(self):
+    global count
+    self.id = count
+    count += 1
+
+    self.source.relabel()
+    self.target.relabel()
+
 class Filter(Stream):
-  def __init__(self, source: 'Iterable', condition: 'BoolOp', line=None, col=None):
+  def __init__(self, source: 'Iterable', condition: 'BoolOp', line, col):
     self.source = source
     self.condition = condition
     global count
@@ -621,6 +644,14 @@ class Filter(Stream):
 
   def kind(self):
     return constants.FILTER
+
+  def relabel(self):
+    global count
+    self.id = count
+    count += 1
+
+    self.source.relabel()
+    self.condition.relabel()
 
 class Map(Stream):
   def __init__(self, source: 'Iterable', op: 'Expression', line, col):
@@ -635,6 +666,14 @@ class Map(Stream):
   def kind(self):
     return constants.MAP
 
+  def relabel(self):
+    global count
+    self.id = count
+    count += 1
+
+    self.source.relabel()
+    self.op.relabel()
+
 class AndThen(Stream):
   def __init__(self, first: 'Stream', second: 'Stream', line, col):
     self.first = first
@@ -647,3 +686,12 @@ class AndThen(Stream):
     
   def kind(self):
     return constants.ANDTHEN 
+
+
+def relabel(self):
+    global count
+    self.id = count
+    count += 1
+
+    self.first.relabel()
+    self.second.relabel()

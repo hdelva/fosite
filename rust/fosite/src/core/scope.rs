@@ -270,6 +270,11 @@ impl Scope {
         }
     }
 
+    pub fn pop_branch(&mut self) {
+        let _ = self.path.pop();
+        let _ = self.frames.pop();
+    }
+
     // should only be called when the last frames are Conditions or Loops
     fn merge_branches(&mut self) {
         if self.frames.len() == 1 {

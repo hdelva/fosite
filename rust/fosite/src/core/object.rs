@@ -74,6 +74,11 @@ impl Object {
         } 
     }
 
+    pub fn pop_branch(&mut self) {
+        self.elements.pop_branch();
+        self.attributes.pop_branch();
+    }
+
     pub fn merge_until(&mut self, cutoff: Option<GastID>) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
             self.elements.merge_until(cutoff)

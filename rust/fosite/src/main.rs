@@ -97,6 +97,10 @@ fn test_vm() {
         index: Some(Box::new(PythonIndex {})),
         set: Some(Box::new(PythonSet {})),
         dict: Some(Box::new(PythonDict {})),
+        generator: Some(Box::new(PythonGenerator {})),
+        filter: Some(Box::new(PythonFilter {})),
+        map: Some(Box::new(PythonMap {})),
+        andthen: Some(Box::new(PythonAndThen {})),
     };
 
     let mut s = String::new();

@@ -43,6 +43,8 @@ impl AssignExecutor for PythonAssign {
             result: mapping,
         };
     }
+
+    //pub fn direct(&self, env: Environment, target: &GastNode, )
 }
 
 impl PythonAssign {

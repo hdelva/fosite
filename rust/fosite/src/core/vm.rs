@@ -396,6 +396,46 @@ impl VirtualMachine {
         }
     }
 
+    pub fn generator(&mut self, executors: &Executors, source: &GastNode, target: &GastNode) -> ExecutionResult {
+        match executors.generator {
+            Some(ref generator) => {
+                let env = Environment::new(self, executors);
+                generator.execute(env, source, target)
+            }
+            None => panic!("VM is not setup to execute generators"),
+        }
+    }
+
+    pub fn filter_generator(&mut self, executors: &Executors, source: &GastNode, condition: &GastNode) -> ExecutionResult {
+        match executors.filter {
+            Some(ref filter) => {
+                let env = Environment::new(self, executors);
+                filter.execute(env, source, condition)
+            }
+            None => panic!("VM is not setup to filter generators"),
+        }
+    }
+
+    pub fn map(&mut self, executors: &Executors, source: &GastNode, op: &GastNode) -> ExecutionResult {
+        match executors.map {
+            Some(ref map) => {
+                let env = Environment::new(self, executors);
+                map.execute(env, source, op)
+            }
+            None => panic!("VM is not setup to map generators"),
+        }
+    }
+
+    pub fn andthen(&mut self, executors: &Executors, first: &GastNode, second: &GastNode) -> ExecutionResult {
+        match executors.andthen {
+            Some(ref andthen) => {
+                let env = Environment::new(self, executors);
+                andthen.execute(env, first, second)
+            }
+            None => panic!("VM is not setup to combine generators"),
+        }
+    }
+
     pub fn execute(&mut self, executors: &Executors, node: &GastNode) -> ExecutionResult {
         let ref id = node.id;
         let ref kind = node.kind;
@@ -450,6 +490,18 @@ impl VirtualMachine {
             &NodeType::Dict {ref content} => {
                 self.dict(executors, content)
             }
+            &NodeType::Generator {ref source, ref target} => {
+                self.generator(executors, source, target)
+            }
+            &NodeType::Filter {ref source, ref condition} => {
+                self.filter_generator(executors, source, condition)
+            }
+            &NodeType::Map {ref source, ref op} => {
+                self.map(executors, source, op)
+            }
+            &NodeType::AndThen {ref first, ref second} => {
+                self.andthen(executors, first, second)
+            }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };
 
@@ -501,6 +553,26 @@ impl VirtualMachine {
 
         if identifier_changed {
             self.scopes.last_mut().unwrap().merge_until(cutoff);
+        }
+    }
+
+    pub fn stop_branch(&mut self, changes: &Vec<AnalysisItem>) {
+        let mut identifier_changed = false;
+
+        let set: HashSet<_> = changes.iter().collect(); // dedup
+        let changes: Vec<_> = set.into_iter().collect();
+
+        for change in changes {
+            if let &AnalysisItem::Object { ref address, .. } = change {
+                let mut object = self.memory.get_object_mut(address);
+                object.pop_branch();
+            } else if let &AnalysisItem::Identifier { .. } = change {
+                identifier_changed = true;
+            }
+        }
+
+        if identifier_changed {
+            self.scopes.last_mut().unwrap().pop_branch();
         }
     }
 

@@ -9,42 +9,7 @@ impl ListExecutor for PythonList {
         let type_name = "list".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);
 
-        let mut changes = Vec::new();
-        let mut dependencies = Vec::new();
-
-        let mut chunks = Vec::new();
-        for node in content {
-            let mut intermediate = vm.execute(executors, node);
-
-            let mut chunk = CollectionChunk::empty();
-
-            for (path, address) in intermediate.result.into_iter(){
-                let kind = vm.get_object(&address).get_extension().first().unwrap();
-                let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
-                chunk.add_representant(path, repr);    
-            }
-
-            changes.append(&mut intermediate.changes);
-            dependencies.append(&mut intermediate.dependencies);
-            
-            chunks.push(chunk);
-        }
-
-        {
-            let mut obj = vm.get_object_mut(&obj_ptr);
-            obj.define_elements(chunks, Path::empty());
-        }
-
-        let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: dependencies,
-            changes: changes,
-            result: mapping,
-        };
-
-        return execution_result;
+        make_collection(vm, executors, obj_ptr, content)
     }
 }
 
@@ -57,42 +22,20 @@ impl SequenceExecutor for PythonTuple {
         let type_name = "tuple".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);
 
-        let mut changes = Vec::new();
-        let mut dependencies = Vec::new();
+        make_collection(vm, executors, obj_ptr, content)
+    }
+}
 
-        let mut chunks = Vec::new();
-        for node in content {
-            let mut intermediate = vm.execute(executors, node);
+pub struct PythonSet {}
 
-            let mut chunk = CollectionChunk::empty();
+impl SetExecutor for PythonSet {
+    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+        let Environment { vm, executors } = env;
 
-            for (path, address) in intermediate.result.into_iter(){
-                let kind = vm.get_object(&address).get_extension().first().unwrap();
-                let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
-                chunk.add_representant(path, repr);    
-            }
+        let type_name = "set".to_owned();
+        let obj_ptr = vm.object_of_type(&type_name);
 
-            changes.append(&mut intermediate.changes);
-            dependencies.append(&mut intermediate.dependencies);
-            
-            chunks.push(chunk);
-        }
-
-        {
-            let mut obj = vm.get_object_mut(&obj_ptr);
-            obj.define_elements(chunks, Path::empty());
-        }
-
-        let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: dependencies,
-            changes: changes,
-            result: mapping,
-        };
-
-        return execution_result;
+        make_collection(vm, executors, obj_ptr, content)
     }
 }
 
@@ -168,54 +111,6 @@ impl DictExecutor for PythonDict {
         }
 
         let mapping = Mapping::simple(Path::empty(), dict_ptr.clone());
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: dependencies,
-            changes: changes,
-            result: mapping,
-        };
-
-        return execution_result;
-    }
-}
-
-pub struct PythonSet {}
-
-impl SetExecutor for PythonSet {
-    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
-        let Environment { vm, executors } = env;
-
-        let type_name = "set".to_owned();
-        let obj_ptr = vm.object_of_type(&type_name);
-
-        let mut changes = Vec::new();
-        let mut dependencies = Vec::new();
-
-        let mut chunks = Vec::new();
-        for node in content {
-            let mut intermediate = vm.execute(executors, node);
-
-            let mut chunk = CollectionChunk::empty();
-
-            for (path, address) in intermediate.result.into_iter(){
-                let kind = vm.get_object(&address).get_extension().first().unwrap();
-                let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
-                chunk.add_representant(path, repr);    
-            }
-
-            changes.append(&mut intermediate.changes);
-            dependencies.append(&mut intermediate.dependencies);
-            
-            chunks.push(chunk);
-        }
-
-        {
-            let mut obj = vm.get_object_mut(&obj_ptr);
-            obj.define_elements(chunks, Path::empty());
-        }
-
-        let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
@@ -323,4 +218,124 @@ impl FloatExecutor for PythonFloat {
 
         return execution_result;
     }
+}
+
+fn make_collection(
+    vm: &mut VirtualMachine, 
+    executors: &Executors, 
+    obj_ptr: Pointer,
+    content: &Vec<GastNode>) 
+    -> ExecutionResult {
+
+    if let Some(node) = content.first() {
+        match &node.kind {
+            &NodeType::Map { .. } => {
+                collection_from_comprehension(vm, executors, obj_ptr, node)
+            },
+            _ => {
+                collection_from_literal(vm, executors, obj_ptr, content)
+            }
+        }
+    } else {
+        collection_from_literal(vm, executors, obj_ptr, content)
+    }
+}
+
+fn collection_from_comprehension(
+    vm: &mut VirtualMachine, 
+    executors: &Executors, 
+    obj_ptr: Pointer,
+    content: &GastNode,
+) -> ExecutionResult {
+
+    let mut path = vm.current_path().clone();
+    let node = PathNode::Frame(vm.current_node(), Some("comprehension".to_owned()), Box::new(Path::empty()));
+    path.add_node(node);
+    vm.push_path(path);
+
+    let content_result = vm.execute(executors, content);
+    let changes = content_result.changes;
+    let dependencies = content_result.dependencies;
+
+    let mut chunk = CollectionChunk::empty();
+    for (path, address) in content_result.result.into_iter() {
+        let obj = vm.get_object(&address);
+
+        // todo, replace current node with the node of the generator
+        for (el_path, el_address) in obj.get_any_element(&vm.current_node()).into_iter() {
+            let mut new_path = path.clone();
+            for node in el_path.into_iter() {
+                new_path.add_node(node);
+            }
+
+            let kind = vm.get_object(&el_address).get_extension().first().unwrap();
+            let repr = Representant::new(el_address, kind.clone(), Some(1), None);
+            chunk.add_representant(new_path, repr);  
+        }
+    }
+
+    {
+        let mut obj = vm.get_object_mut(&obj_ptr);
+        obj.define_elements(vec!(chunk), Path::empty());
+    }
+
+    vm.stop_branch(&changes);
+
+    let _ = vm.pop_path();
+
+    let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
+
+    let execution_result = ExecutionResult {
+        flow: FlowControl::Continue,
+        dependencies: dependencies,
+        changes: changes,
+        result: mapping,
+    };
+
+    return execution_result;
+}
+
+fn collection_from_literal(
+    vm: &mut VirtualMachine, 
+    executors: &Executors, 
+    obj_ptr: Pointer,
+    content: &Vec<GastNode>) 
+    -> ExecutionResult {
+
+    let mut changes = Vec::new();
+    let mut dependencies = Vec::new();
+
+    let mut chunks = Vec::new();
+    for node in content {
+        let mut intermediate = vm.execute(executors, node);
+
+        let mut chunk = CollectionChunk::empty();
+
+        for (path, address) in intermediate.result.into_iter(){
+            let kind = vm.get_object(&address).get_extension().first().unwrap();
+            let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+            chunk.add_representant(path, repr);    
+        }
+
+        changes.append(&mut intermediate.changes);
+        dependencies.append(&mut intermediate.dependencies);
+        
+        chunks.push(chunk);
+    }
+
+    {
+        let mut obj = vm.get_object_mut(&obj_ptr);
+        obj.define_elements(chunks, Path::empty());
+    }
+
+    let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
+
+    let execution_result = ExecutionResult {
+        flow: FlowControl::Continue,
+        dependencies: dependencies,
+        changes: changes,
+        result: mapping,
+    };
+
+    return execution_result;
 }

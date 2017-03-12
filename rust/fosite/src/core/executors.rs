@@ -24,6 +24,10 @@ pub struct Executors {
     pub index: Option<Box<IndexExecutor>>,
     pub set: Option<Box<SetExecutor>>,
     pub dict: Option<Box<DictExecutor>>,
+    pub generator: Option<Box<GeneratorExecutor>>,
+    pub filter: Option<Box<FilterExecutor>>,
+    pub map: Option<Box<MapExecutor>>,
+    pub andthen: Option<Box<AndThenExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -133,6 +137,22 @@ pub trait WhileExecutor {
                -> ExecutionResult;
 }
 
+pub trait GeneratorExecutor {
+    fn execute(&self, env: Environment, source: &GastNode, target: &GastNode) -> ExecutionResult;
+}
+
+pub trait FilterExecutor {
+    fn execute(&self, env: Environment, source: &GastNode, condition: &GastNode) -> ExecutionResult;
+}
+
+pub trait MapExecutor {
+    fn execute(&self, env: Environment, source: &GastNode, map: &GastNode) -> ExecutionResult;
+}
+
+pub trait AndThenExecutor {
+    fn execute(&self, env: Environment, first: &GastNode, second: &GastNode) -> ExecutionResult;
+}
+
 pub struct Environment<'a> {
     pub vm: &'a mut VirtualMachine,
     pub executors: &'a Executors,
@@ -166,3 +186,4 @@ impl<'a> Environment<'a> {
         self.vm
     }
 }
+

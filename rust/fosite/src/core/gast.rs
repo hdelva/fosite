@@ -75,6 +75,22 @@ pub enum NodeType {
     Index {
         target: Box<GastNode>,
         index: Box<GastNode>,
+    },
+    Generator {
+        source: Box<GastNode>,
+        target: Box<GastNode>,
+    },
+    Filter {
+        source: Box<GastNode>,
+        condition: Box<GastNode>,
+    },
+    Map {
+        source: Box<GastNode>,
+        op: Box<GastNode>,
+    },
+    AndThen {
+        first: Box<GastNode>,
+        second: Box<GastNode>,
     }
 }
 
@@ -135,6 +151,10 @@ pub fn build(node: &Json) -> GastNode {
         "set" => build_set(id, node),
         "dictionary" => build_dict(id, node),
         "pair" => build_pair(id, node),
+        "generator" => build_generator(id, node),
+        "filter" => build_filter(id, node),
+        "map" => build_map(id, node),
+        "andthen" => build_andthen(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -426,4 +446,52 @@ fn build_sequence(id: GastID, node: &Json) -> GastNode {
     }
 
     return GastNode::new(id, NodeType::Sequence { content: content });
+}
+
+fn build_generator(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    
+    let json_source = obj.get("source").unwrap();
+    let source = Box::new(build(json_source));
+
+    let json_target = obj.get("target").unwrap();
+    let target = Box::new(build(json_target));
+
+    return GastNode::new(id, NodeType::Generator { source: source, target: target });
+}
+
+fn build_filter(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    
+    let json_source = obj.get("source").unwrap();
+    let source = Box::new(build(json_source));
+
+    let json_condition = obj.get("condition").unwrap();
+    let condition = Box::new(build(json_condition));
+
+    return GastNode::new(id, NodeType::Filter { source: source, condition: condition });
+}
+
+fn build_map(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    
+    let json_source = obj.get("source").unwrap();
+    let source = Box::new(build(json_source));
+
+    let json_op = obj.get("op").unwrap();
+    let op = Box::new(build(json_op));
+
+    return GastNode::new(id, NodeType::Map { source: source, op: op });
+}
+
+fn build_andthen(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    
+    let json_first = obj.get("first").unwrap();
+    let first = Box::new(build(json_first));
+
+    let json_second = obj.get("second").unwrap();
+    let second = Box::new(build(json_second));
+
+    return GastNode::new(id, NodeType::AndThen { first: first, second: second });
 }

@@ -736,6 +736,11 @@ impl Collection {
         self.merge_branches();
     }
 
+    pub fn pop_branch(&mut self) {
+        let _ = self.path.pop();
+        let _ = self.frames.pop();
+    }
+
     pub fn merge_branches(&mut self) {
         if self.frames.len() < 2 {
             return;
