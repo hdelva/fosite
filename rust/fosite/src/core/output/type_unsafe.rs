@@ -14,6 +14,8 @@ use std::collections::hash_map::DefaultHasher;
 use super::GastID;
 use super::GastNode;
 
+use super::TYPE_UNSAFE;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
@@ -45,6 +47,7 @@ impl MessageContent for TypeUnsafe {
             }
         }
 
+        TYPE_UNSAFE.hash(&mut s);
         self.name.hash(&mut s);
         set.hash(&mut s);
         s.finish()

@@ -12,6 +12,8 @@ use super::GastNode;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
+use super::OUT_OF_BOUNDS;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
@@ -42,6 +44,7 @@ impl MessageContent for OutOfBounds {
             }
         }
 
+        OUT_OF_BOUNDS.hash(&mut s);
         self.target.hash(&mut s);
         fingerprint.hash(&mut s);
         s.finish()

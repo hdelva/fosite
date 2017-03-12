@@ -241,6 +241,130 @@ impl PythonAssign {
         };
     }
 
+    fn insert_dictionary(&self, 
+        vm: &mut VirtualMachine, 
+        target_address: &Pointer, 
+        index_mapping: &Mapping,
+        value_mapping: &Mapping) {
+
+        // todo this clone shouldn't be necessary
+        let current_path = vm.current_path().clone();
+
+        let keys;
+        let values;
+        {
+            let target_object = vm.get_object(target_address);
+
+            keys = target_object.get_attribute(&"___keys".to_owned()).clone();
+            values = target_object.get_attribute(&"___values".to_owned()).clone();
+        }
+        
+
+        let mut key_chunk = CollectionChunk::empty();
+        let mut value_chunk = CollectionChunk::empty();
+
+        for (path, pointer) in value_mapping.iter() {
+            let value_obj = vm.get_object(pointer);
+            let kind = value_obj.get_extension().first().unwrap();
+
+            value_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
+        }
+
+        for (path, pointer) in index_mapping.iter() {
+            let value_obj = vm.get_object(pointer);
+            let kind = value_obj.get_extension().first().unwrap();
+
+            key_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
+        }
+
+        for (_, opt_address) in values.iter() {
+            if let &Some(ref address) = opt_address {
+                // add the new element
+                let mut parent_object = vm.get_object_mut(address);
+
+                // add the new element
+                parent_object.append_element(value_chunk.clone(), current_path.clone());
+            }
+        }
+        
+        for (_, opt_address) in keys.iter() {
+            if let &Some(ref address) = opt_address {
+                // add the new element
+                let mut parent_object = vm.get_object_mut(address);
+
+                // add the new element
+                parent_object.append_element(key_chunk.clone(), current_path.clone());
+            }
+        }
+    }
+
+    fn insert_collection(&self, 
+        vm: &mut VirtualMachine, 
+        target: &GastNode,
+        target_address: &Pointer, 
+        mapping: &Mapping) {
+
+        // todo this clone shouldn't be necessary
+        let current_path = vm.current_path().clone();
+
+        let mut chunk = CollectionChunk::empty();
+
+        let mut max = Some(1);
+        for node in current_path.iter().rev() {
+            match node {
+                &PathNode::Loop(_, _) => {
+                    max = None;
+                    break;
+                },
+                &PathNode::Frame(_, _, _) => {
+                    break;
+                },
+                _ => ()
+            }
+        }
+
+        for (path, pointer) in mapping.iter() {
+            let value_obj = vm.get_object(pointer);
+            let kind = value_obj.get_extension().first().unwrap();
+
+            chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
+        }
+
+        // remember the type of the collection before the addition
+        let original_type;
+        {
+            let parent_object = vm.get_object(target_address);
+            let kb = vm.knowledge();
+            original_type = parent_object.get_type_name(kb);
+        }
+
+        // add the new element
+        {
+            let mut parent_object = vm.get_object_mut(target_address);
+
+            // add the new element
+            parent_object.insert_element(chunk, current_path.clone());
+        }
+
+        // get the new type of the
+        let new_type;
+        {
+            let parent_object = vm.get_object(target_address);
+            let kb = vm.knowledge();
+            new_type = parent_object.get_type_name(kb);
+        }
+
+        // check whether or not an element of a new type had been added
+        if !new_type.contains(&original_type) {
+            let content = HeteroCollection::new(target.to_string(), original_type, new_type);
+            let message = Message::Output {
+                source: vm.current_node(),
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
+        }
+    }
+
     fn assign_to_index(&self,
                            vm: &mut VirtualMachine,
                            executors: &Executors,
@@ -254,12 +378,17 @@ impl PythonAssign {
                                                                            target.to_string(),
                                                                            index.to_string())));
 
+        
+
         let target_result = vm.execute(executors, target);
-
         let target_mapping = target_result.result;
-        let dependencies = target_result.dependencies;
+        let mut dependencies = target_result.dependencies;
+        let mut changes = target_result.changes;
 
-        let mut changes = Vec::new();
+        let mut index_result = vm.execute(executors, index);
+        let index_mapping = index_result.result;
+        dependencies.append(&mut index_result.dependencies);
+        changes.append(&mut index_result.changes);
 
         let mut errors = BTreeMap::new();
 
@@ -268,12 +397,33 @@ impl PythonAssign {
         for (path, target_address) in target_mapping.iter() {
             // does this type of object support item assignment?
             {
-                let kb = vm.knowledge();
-                let seq_type = kb.get_type(&"mutable_sequence".to_owned()).unwrap();
-                let dict_type = kb.get_type(&"dict".to_owned()).unwrap();
+                let seq_type;
+                let dict_type;
+                
+                {
+                    let kb = vm.knowledge();
+                    seq_type = kb.get_type(&"mutable_sequence".to_owned()).unwrap().clone();
+                    dict_type = kb.get_type(&"dict".to_owned()).unwrap().clone();
+                }
+
                 let types = vm.ancestors(&target_address);
                 
-                if !(types.contains(seq_type) || types.contains(dict_type)) {
+                if types.contains(&seq_type) { 
+                    changes.push(AnalysisItem::Object { 
+                        address: target_address.clone(), 
+                        path: Some(vm.current_path().clone()) });
+
+                    self.insert_collection(vm, target, target_address, &mapping);
+                }
+                else if types.contains(&dict_type) {
+                    changes.push(AnalysisItem::Object { 
+                        address: target_address.clone(), 
+                        path: Some(vm.current_path().clone()) });
+
+                    self.insert_dictionary(vm, target_address, &index_mapping, &mapping);
+                }
+                else {
+                    let kb = vm.knowledge();
                     let target_object = vm.get_object(target_address);
                     let type_name = target_object.get_type_name(kb);
 
@@ -285,72 +435,10 @@ impl PythonAssign {
                             o.get_mut().push(path.clone());
                         }
                     };
-
-                    continue;
                 }
             }
 
-            // todo this clone shouldn't be necessary
-            let current_path = vm.current_path().clone();
-
-            let mut chunk = CollectionChunk::empty();
-
-            let mut max = Some(1);
-            for node in current_path.iter().rev() {
-                match node {
-                    &PathNode::Loop(_, _) => {
-                        max = None;
-                        break;
-                    },
-                    &PathNode::Frame(_, _, _) => {
-                        break;
-                    },
-                    _ => ()
-                }
-            }
-
-            for (path, pointer) in mapping.iter() {
-                let value_obj = vm.get_object(pointer);
-                let kind = value_obj.get_extension().first().unwrap();
-
-                chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
-            }
-
-            // remember the type of the collection before the addition
-            let original_type;
-            {
-                let parent_object = vm.get_object(target_address);
-                let kb = vm.knowledge();
-                original_type = parent_object.get_type_name(kb);
-            }
-
-            // add the new element
-            {
-                let mut parent_object = vm.get_object_mut(target_address);
-
-                // add the new element
-                parent_object.insert_element(chunk, current_path.clone());
-            }
-
-            // get the new type of the
-            let new_type;
-            {
-                let parent_object = vm.get_object(target_address);
-                let kb = vm.knowledge();
-                new_type = parent_object.get_type_name(kb);
-            }
-
-            // check whether or not an element of a new type had been added
-            if !new_type.contains(&original_type) {
-                let content = HeteroCollection::new(target.to_string(), original_type, new_type);
-                let message = Message::Output {
-                    source: vm.current_node(),
-                    content: Box::new(content),
-                };
-                &CHANNEL.publish(message);
-            }
-
-            changes.push(AnalysisItem::Object { address: target_address.clone(), path: Some(current_path) });
+            
         }
 
         if errors.len() > 0 {

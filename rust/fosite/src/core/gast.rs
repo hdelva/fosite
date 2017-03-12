@@ -41,6 +41,8 @@ pub enum NodeType {
     String { value: String },
     List { content: Vec<GastNode> },
     Set { content: Vec<GastNode> },
+    Dict { content: Vec<GastNode> },
+    Pair { first: Box<GastNode>, second: Box<GastNode> },
     Sequence { content: Vec<GastNode> },
     Block { content: Vec<GastNode> },
     If {
@@ -131,6 +133,8 @@ pub fn build(node: &Json) -> GastNode {
         "unop" => build_unop(id, node),
         "index" => build_index(id, node),
         "set" => build_set(id, node),
+        "dictionary" => build_dict(id, node),
+        "pair" => build_pair(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -386,6 +390,30 @@ fn build_set(id: GastID, node: &Json) -> GastNode {
     }
 
     return GastNode::new(id, NodeType::Set { content: content });
+}
+
+fn build_dict(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    let array = obj.get("content").unwrap().as_array().unwrap();
+    let mut content = Vec::new();
+
+    for element in array {
+        content.push(build(element));
+    }
+
+    return GastNode::new(id, NodeType::Dict { content: content });
+}
+
+fn build_pair(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+    
+    let json_first = obj.get("first").unwrap();
+    let first = Box::new(build(json_first));
+
+    let json_second = obj.get("second").unwrap();
+    let second = Box::new(build(json_second));
+
+    return GastNode::new(id, NodeType::Pair { first: first, second: second });
 }
 
 fn build_sequence(id: GastID, node: &Json) -> GastNode {

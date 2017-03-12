@@ -96,6 +96,7 @@ fn test_vm() {
         sequence: Some(Box::new(PythonTuple {})),
         index: Some(Box::new(PythonIndex {})),
         set: Some(Box::new(PythonSet {})),
+        dict: Some(Box::new(PythonDict {})),
     };
 
     let mut s = String::new();

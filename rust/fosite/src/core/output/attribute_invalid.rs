@@ -13,6 +13,8 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeSet;
 
+use super::ATTRIBUTE_INVALID;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
@@ -35,6 +37,7 @@ impl AttributeInvalid {
 impl MessageContent for AttributeInvalid {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
+        ATTRIBUTE_INVALID.hash(&mut s);
         self.parent.hash(&mut s);
         self.attribute.hash(&mut s);
         self.paths.hash(&mut s);

@@ -17,6 +17,8 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeSet;
 
+use super::IDENTIFIER_INVALID;
+
 pub struct IdentifierInvalid {
     name: String,
     paths: BTreeSet<Path>,
@@ -34,6 +36,7 @@ impl IdentifierInvalid {
 impl MessageContent for IdentifierInvalid {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
+        IDENTIFIER_INVALID.hash(&mut s);
         self.name.hash(&mut s);
         self.paths.hash(&mut s);
         s.finish()

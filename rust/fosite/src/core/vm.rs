@@ -244,6 +244,16 @@ impl VirtualMachine {
         }
     }
 
+    pub fn dict(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+        match executors.dict {
+            Some(ref dict) => {
+                let env = Environment::new(self, executors);
+                dict.execute(env, content)
+            }
+            None => panic!("VM is not setup to execute dictionary literals"),
+        }
+    }
+
     pub fn sequence(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
         match executors.sequence {
             Some(ref sequence) => {
@@ -437,7 +447,10 @@ impl VirtualMachine {
             &NodeType::Index {ref target, ref index} => {
                 self.index(executors, target, index)
             }
-            _ => panic!("Unsupported Operation"),
+            &NodeType::Dict {ref content} => {
+                self.dict(executors, content)
+            }
+            _ => panic!("Unsupported Operation\n{:?}", kind),
         };
 
         let _ = self.nodes.pop();

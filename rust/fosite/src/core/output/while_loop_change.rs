@@ -15,6 +15,8 @@ use super::GastNode;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
+use super::WHILE_LOOP_CHANGE;
+
 pub struct WhileLoopChange {
     paths: Vec<Path>,
 }
@@ -30,6 +32,7 @@ impl WhileLoopChange {
 impl MessageContent for WhileLoopChange {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
+        WHILE_LOOP_CHANGE.hash(&mut s);
         self.paths.hash(&mut s);
         s.finish()
     }

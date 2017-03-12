@@ -17,6 +17,8 @@ type Nodes = HashMap<GastID, GastNode>;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
+use super::BINOP_INVALID;
+
 pub struct BinOpInvalid {
     operator: String,
     combinations: BTreeMap<(String, String), (BTreeSet<Path>, BTreeSet<Path>)>,
@@ -34,6 +36,7 @@ impl BinOpInvalid {
 impl MessageContent for BinOpInvalid {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
+        BINOP_INVALID.hash(&mut s);
         self.operator.hash(&mut s);
         self.combinations.hash(&mut s);
         s.finish()
@@ -68,7 +71,7 @@ impl MessageContent for BinOpInvalid {
             }
 
             // right side
-            println!("    Right side has type {}", left_type);
+            println!("    Right side has type {}", right_type);
             println!("    In the following cases:");
 
             if right_paths.len() == 0 {

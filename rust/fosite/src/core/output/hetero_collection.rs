@@ -10,6 +10,8 @@ use super::GastNode;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
+use super::HETERO_COLLECTION;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
@@ -33,6 +35,7 @@ impl MessageContent for HeteroCollection {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
 
+        HETERO_COLLECTION.hash(&mut s);
         self.target.hash(&mut s);
         self.old_type.hash(&mut s);
         self.new_type.hash(&mut s);

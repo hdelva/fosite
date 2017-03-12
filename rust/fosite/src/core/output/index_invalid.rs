@@ -14,30 +14,30 @@ use std::collections::BTreeMap;
 
 use super::Path;
 
+use super::INDEX_INVALID;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
-use super::INSERT_INVALID;
-
-pub struct InsertInvalid {
+pub struct IndexInvalid {
     target: String,
     types: BTreeMap<String, Vec<Path>>,
 }
 
-impl InsertInvalid {
+impl IndexInvalid {
     pub fn new(target: String, types: BTreeMap<String, Vec<Path>>) -> Self {
-        InsertInvalid {
+        IndexInvalid {
             target: target,
             types: types,
         }
     }
 }
 
-impl MessageContent for InsertInvalid {
+impl MessageContent for IndexInvalid {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
 
-        INSERT_INVALID.hash(&mut s);
+        INDEX_INVALID.hash(&mut s);
         self.target.hash(&mut s);
         self.types.hash(&mut s);
         s.finish()
@@ -45,7 +45,7 @@ impl MessageContent for InsertInvalid {
 
     fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
         self.print_error_preamble(sources, node);
-        println!("  {} does not support item assignment", 
+        println!("  {} does not support indexing", 
             Bold.paint(&self.target));
         println!("  It has an incompatible type in the following cases:");
 

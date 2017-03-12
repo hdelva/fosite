@@ -13,6 +13,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::BTreeSet;
 
+use super::ATTRIBUTE_UNSAFE;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
@@ -47,6 +49,7 @@ impl MessageContent for AttributeUnsafe {
             }
         }
 
+        ATTRIBUTE_UNSAFE.hash(&mut s);
         self.parent.hash(&mut s);
         self.attribute.hash(&mut s);
         fingerprint.hash(&mut s);

@@ -9,9 +9,12 @@ impl ListExecutor for PythonList {
         let type_name = "list".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);
 
+        let mut changes = Vec::new();
+        let mut dependencies = Vec::new();
+
         let mut chunks = Vec::new();
         for node in content {
-            let intermediate = vm.execute(executors, node);
+            let mut intermediate = vm.execute(executors, node);
 
             let mut chunk = CollectionChunk::empty();
 
@@ -20,6 +23,9 @@ impl ListExecutor for PythonList {
                 let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
                 chunk.add_representant(path, repr);    
             }
+
+            changes.append(&mut intermediate.changes);
+            dependencies.append(&mut intermediate.dependencies);
             
             chunks.push(chunk);
         }
@@ -33,8 +39,8 @@ impl ListExecutor for PythonList {
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec!(),
+            dependencies: dependencies,
+            changes: changes,
             result: mapping,
         };
 
@@ -51,9 +57,12 @@ impl SequenceExecutor for PythonTuple {
         let type_name = "tuple".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);
 
+        let mut changes = Vec::new();
+        let mut dependencies = Vec::new();
+
         let mut chunks = Vec::new();
         for node in content {
-            let intermediate = vm.execute(executors, node);
+            let mut intermediate = vm.execute(executors, node);
 
             let mut chunk = CollectionChunk::empty();
 
@@ -62,6 +71,9 @@ impl SequenceExecutor for PythonTuple {
                 let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
                 chunk.add_representant(path, repr);    
             }
+
+            changes.append(&mut intermediate.changes);
+            dependencies.append(&mut intermediate.dependencies);
             
             chunks.push(chunk);
         }
@@ -75,8 +87,92 @@ impl SequenceExecutor for PythonTuple {
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec!(),
+            dependencies: dependencies,
+            changes: changes,
+            result: mapping,
+        };
+
+        return execution_result;
+    }
+}
+
+pub struct PythonDict {}
+
+impl DictExecutor for PythonDict {
+    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+        let Environment { vm, executors } = env;
+
+        let dict_type = "dict".to_owned();
+        let dict_ptr = vm.object_of_type(&dict_type);
+
+        let set_type = "set".to_owned();
+        let keys_ptr = vm.object_of_type(&set_type);
+        let values_ptr = vm.object_of_type(&set_type);
+
+        let mut key_chunks = Vec::new();
+        let mut value_chunks = Vec::new();
+
+        let mut changes = Vec::new();
+        let mut dependencies = Vec::new();
+
+        for node in content {
+            match node.kind {
+                NodeType::Pair {ref first, ref second} => {
+                    let intermediate = vm.execute(executors, first);
+                    let mut chunk = CollectionChunk::empty();
+
+                    for (path, address) in intermediate.result.into_iter(){
+                        let kind = vm.get_object(&address).get_extension().first().unwrap();
+                        let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+                        chunk.add_representant(path, repr);    
+                    }
+                    
+                    key_chunks.push(chunk);
+
+                    let mut intermediate = vm.execute(executors, second);
+                    let mut chunk = CollectionChunk::empty();
+
+                    for (path, address) in intermediate.result.into_iter(){
+                        let kind = vm.get_object(&address).get_extension().first().unwrap();
+                        let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+                        chunk.add_representant(path, repr);    
+                    }
+                    
+                    changes.append(&mut intermediate.changes);
+                    dependencies.append(&mut intermediate.dependencies);
+
+                    value_chunks.push(chunk);
+                },
+                _ => ()
+            } 
+            
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&keys_ptr);
+            obj.define_elements(key_chunks, Path::empty());
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&values_ptr);
+            obj.define_elements(value_chunks, Path::empty());
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&dict_ptr);
+            let keys_mapping = Mapping::simple(Path::empty(), keys_ptr.clone());
+            let values_mapping = Mapping::simple(Path::empty(), values_ptr.clone());
+
+            obj.assign_attribute("___keys".to_owned(), Path::empty(), keys_mapping);
+            obj.assign_attribute("___values".to_owned(), Path::empty(), values_mapping);
+        }
+
+        let mapping = Mapping::simple(Path::empty(), dict_ptr.clone());
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: dependencies,
+            changes: changes,
             result: mapping,
         };
 
@@ -93,9 +189,12 @@ impl SetExecutor for PythonSet {
         let type_name = "set".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);
 
+        let mut changes = Vec::new();
+        let mut dependencies = Vec::new();
+
         let mut chunks = Vec::new();
         for node in content {
-            let intermediate = vm.execute(executors, node);
+            let mut intermediate = vm.execute(executors, node);
 
             let mut chunk = CollectionChunk::empty();
 
@@ -104,6 +203,9 @@ impl SetExecutor for PythonSet {
                 let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
                 chunk.add_representant(path, repr);    
             }
+
+            changes.append(&mut intermediate.changes);
+            dependencies.append(&mut intermediate.dependencies);
             
             chunks.push(chunk);
         }
@@ -117,8 +219,8 @@ impl SetExecutor for PythonSet {
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec!(),
+            dependencies: dependencies,
+            changes: changes,
             result: mapping,
         };
 

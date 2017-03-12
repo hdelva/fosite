@@ -15,6 +15,8 @@ use std::collections::HashMap;
 
 use std::collections::BTreeSet;
 
+use super::IDENTIFIER_UNSAFE;
+
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
 
@@ -45,6 +47,7 @@ impl MessageContent for IdentifierUnsafe {
             }
         }
 
+        IDENTIFIER_UNSAFE.hash(&mut s);
         self.name.hash(&mut s);
         fingerprint.hash(&mut s);
         s.finish()

@@ -1,5 +1,8 @@
 use core::*;
 
+use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
+
 pub struct PythonIndex {
 
 }
@@ -41,16 +44,55 @@ impl IndexExecutor for PythonIndex {
         // index out of bounds warnings
         let mut warnings = Vec::new();
 
+        // indexing something that doesn't support indexing
+        let mut errors = BTreeMap::new();
+
         for (target_path, target_address) in target_mapping.iter() {
+            // does this type of object support indexation?
+            {
+                let kb = vm.knowledge();
+                let collection_type = kb.get_type(&"collection".to_owned()).unwrap();
+                let set_type = kb.get_type(&"set".to_owned()).unwrap();
+                let types = vm.ancestors(&target_address);
+                
+                if !(types.contains(collection_type)) || types.contains(set_type) {
+                    let target_object = vm.get_object(target_address);
+                    let type_name = target_object.get_type_name(kb);
+
+                    match errors.entry(type_name.clone()) {
+                        Entry::Vacant(v) => {
+                            v.insert(vec![target_path.clone()]);
+                        }
+                        Entry::Occupied(mut o) => {
+                            o.get_mut().push(target_path.clone());
+                        }
+                    };
+
+                    continue;
+                }
+            }
+
+
             // we obviously depend on the target object
             total_dependencies.push(AnalysisItem::Object { address: target_address.clone(), path: None });
 
-            let target_object = vm.get_object(target_address);
+            let mut target_object = vm.get_object(target_address);
+            let mut is_dict = false;
+            {
+                let kb = vm.knowledge();
+                let dict_type = kb.get_type(&"dict".to_owned()).unwrap();
+                if target_object.get_extension().contains(dict_type) {
+                    let pls = target_object.get_attribute(&"___values".to_owned());
+                    let (_, new_address) = pls.iter().next().unwrap();
+                    target_object = vm.get_object(&new_address.unwrap());
+                    is_dict = true;
+                }
+            }
             
             let value_mappings;
-            // getting a fixed value can be done more accurately
-            match &index.kind {
-                &NodeType::Int {ref value} => {
+            // getting a fixed value can be done more accurately on sequences
+            match (is_dict, &index.kind) {
+                (false, &NodeType::Int {ref value}) => {
                     let adjusted_value;
                     if *value >= 0 {
                         // +1 because `Collection::first_combinations` starts at 1, not 0
@@ -66,6 +108,7 @@ impl IndexExecutor for PythonIndex {
                             }
                         }
                     }
+
                     value_mappings = target_object.get_element(adjusted_value as i16, &current_node);
                 },
                 _ => {
@@ -88,6 +131,15 @@ impl IndexExecutor for PythonIndex {
 
         if warnings.len() > 0 {
             let content = OutOfBounds::new(target.to_string(), warnings);
+            let message = Message::Output {
+                source: vm.current_node(),
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
+        }
+
+        if errors.len() > 0 {
+            let content = IndexInvalid::new(target.to_string(), errors);
             let message = Message::Output {
                 source: vm.current_node(),
                 content: Box::new(content),

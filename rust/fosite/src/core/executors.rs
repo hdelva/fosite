@@ -23,6 +23,7 @@ pub struct Executors {
     pub sequence: Option<Box<SequenceExecutor>>,
     pub index: Option<Box<IndexExecutor>>,
     pub set: Option<Box<SetExecutor>>,
+    pub dict: Option<Box<DictExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -74,6 +75,10 @@ pub trait ListExecutor {
 }
 
 pub trait SetExecutor {
+    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+}
+
+pub trait DictExecutor {
     fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
 }
 
