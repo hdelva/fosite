@@ -2,6 +2,7 @@ use rustc_serialize::json::*;
 
 use super::Message;
 use super::CHANNEL;
+use super::AnalysisItem;
 
 pub type GastID = u16;
 
@@ -114,6 +115,21 @@ impl NodeType {
                 format!("{}", value)
             }
             _ => format!("Node {:?} doesn't have a string representation", self),
+        }
+    }
+
+    pub fn to_analysis_item(&self) -> Option<AnalysisItem> {
+        match self {
+            &NodeType::Identifier { ref name } => Some(AnalysisItem::Identifier(name.clone())),
+            &NodeType::Attribute { ref parent, ref attribute } => {
+                let parent_item = parent.as_ref().kind.to_analysis_item();
+                if let Some(item) = parent_item {
+                    Some(AnalysisItem::Attribute(Box::new(item), attribute.clone()))
+                } else {
+                    None
+                }
+            }  
+            _ => None,
         }
     }
 }

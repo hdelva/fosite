@@ -1,5 +1,6 @@
 use super::Pointer;
 use super::{Path, PathNode};
+use super::GastID;
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::{Iter, IntoIter};
@@ -43,6 +44,14 @@ impl Mapping {
 
     pub fn len(&self) -> usize {
         return self.possibilities.len();
+    }
+
+    pub fn prune(&self, cutoff: &GastID) -> Mapping {
+        let mut new = Mapping::new();
+        for (path, address) in self.iter() {
+            new.add_mapping(path.prune(cutoff), *address);
+        }
+        return new;
     }
 }
 

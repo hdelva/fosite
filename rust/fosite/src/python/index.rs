@@ -72,9 +72,8 @@ impl IndexExecutor for PythonIndex {
                 }
             }
 
-
             // we obviously depend on the target object
-            total_dependencies.push(AnalysisItem::Object { address: target_address.clone(), path: None });
+            total_dependencies.push(AnalysisItem::Object(target_address.clone()));
 
             let mut target_object = vm.get_object(target_address);
             let mut is_dict = false;

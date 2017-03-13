@@ -63,9 +63,11 @@ impl IdentifierExecutor for PythonIdentifier {
             &CHANNEL.publish(message);
         }
 
+        vm.store_identifier_dependency(AnalysisItem::Identifier(name.clone()), &mapping);
+
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
-            dependencies: vec![AnalysisItem::Identifier { name: name.clone() }],
+            dependencies: vec![AnalysisItem::Identifier(name.clone())],
             changes: vec![],
             result: mapping,
         };

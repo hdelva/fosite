@@ -43,8 +43,6 @@ impl AssignExecutor for PythonAssign {
             result: mapping,
         };
     }
-
-    //pub fn direct(&self, env: Environment, target: &GastNode, )
 }
 
 impl PythonAssign {
@@ -378,9 +376,7 @@ impl PythonAssign {
         let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node(),
                                                                    format!("{}[{}]",
                                                                            target.to_string(),
-                                                                           index.to_string())));
-
-        
+                                                                           index.to_string())));        
 
         let target_result = vm.execute(executors, target);
         let target_mapping = target_result.result;
@@ -396,12 +392,15 @@ impl PythonAssign {
 
         // add the object changes
         // perform the assignment
-        for (path, target_address) in target_mapping.iter() {
+        for (target_path, target_address) in target_mapping.iter() {
             // does this type of object support item assignment?
             {
                 let seq_type;
                 let dict_type;
-                
+
+                let mut new_path = vm.current_path().clone();
+                new_path.merge_into(target_path.clone());
+
                 {
                     let kb = vm.knowledge();
                     seq_type = kb.get_type(&"mutable_sequence".to_owned()).unwrap().clone();
@@ -411,17 +410,19 @@ impl PythonAssign {
                 let types = vm.ancestors(&target_address);
                 
                 if types.contains(&seq_type) { 
-                    changes.push(AnalysisItem::Object { 
-                        address: target_address.clone(), 
-                        path: Some(vm.current_path().clone()) });
+                    changes.push(AnalysisItem::Object(target_address.clone()));
 
+                    vm.store_object_change(target_address.clone(), &new_path);
+
+                    // todo, pass on the new_path
                     self.insert_collection(vm, target, target_address, &mapping);
                 }
                 else if types.contains(&dict_type) {
-                    changes.push(AnalysisItem::Object { 
-                        address: target_address.clone(), 
-                        path: Some(vm.current_path().clone()) });
+                    changes.push(AnalysisItem::Object(target_address.clone()));
 
+                    vm.store_object_change(target_address.clone(), &new_path);
+
+                    // todo, pass on the new_path
                     self.insert_dictionary(vm, target_address, &index_mapping, &mapping);
                 }
                 else {
@@ -431,16 +432,14 @@ impl PythonAssign {
 
                     match errors.entry(type_name.clone()) {
                         Entry::Vacant(v) => {
-                            v.insert(vec![path.clone()]);
+                            v.insert(vec![new_path]);
                         }
                         Entry::Occupied(mut o) => {
-                            o.get_mut().push(path.clone());
+                            o.get_mut().push(new_path);
                         }
                     };
                 }
-            }
-
-            
+            }   
         }
 
         if errors.len() > 0 {
@@ -450,13 +449,6 @@ impl PythonAssign {
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
-        }
-
-        // notify the vm a mapping has changed
-        // used to update watches
-        // dirty fix, assumes the first change is the relevant one
-        if let Some(change) = changes.first() {
-            vm.notify_change(change.clone(), mapping.clone());
         }
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
@@ -491,32 +483,34 @@ impl PythonAssign {
         let parent_mapping = result;
         let mut changes = Vec::new();
 
-        // add the attribute identifier changes
-        for dependency in dependencies.iter() {
-            if !dependency.is_object() {
-                changes.push(AnalysisItem::Attribute {
-                    parent: Box::new(dependency.clone()),
-                    name: attribute.clone(),
-                });
-            }
-        }
-
         // add the object changes
         // perform the assignment
-        for (_, parent_address) in parent_mapping.iter() {
+        for (parent_path, parent_address) in parent_mapping.iter() {
             // todo this clone shouldn't be necessary
-            let current_path = vm.current_path().clone();
+            let mut new_path = vm.current_path().clone();
+            new_path.merge_into(parent_path.clone());
 
-            changes.push(AnalysisItem::Object { address: parent_address.clone(), path: Some(current_path.clone()) });
+            changes.push(AnalysisItem::Object(parent_address.clone()));
+
+            vm.store_object_change(parent_address.clone(), &new_path);
 
             let mut parent_object = vm.get_object_mut(parent_address);
-            parent_object.assign_attribute(attribute.clone(), current_path, mapping.clone())
+            parent_object.assign_attribute(attribute.clone(), new_path, mapping.clone())
         }
 
-        // notify the vm a mapping has changed
-        // used to update watches
-        // dirty fix, assumes the first change is the relevant one
-        vm.notify_change(changes.first().unwrap().clone(), mapping.clone());
+        if let Some(item) = parent.kind.to_analysis_item() {
+            changes.push(AnalysisItem::Attribute (
+                Box::new(item.clone()),
+                attribute.clone(),
+            ));
+
+            let path = &vm.current_path().clone();
+            
+            vm.store_identifier_change(AnalysisItem::Attribute (
+                Box::new(item),
+                attribute.clone(),
+            ), &path, &parent_mapping);
+        }
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
@@ -534,7 +528,7 @@ impl PythonAssign {
                             target: &String,
                             mapping: &Mapping)
                             -> ExecutionResult {
-        let changes = vec![AnalysisItem::Identifier { name: target.clone() }];
+        let changes = vec![AnalysisItem::Identifier (target.clone())];
 
         // todo get rid of clone
         let mapping = mapping.clone()
@@ -542,15 +536,12 @@ impl PythonAssign {
 
         let path = vm.current_path().clone();
 
+        vm.store_identifier_change(AnalysisItem::Identifier(target.clone()), &path, &mapping);
+
         {
             let mut scope = vm.last_scope_mut();
             scope.set_mapping(target.clone(), path, mapping.clone());
         }
-
-        // notify the vm a mapping has changed
-        // used to update watches
-        // dirty fix, assumes the first change is the relevant one
-        vm.notify_change(changes.first().unwrap().clone(), mapping.clone());
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 

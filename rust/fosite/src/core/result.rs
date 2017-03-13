@@ -1,7 +1,6 @@
 use super::Pointer;
 use super::Mapping;
 use super::{GastNode, NodeType};
-use super::Path;
 
 #[derive(Debug, Clone)]
 pub enum FlowControl {
@@ -20,22 +19,17 @@ pub struct ExecutionResult {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AnalysisItem {
-    Identifier { name: String },
-    // we need the path if an object changes
-    // but irrelevant if it's a dependency
-    Object { address: Pointer, path: Option<Path> },
-    Attribute {
-        parent: Box<AnalysisItem>,
-        name: String,
-    },
+    Identifier(String),
+    Object(Pointer),
+    Attribute(Box<AnalysisItem>, String),
 }
 
 impl AnalysisItem {
     pub fn to_string(&self) -> String {
         match self {
-            &AnalysisItem::Identifier { ref name } => name.clone(),
-            &AnalysisItem::Object { ref address, .. } => format!("{}", address),
-            &AnalysisItem::Attribute { ref parent, ref name } => {
+            &AnalysisItem::Identifier ( ref name ) => name.clone(),
+            &AnalysisItem::Object ( ref address ) => format!("{}", address),
+            &AnalysisItem::Attribute ( ref parent, ref name ) => {
                 format!("{}.{}", parent.to_string(), name)
             }
         }
@@ -43,34 +37,34 @@ impl AnalysisItem {
 
     pub fn is_object(&self) -> bool {
         match self {
-            &AnalysisItem::Object { .. } => true,
+            &AnalysisItem::Object ( _ ) => true,
             _ => false,
         }
     }
 
     pub fn is_identifier(&self) -> bool {
         match self {
-            &AnalysisItem::Identifier { .. } => true,
+            &AnalysisItem::Identifier ( _ ) => true,
             _ => false,
         }
     }
 
     pub fn is_attribute(&self) -> bool {
         match self {
-            &AnalysisItem::Attribute { .. } => true,
+            &AnalysisItem::Attribute ( _, _ ) => true,
             _ => false,
         }
     }
 
     pub fn as_node(&self) -> GastNode {
         match self {
-            &AnalysisItem::Identifier { ref name } => {
+            &AnalysisItem::Identifier ( ref name ) => {
                 return GastNode {
                     id: 0,
                     kind: NodeType::Identifier { name: name.clone() },
                 }
             }
-            &AnalysisItem::Attribute { ref parent, ref name } => {
+            &AnalysisItem::Attribute ( ref parent, ref name ) => {
                 return GastNode {
                     id: 0,
                     kind: NodeType::Attribute {

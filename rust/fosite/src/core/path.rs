@@ -259,10 +259,10 @@ impl Path {
         return result;
     } 
 
-    pub fn prune(&self, cutoff: GastID) -> Path {
+    pub fn prune(&self, cutoff: &GastID) -> Path {
         let mut new = Path::empty();
         for node in self.nodes.iter() {
-            if node.get_location() > cutoff {
+            if node.get_location() > *cutoff {
                 new.add_node(node.clone());
             }
         }

@@ -91,7 +91,7 @@ impl PythonWhile {
 
         vm.change_branch(&total_changes);
 
-        self.check_changes(vm, &total_changes);
+        self.check_changes(vm);
 
         // labels all changes made with the Loop id
         vm.merge_branches(&total_changes);
@@ -106,103 +106,79 @@ impl PythonWhile {
         };
     }
 
-    fn check_changes(&self, vm: &mut VirtualMachine, changes: &Vec<AnalysisItem>) {
-        // we might need to prune some paths
-        let current_node = vm.current_node();
-
+    fn check_changes(&self, vm: &mut VirtualMachine) {
         let watch = vm.pop_watch();
-        let Watch {before, after, ..} = watch;
 
-        let mut relevant_objects = BTreeSet::new();
-        let mut changed_objects = BTreeMap::new();
+        // initialise an empty path as a problem path
+        // will get expanded everytime a variable is unchanged
+        let mut problems = vec!(Path::empty());
 
-        for (_, mapping) in before.iter() {
-            for (_, address) in mapping.iter() {
-                relevant_objects.insert(address.clone());
-            } 
-        }
+        // because the initial problem path is empty 
+        // it's only an actual problem if things get merged into it
+        let mut real_problem = false;
 
-        for change in changes {
-            if let &AnalysisItem::Object {address, ref path} = change {
-                if relevant_objects.contains(&address) {
-                    match changed_objects.entry(address.clone()) {
-                        Entry::Vacant(v) => {
-                            // don't take ownership of the path 
-                            // create a cloned version 
-                            // that doesn't include the current node
-                            v.insert(vec![path.as_ref().unwrap().prune(current_node)]);
-                        }
-                        Entry::Occupied(mut o) => {
-                            // create a cloned version 
-                            // that doesn't include the current node
-                            o.get_mut().push(path.as_ref().unwrap().prune(current_node));
-                        }
-                    };
+        for (identifier, addresses) in watch.identifiers_before.into_iter() {
+            // me too thanks
+            let mut same = BTreeSet::new();
+
+            let opt_mapping = watch.identifiers_changed.get(&identifier);
+
+            let identifier_invariants;
+            if let Some(new_mapping) = opt_mapping {
+                identifier_invariants = possible_identifier_invariants(new_mapping);
+            } else {
+                let mut pls = BTreeMap::new();
+                for address in addresses {
+                    let mut pls2 = BTreeSet::new();
+                    pls2.insert(Path::empty());
+                    pls.insert(address, pls2);
                 }
+                identifier_invariants = pls;
             }
-        }
 
-        if before.len() == 0 {
-            //todo warning, trivial loop condition
-        } else {
-            let (identifier, mapping)  = before.iter().next().unwrap();
-
-            let new_mapping = after.get(&identifier).unwrap();
-
-            // initialise an empty path as a problem path
-            // will get expanded everytime a variable is unchanged
-            let mut problems = vec!(Path::empty());
-
-            // because the initial problem path is empty 
-            // it's only an actual problem if things get merged into it
-            let mut real_problem = false;
-
-            for (_, address) in mapping.iter() {
-                // me too thanks
-                let mut same = Vec::new();
-                
-                for (new_path, new_address) in new_mapping.iter() {
-                    if address == new_address {
-                        if let Some(paths) = changed_objects.get(address) {
-                            // address hasn't changed 
-                            // but the object at that address has changed under some conditions 
-                            let mut invariants = possible_invariants(new_path, paths);
-                            if invariants.len() > 0 {
-                                real_problem = true;
-                            }
-                            same.append(&mut invariants);
-                        } else {
-                            // address hasn't changed 
-                            // object at that address hasn't either
+            for (address, identifier_paths) in identifier_invariants.into_iter() {
+                if let Some(object_paths) = watch.objects_changed.get(&address) {
+                    // address hasn't changed 
+                    // but the object at that address has changed under some conditions 
+                    for identifier_path in identifier_paths {
+                        let mut invariants = possible_object_invariants(&identifier_path, object_paths);
+                        if invariants.len() > 0 {
                             real_problem = true;
-                            same.push(new_path.clone());
                         }
+                        same.append(&mut invariants);
+                    }
+                } else {
+                    // address hasn't changed 
+                    // object at that address hasn't either
+                    real_problem = true;
+                    for identifier_path in identifier_paths {
+                        same.insert(identifier_path);
                     }
                 }
+            }
 
-                let mut new_problems = Vec::new();
+            let mut new_problems = Vec::new();
 
-                for problem in problems.into_iter() {
-                    for new_problem in same.iter() {
-                        if problem.mergeable(new_problem) {
-                            let mut new = problem.clone();
-                            new.merge_into(new_problem.clone());
-                            new_problems.push(new);
-                        }
+            for problem in problems.iter() {
+                for new_problem in same.iter() {
+                    if problem.mergeable(new_problem) {
+                        let mut new = problem.clone();
+                        new.merge_into(new_problem.clone());
+                        new_problems.push(new);
                     }
                 }
-
-                problems = new_problems;
             }
 
-            if real_problem {
-                let content = WhileLoopChange::new(problems);
-                let message = Message::Output {
-                    source: vm.current_node(),
-                    content: Box::new(content),
-                };
-                &CHANNEL.publish(message);
-            }
+            problems = new_problems;
+        }
+
+        if real_problem {
+            let content = WhileLoopChange::new(problems);
+            let message = Message::Output {
+                source: vm.current_node(),
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
         }
     }
 
@@ -215,8 +191,8 @@ impl PythonWhile {
                 let mut all_types = BTreeMap::new();
 
                 let execution_result = match change {
-                    &AnalysisItem::Identifier { ref name } => vm.load_identifier(executors, name),
-                    &AnalysisItem::Attribute { ref parent, ref name } => {
+                    &AnalysisItem::Identifier (ref name) => vm.load_identifier(executors, name),
+                    &AnalysisItem::Attribute (ref parent, ref name) => {
                         vm.load_attribute(executors, &parent.as_node(), name)
                     }
                     _ => {
@@ -253,7 +229,42 @@ impl PythonWhile {
     }
 }
 
-fn possible_invariants(parent_path: &Path, changes: &Vec<Path>) -> Vec<Path> {
+fn possible_identifier_invariants(changes: &Mapping) -> BTreeMap<Pointer, BTreeSet<Path>> {
+    let mut all_reversals = BTreeMap::new();
+    let mut all_changes = BTreeSet::new();
+
+    for (path, _) in changes.iter() {
+        all_changes.insert(path.clone());
+    }
+
+    for (path, address) in changes.iter(){
+        let change_reversals = path.reverse();
+        for reversal in change_reversals.iter().rev() {
+            for change in &all_changes {
+                if reversal.contains(change) {
+                    break;
+                }
+            }
+
+            println!("REV {:?}", reversal);
+
+            match all_reversals.entry(*address) {
+                Entry::Vacant(v) => {
+                    let mut acc = BTreeSet::new();
+                    acc.insert(path.clone());
+                    v.insert(acc);
+                }
+                Entry::Occupied(mut o) => {
+                    o.get_mut().insert(path.clone());
+                }
+            };
+        }
+    }
+
+    return all_reversals;
+}
+
+fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeSet<Path> {
     // remove obsolete entries first, i.e.
     // (1, 5) and (1, 5, 9)
     let mut all_reversals = BTreeSet::new();
@@ -265,7 +276,7 @@ fn possible_invariants(parent_path: &Path, changes: &Vec<Path>) -> Vec<Path> {
         }
     }
 
-    let mut possibilities = Vec::new();
+    let mut possibilities = BTreeSet::new();
     for reversal in all_reversals.into_iter() {
         let mut legit = true;
         for change in changes {
@@ -278,7 +289,7 @@ fn possible_invariants(parent_path: &Path, changes: &Vec<Path>) -> Vec<Path> {
         if legit && parent_path.mergeable(&reversal) {
             let mut new_path = parent_path.clone();
             new_path.merge_into(reversal);
-            possibilities.push(new_path);
+            possibilities.insert(new_path);
         }
     }
 

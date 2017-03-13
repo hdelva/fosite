@@ -231,8 +231,8 @@ impl PythonConditional {
                 let mut all_types = BTreeMap::new();
 
                 let execution_result = match change {
-                    &AnalysisItem::Identifier { ref name } => vm.load_identifier(executors, name),
-                    &AnalysisItem::Attribute { ref parent, ref name } => {
+                    &AnalysisItem::Identifier (ref name) => vm.load_identifier(executors, name),
+                    &AnalysisItem::Attribute (ref parent, ref name) => {
                         vm.load_attribute(executors, &parent.as_node(), name)
                     }
                     _ => {

@@ -21,17 +21,6 @@ impl AttributeExecutor for PythonAttribute {
         let mut dependencies = parent_result.dependencies;
         let mut changes = parent_result.changes;
 
-        for dependency in dependencies.iter() {
-            // there should be exactly one of these in there
-            if !dependency.is_object() {
-                total_dependencies.push(AnalysisItem::Attribute {
-                    parent: Box::new(dependency.clone()),
-                    name: name.clone(),
-                });
-                break;
-            }
-        }
-
         total_dependencies.append(&mut dependencies);
         total_changes.append(&mut changes);
 
@@ -39,20 +28,25 @@ impl AttributeExecutor for PythonAttribute {
         let mut error = BTreeSet::new();
 
         for (parent_path, parent_address) in parent_mapping.iter() {
-            total_dependencies.push(AnalysisItem::Object { address: parent_address.clone(), path: None });
+            total_dependencies.push(AnalysisItem::Object(parent_address.clone()));
 
-            let parent_object = vm.get_object(parent_address);
-            let opt_mappings = parent_object.get_attribute(name);
+            let opt_mappings;
+            let types;
+            {
+                let parent_object = vm.get_object(parent_address);
+                opt_mappings = parent_object.get_attribute(name).clone();
+                types = parent_object.get_extension().clone();
+            }
 
             // copy the actual possible paths
             // need the amount of actual paths to decide whether or not to send a warning
             let mut actual_paths = Vec::new();
-            for (path, opt_address) in opt_mappings.iter() {
+            for (path, opt_address) in opt_mappings.into_iter() {
                 if parent_path.mergeable(&path) {
                     let mut new_path = parent_path.clone();
 
                     // todo can probably remove this clone
-                    new_path.merge_into(path.clone());
+                    new_path.merge_into(path);
                     actual_paths.push((new_path, opt_address));
                 }
             }
@@ -60,7 +54,7 @@ impl AttributeExecutor for PythonAttribute {
             let num_paths = actual_paths.len();
 
             for (path, opt_address) in actual_paths.into_iter() {
-                if let &Some(address) = opt_address {
+                if let Some(address) = opt_address {
                     mapping.add_mapping(path, address.clone());
                 } else {
                     unresolved.insert(path.clone());
@@ -75,8 +69,6 @@ impl AttributeExecutor for PythonAttribute {
 
             // look for the attribute in its types
             if unresolved.len() > 0 {
-                let types = parent_object.get_extension();
-
                 if types.len() == 0 {
                     for unmet in unresolved.iter() {
                         // todo, add type information as well
@@ -94,12 +86,13 @@ impl AttributeExecutor for PythonAttribute {
                                 new_path.add_node(pls.clone());
                             }
 
-                            if opt_address.is_none() {
-                                // todo, add type information as well
-                                error.insert(new_path);
-                                continue;
+                            if let Some(address) = opt_address {
+                                // update watches in the VM 
+                                vm.store_object_dependency(parent_address.clone());
+
+                                mapping.add_mapping(new_path, address);
                             } else {
-                                mapping.add_mapping(new_path, opt_address.unwrap());
+                                error.insert(new_path);
                             }
                         }
                     }
@@ -123,6 +116,18 @@ impl AttributeExecutor for PythonAttribute {
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
+        }
+
+        if let Some(item) = parent.kind.to_analysis_item() {
+            total_dependencies.push(AnalysisItem::Attribute (
+                Box::new(item.clone()),
+                name.clone(),
+            ));
+            
+            vm.store_identifier_dependency(AnalysisItem::Attribute (
+                Box::new(item),
+                name.clone(),
+            ), &parent_mapping);
         }
 
         return ExecutionResult {

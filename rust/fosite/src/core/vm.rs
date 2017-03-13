@@ -56,7 +56,8 @@ impl VirtualMachine {
     }
 
     pub fn start_watch(&mut self) {
-        self.watches.push(Watch::new());
+        let node = self.current_node();
+        self.watches.push(Watch::new(node));
     }
 
     pub fn toggle_watch(&mut self) {
@@ -67,10 +68,27 @@ impl VirtualMachine {
         self.watches.pop().unwrap()
     }
 
-    //
-    pub fn notify_change(&mut self, identifier: AnalysisItem, mapping: Mapping) {
+    pub fn store_identifier_dependency(&mut self, identifier: AnalysisItem, mapping: &Mapping) {
         if let Some(watch) = self.watches.last_mut() {
-            watch.store(identifier, mapping);
+            watch.store_identifier_dependency(identifier, mapping);
+        }
+    }
+
+    pub fn store_object_dependency(&mut self, address: Pointer) {
+        if let Some(watch) = self.watches.last_mut() {
+            watch.store_object_dependency(address);
+        }
+    }
+
+    pub fn store_identifier_change(&mut self, identifier: AnalysisItem, path: &Path, mapping: &Mapping) {
+        if let Some(watch) = self.watches.last_mut() {
+            watch.store_identifier_change(identifier, path, mapping);
+        }
+    }
+
+    pub fn store_object_change(&mut self, pointer: Pointer, path: &Path) {
+        if let Some(watch) = self.watches.last_mut() {
+            watch.store_object_change(pointer, path);
         }
     }
 
@@ -267,18 +285,8 @@ impl VirtualMachine {
     pub fn load_identifier(&mut self, executors: &Executors, name: &String) -> ExecutionResult {
         match executors.identifier {
             Some(ref identifier) => {
-                let result;
-                {
-                    let env = Environment::new(self, executors);
-                    result = identifier.execute(env, name);
-                }
-
-                if let Some(watch) = self.watches.last_mut() {
-                    // bit dirty, assumes that the relevant dependency is the first one
-                    watch.store(result.dependencies.first().unwrap().clone(), result.result.clone());
-                }
-
-                return result;
+                let env = Environment::new(self, executors);
+                identifier.execute(env, name)
             }
             None => panic!("VM is not setup to execute identifiers"),
         }
@@ -291,18 +299,8 @@ impl VirtualMachine {
                           -> ExecutionResult {
         match executors.attribute {
             Some(ref attribute) => {
-                let result;
-                {
-                    let env = Environment::new(self, executors);
-                    result = attribute.execute(env, parent, name);
-                }
-
-                if let Some(watch) = self.watches.last_mut() {
-                    // bit dirty, assumes that the relevant dependency is the first one
-                    watch.store(result.dependencies.first().unwrap().clone(), result.result.clone());
-                }
-
-                return result;
+                let env = Environment::new(self, executors);
+                attribute.execute(env, parent, name)
             }
             None => panic!("VM is not setup to execute attributes"),
         }
@@ -519,10 +517,10 @@ impl VirtualMachine {
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address, .. } = change {
+            if let &AnalysisItem::Object(ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.change_branch();
-            } else if let &AnalysisItem::Identifier { .. } = change {
+            } else if let &AnalysisItem::Identifier( _ ) = change {
                 identifier_changed = true;
             }
         }
@@ -543,10 +541,10 @@ impl VirtualMachine {
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address, .. } = change {
+            if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_until(cutoff);
-            } else if let &AnalysisItem::Identifier { .. } = change {
+            } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
@@ -563,10 +561,10 @@ impl VirtualMachine {
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address, .. } = change {
+            if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.pop_branch();
-            } else if let &AnalysisItem::Identifier { .. } = change {
+            } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
@@ -601,10 +599,10 @@ impl VirtualMachine {
         let mut identifier_changed = false;
 
         for change in changes {
-            if let &AnalysisItem::Object { ref address, .. } = change {
+            if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.lift_branches();
-            } else if let &AnalysisItem::Identifier { .. } = change {
+            } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
@@ -650,7 +648,7 @@ impl VirtualMachine {
         return ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier { name: name.clone() }],
+            changes: vec![AnalysisItem::Identifier (name.clone())],
             result: result,
         };
     }

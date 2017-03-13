@@ -30,13 +30,16 @@ impl GeneratorExecutor for PythonGenerator {
         let mapping = mapping.clone()
             .augment(PathNode::Assignment(vm.current_node(), target.to_string()));
 
+        changes.push(AnalysisItem::Identifier(target.to_string()));
+
         let path = vm.current_path().clone();
+
+        vm.store_identifier_change(AnalysisItem::Identifier(target.to_string()), &path, &mapping);
+
         {
             let mut scope = vm.last_scope_mut();
             scope.set_mapping(target.to_string(), path, mapping);
         }
-
-        changes.push(AnalysisItem::Identifier { name: target.to_string() });
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
