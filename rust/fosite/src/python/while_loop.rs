@@ -4,6 +4,7 @@ use core::Path;
 use std::collections::btree_map::Entry;
 use std::collections::BTreeSet;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 pub struct PythonWhile { }
 
@@ -125,7 +126,7 @@ impl PythonWhile {
 
             let identifier_invariants;
             if let Some(new_mapping) = opt_mapping {
-                identifier_invariants = possible_identifier_invariants(new_mapping);
+                identifier_invariants = possible_identifier_invariants(&addresses, new_mapping);
             } else {
                 let mut pls = BTreeMap::new();
                 for address in addresses {
@@ -229,7 +230,7 @@ impl PythonWhile {
     }
 }
 
-fn possible_identifier_invariants(changes: &Mapping) -> BTreeMap<Pointer, BTreeSet<Path>> {
+fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> BTreeMap<Pointer, BTreeSet<Path>> {
     let mut all_reversals = BTreeMap::new();
     let mut all_changes = BTreeSet::new();
 
@@ -238,15 +239,18 @@ fn possible_identifier_invariants(changes: &Mapping) -> BTreeMap<Pointer, BTreeS
     }
 
     for (path, address) in changes.iter(){
-        let change_reversals = path.reverse();
+        let mut change_reversals = path.reverse();
+
+        if old.contains(address) {
+            change_reversals.push(path.clone());
+        }
+
         for reversal in change_reversals.iter().rev() {
             for change in &all_changes {
                 if reversal.contains(change) {
                     break;
                 }
             }
-
-            println!("REV {:?}", reversal);
 
             match all_reversals.entry(*address) {
                 Entry::Vacant(v) => {
