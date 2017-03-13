@@ -5,6 +5,7 @@ mod out_of_bounds;
 mod type_unsafe;
 mod while_loop_change;
 mod hetero_collection;
+mod for_loop_change;
 
 pub use self::identifier_unsafe::*;
 pub use self::attribute_unsafe::*;
@@ -12,6 +13,7 @@ pub use self::out_of_bounds::*;
 pub use self::type_unsafe::*;
 pub use self::while_loop_change::*;
 pub use self::hetero_collection::*;
+pub use self::for_loop_change::*;
 
 pub use super::*;
 
@@ -35,6 +37,7 @@ pub const OUT_OF_BOUNDS: i16 = 3;
 pub const TYPE_UNSAFE: i16 = 4;
 pub const WHILE_LOOP_CHANGE: i16 = 5;
 pub const HETERO_COLLECTION: i16 = 6;
+pub const FOR_LOOP_CHANGE: i16 = 7;
 
 pub const IDENTIFIER_INVALID: i16 = -1;
 pub const ATTRIBUTE_INVALID: i16 = -2;

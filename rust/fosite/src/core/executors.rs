@@ -28,6 +28,7 @@ pub struct Executors {
     pub filter: Option<Box<FilterExecutor>>,
     pub map: Option<Box<MapExecutor>>,
     pub andthen: Option<Box<AndThenExecutor>>,
+    pub foreach: Option<Box<ForEachExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -136,6 +137,15 @@ pub trait WhileExecutor {
                body: &GastNode)
                -> ExecutionResult;
 }
+
+pub trait ForEachExecutor {
+    fn execute(&self,
+               env: Environment,
+               before: &GastNode,
+               body: &GastNode)
+               -> ExecutionResult;
+}
+
 
 pub trait GeneratorExecutor {
     fn execute(&self, env: Environment, source: &GastNode, target: &GastNode) -> ExecutionResult;

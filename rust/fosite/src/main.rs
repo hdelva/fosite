@@ -101,6 +101,7 @@ fn test_vm() {
         filter: Some(Box::new(PythonFilter {})),
         map: Some(Box::new(PythonMap {})),
         andthen: Some(Box::new(PythonAndThen {})),
+        foreach: Some(Box::new(PythonFor {})),
     };
 
     let mut s = String::new();

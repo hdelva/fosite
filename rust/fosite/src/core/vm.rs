@@ -232,6 +232,20 @@ impl VirtualMachine {
         }
     }
 
+    pub fn foreach(&mut self,
+                       executors: &Executors,
+                       before: &GastNode,
+                       body: &GastNode)
+                       -> ExecutionResult {
+        match executors.foreach {
+            Some(ref foreach) => {
+                let env = Environment::new(self, executors);
+                foreach.execute(env, before, body)
+            }
+            None => panic!("VM is not setup to execute foreach loops"),
+        }
+    }
+
     pub fn block(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
         match executors.block {
             Some(ref block) => {
@@ -499,6 +513,9 @@ impl VirtualMachine {
             }
             &NodeType::AndThen {ref first, ref second} => {
                 self.andthen(executors, first, second)
+            }
+            &NodeType::ForEach {ref before, ref body} => {
+                self.foreach(executors, before, body)
             }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };

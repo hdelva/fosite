@@ -15,32 +15,32 @@ use super::GastNode;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
-use super::WHILE_LOOP_CHANGE;
+use super::FOR_LOOP_CHANGE;
 
-pub struct WhileLoopChange {
+pub struct ForLoopChange {
     paths: Vec<Path>,
 }
 
-impl WhileLoopChange {
+impl ForLoopChange {
     pub fn new(paths: Vec<Path>) -> Self {
-        WhileLoopChange {
+        ForLoopChange {
             paths: paths,
         }
     }
 }
 
-impl MessageContent for WhileLoopChange {
+impl MessageContent for ForLoopChange {
     fn hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
-        WHILE_LOOP_CHANGE.hash(&mut s);
+        FOR_LOOP_CHANGE.hash(&mut s);
         self.paths.hash(&mut s);
         s.finish()
     }
 
     fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
         self.print_warning_preamble(sources, node);
-        println!("  Not all code paths update the loop condition");
-        println!("  There's a risk of endless loops");
+        println!("  Some code paths change the collection that's being iterated over");
+        println!("  This can have unexpected consequences");
         println!("  In the following cases:");
 
         if self.paths.first().unwrap().len() == 0 {

@@ -15,32 +15,34 @@ impl ForEachExecutor for PythonFor {
                -> ExecutionResult {
         let Environment { vm, executors } = env;
 
-        let mut total_changes = Vec::new();
-        let mut total_dependencies = Vec::new();
-
-        vm.start_watch();
-        let test_result = vm.execute(executors, before);
-        vm.toggle_watch();
-
-        for change in test_result.changes.into_iter() {
-            total_changes.push(change);
-        }
-
-        for dependency in test_result.dependencies.into_iter() {
-            total_dependencies.push(dependency);
-        }
-
         // register this node as a branch
         let id = vm.current_node().clone();
         vm.push_branch(id);
 
+        let mut total_changes = Vec::new();
+        let mut total_dependencies = Vec::new();
 
-        let result = self.branch(vm, executors, body, total_changes, total_dependencies);
+        vm.start_watch();
+        let mut gen_result = vm.execute(executors, before);
+        vm.toggle_watch();
+
+        total_changes.append(&mut gen_result.changes);
+        total_dependencies.append(&mut gen_result.dependencies);
+
+        let mut result = self.branch(vm, executors, body);
+
+        total_changes.append(&mut result.changes);
+        total_dependencies.append(&mut result.dependencies);
 
         // register this node as a branch
         vm.pop_branch();
 
-        return result;
+        return ExecutionResult {
+            changes: total_changes,
+            dependencies: total_dependencies,
+            flow: FlowControl::Continue,
+            result: Mapping::new(),
+        };
     }
 }
 
@@ -48,12 +50,10 @@ impl PythonFor {
     fn branch(&self,
               vm: &mut VirtualMachine,
               executors: &Executors,
-              body: &GastNode,
-              c: Vec<AnalysisItem>,
-              d: Vec<AnalysisItem>) -> ExecutionResult {
+              body: &GastNode) -> ExecutionResult {
                           
-        let mut total_changes = c;
-        let mut total_dependencies = d;
+        let mut total_changes = Vec::new();
+        let mut total_dependencies = Vec::new();
 
         let mut positive;
         let mut negative;
@@ -78,7 +78,7 @@ impl PythonFor {
 
         vm.change_branch(&total_changes);
 
-        self.check_changes(vm, &total_changes);
+        self.check_changes(vm);
 
         // labels all changes made with the Loop id
         vm.merge_branches(&total_changes);
@@ -93,86 +93,33 @@ impl PythonFor {
         };
     }
 
-    fn check_changes(&self, vm: &mut VirtualMachine, changes: &Vec<AnalysisItem>) {
-        // we might need to prune some paths
-        let current_node = vm.current_node();
+    fn check_changes(&self, vm: &mut VirtualMachine) {
+        let mut watch = vm.pop_watch();
 
-        let watch = vm.pop_watch();
-        let Watch {before, after, ..} = watch;
+        let mut problems = vec!();
 
-        let mut relevant_objects = BTreeSet::new();
-        let mut changed_objects = BTreeMap::new();
-
-        for (_, mapping) in before.iter() {
-            for (_, address) in mapping.iter() {
-                relevant_objects.insert(address.clone());
-            } 
-        }
-
-
-
-        if before.len() == 0 {
-            //todo warning, trivial loop condition
-        } else {
-            let (identifier, mapping)  = before.iter().next().unwrap();
-
-            let new_mapping = after.get(&identifier).unwrap();
-
-            // initialise an empty path as a problem path
-            // will get expanded everytime a variable is unchanged
-            let mut problems = vec!(Path::empty());
-
-            // because the initial problem path is empty 
-            // it's only an actual problem if things get merged into it
-            let mut real_problem = false;
-
-            for (_, address) in mapping.iter() {
-                // me too thanks
-                let mut same = Vec::new();
-                
-                for (new_path, new_address) in new_mapping.iter() {
-                    if address == new_address {
-                        if let Some(paths) = changed_objects.get(address) {
-                            // address hasn't changed 
-                            // but the object at that address has changed under some conditions 
-                            let mut invariants = possible_invariants(new_path, paths);
-                            if invariants.len() > 0 {
-                                real_problem = true;
-                            }
-                            same.append(&mut invariants);
-                        } else {
-                            // address hasn't changed 
-                            // object at that address hasn't either
-                            real_problem = true;
-                            same.push(new_path.clone());
-                        }
-                    }
+        for (identifier, addresses) in watch.identifiers_before.into_iter() {
+            for address in addresses {
+                if let Some(object_paths) = watch.objects_changed.get_mut(&address) {
+                    problems.append(object_paths);
                 }
-
-                let mut new_problems = Vec::new();
-
-                for problem in problems.into_iter() {
-                    for new_problem in same.iter() {
-                        if problem.mergeable(new_problem) {
-                            let mut new = problem.clone();
-                            new.merge_into(new_problem.clone());
-                            new_problems.push(new);
-                        }
-                    }
-                }
-
-                problems = new_problems;
             }
 
-            if real_problem {
-                let content = WhileLoopChange::new(problems);
-                let message = Message::Output {
-                    source: vm.current_node(),
-                    content: Box::new(content),
-                };
-                &CHANNEL.publish(message);
+            if let Some(mapping) = watch.identifiers_changed.get(&identifier) {
+                for (path, _) in mapping.iter() {
+                    problems.push(path.clone());
+                }
             }
         }
+
+        if problems.len() > 0 {
+            let content = ForLoopChange::new(problems);
+            let message = Message::Output {
+                source: vm.current_node(),
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
+        }   
     }
 
     fn check_types(&self,
@@ -184,8 +131,8 @@ impl PythonFor {
                 let mut all_types = BTreeMap::new();
 
                 let execution_result = match change {
-                    &AnalysisItem::Identifier { ref name } => vm.load_identifier(executors, name),
-                    &AnalysisItem::Attribute { ref parent, ref name } => {
+                    &AnalysisItem::Identifier (ref name) => vm.load_identifier(executors, name),
+                    &AnalysisItem::Attribute (ref parent, ref name) => {
                         vm.load_attribute(executors, &parent.as_node(), name)
                     }
                     _ => {
@@ -220,36 +167,4 @@ impl PythonFor {
             }
         }
     }
-}
-
-fn possible_invariants(parent_path: &Path, changes: &Vec<Path>) -> Vec<Path> {
-    // remove obsolete entries first, i.e.
-    // (1, 5) and (1, 5, 9)
-    let mut all_reversals = BTreeSet::new();
-
-    for change in changes {
-        let change_reversals = change.reverse();
-        for reversal in change_reversals.iter().rev() {
-            all_reversals.insert(reversal.clone());
-        }
-    }
-
-    let mut possibilities = Vec::new();
-    for reversal in all_reversals.into_iter() {
-        let mut legit = true;
-        for change in changes {
-            if reversal.contains(change) {
-                legit = false;
-                break;
-            }
-        }
-
-        if legit && parent_path.mergeable(&reversal) {
-            let mut new_path = parent_path.clone();
-            new_path.merge_into(reversal);
-            possibilities.push(new_path);
-        }
-    }
-
-    return possibilities;
 }
