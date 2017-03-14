@@ -5,6 +5,6 @@ while 1 in a:
 		if 'cond2':
 			pass
 		else:
-			a[1] = 9
+			a[1] = 'string'
 	else:
 		a[1] = 9

@@ -57,24 +57,18 @@ impl MessageContent for OutOfBounds {
                  Bold.paint(&self.target));
         println!("  In the following cases:");
 
-        if self.cases.len() == 1 {
-            // empty path 
-            // always the case
-            if let Some(&(ref path, max)) = self.cases.first() {
-                if path.len() == 0 {
-                    println!("    {} always has {} elements", self.target, max);
-                    println!("    {}", Red.bold().paint("Always"));
-                    println!("");
-                }
-            }
-        } else {
-            for (index, &(ref path, max)) in self.cases.iter().enumerate() {
-                println!("  Case {}",
-                        Bold.paint(format!("{}", index + 1)));
-                println!("    {} has {} elements", self.target, max);
+
+        for (index, &(ref path, max)) in self.cases.iter().enumerate() {
+            println!("  Case {}",
+                    Bold.paint(format!("{}", index + 1)));
+            println!("    {} has {} elements at most in the following case", self.target, max);
+            if path.len() > 0 {
                 self.print_path(sources, &path, "    ");
-                println!("");
+            } else {
+                println!("    {}", Red.bold().paint("Always"));
             }
+            
+            println!("");
         }
     }
 }

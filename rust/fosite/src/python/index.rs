@@ -100,10 +100,12 @@ impl IndexExecutor for PythonIndex {
                         adjusted_value = *value;
                     }
 
-                    for (path, _, max) in target_object.size_range().into_iter() {
+                    for (coll_path, _, max) in target_object.size_range().into_iter() {
                         if let Some(max) = max {
                             if adjusted_value.abs() as usize > max {
-                                warnings.push((path, max as i16));
+                                let mut new_path = target_path.clone();
+                                new_path.merge_into(coll_path);
+                                warnings.push((new_path, max as i16));
                             }
                         }
                     }
