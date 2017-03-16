@@ -1,8 +1,6 @@
 use core::*;
 
-use core::Path;
 use std::collections::btree_map::Entry;
-use std::collections::BTreeSet;
 use std::collections::BTreeMap;
 
 pub struct PythonFor { }
@@ -61,9 +59,9 @@ impl PythonFor {
             let current_path = vm.current_path();
 
             positive = current_path.clone();
-            positive.add_node(PathNode::Loop(vm.current_node(), true));
+            positive.add_node(PathNode::Loop(vm.current_node().clone(), 0, 2));
             negative = current_path.clone();
-            negative.add_node(PathNode::Loop(vm.current_node(), false));
+            negative.add_node(PathNode::Loop(vm.current_node().clone(), 1, 2));
         }
 
         vm.push_path(positive);
@@ -76,7 +74,7 @@ impl PythonFor {
         total_changes.append(&mut changes);
         total_dependencies.append(&mut dependencies);
 
-        vm.change_branch(&total_changes);
+        vm.next_branch(&total_changes);
 
         self.check_changes(vm);
 
@@ -115,7 +113,7 @@ impl PythonFor {
         if problems.len() > 0 {
             let content = ForLoopChange::new(problems);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -159,7 +157,7 @@ impl PythonFor {
                 if all_types.len() > 1 {
                     let content = TypeUnsafe::new(change.to_string(), all_types);
                     let message = Message::Output { 
-                        source: vm.current_node(),
+                        source: vm.current_node().clone(),
                         content: Box::new(content),
                     };
                     &CHANNEL.publish(message);

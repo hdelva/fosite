@@ -11,6 +11,8 @@ type Nodes = HashMap<GastID, GastNode>;
 use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
+
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -30,14 +32,14 @@ impl ForLoopChange {
 }
 
 impl MessageContent for ForLoopChange {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
         FOR_LOOP_CHANGE.hash(&mut s);
         self.paths.hash(&mut s);
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_warning_preamble(sources, node);
         println!("  Some code paths change the collection that's being iterated over");
         println!("  This can have unexpected consequences");

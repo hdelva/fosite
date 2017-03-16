@@ -103,7 +103,7 @@ impl AttributeExecutor for PythonAttribute {
         if warning.len() > 0 {
             let content = AttributeUnsafe::new(parent.to_string(), name.clone(), warning);
             let message = Message::Output {
-                source: vm.current_node(), 
+                source: vm.current_node().clone(), 
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -112,7 +112,7 @@ impl AttributeExecutor for PythonAttribute {
         if error.len() > 0 {
             let content = AttributeInvalid::new(parent.to_string(), name.clone(), error);
             let message = Message::Output { 
-                source: vm.current_node(), 
+                source: vm.current_node().clone(), 
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);

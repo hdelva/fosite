@@ -71,7 +71,7 @@ impl BinOpExecutor for PythonBinOp {
                     || right_ancestors.contains(&list_type)
                     || right_ancestors.contains(&string_type); 
                 let b3 = right_ancestors.contains(&int_type);
-                let b4 = left_ancestors.contains(&int_type);            
+                let b4 = left_ancestors.contains(&int_type);         
 
                 // normal multiplication 
                 if vm.knowledge().operation_supported(&ancestor_name, op) {
@@ -100,7 +100,7 @@ impl BinOpExecutor for PythonBinOp {
                         let mut new_object = vm.get_object_mut(&new_ptr);
                         new_object.set_elements(new_col);
                     }                 
-                } else if b1 && b3 {
+                } else if op == &"*" && b1 && b3 {
                     let old_type;
                     let collection;
                     {
@@ -113,7 +113,7 @@ impl BinOpExecutor for PythonBinOp {
                     result.add_mapping(new_path, new_ptr);
                     let mut new_object = vm.get_object_mut(&new_ptr);
                     new_object.set_elements(collection); 
-                } else if b2 && b4 {
+                } else if op == &"*" && b2 && b4 {
                     let old_type;
                     let collection;
                     {
@@ -154,7 +154,7 @@ impl BinOpExecutor for PythonBinOp {
         if error.len() > 0 {
             let content = BinOpInvalid::new(op.clone(), error);
             let message = Message::Output { 
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content)};
             &CHANNEL.publish(message);
         }

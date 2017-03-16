@@ -1,6 +1,6 @@
 use super::Pointer;
 use super::{Path, PathNode};
-use super::GastID;
+use super::PathID;
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::{Iter, IntoIter};
@@ -46,7 +46,7 @@ impl Mapping {
         return self.possibilities.len();
     }
 
-    pub fn prune(&self, cutoff: &GastID) -> Mapping {
+    pub fn prune(&self, cutoff: &PathID) -> Mapping {
         let mut new = Mapping::new();
         for (path, address) in self.iter() {
             new.add_mapping(path.prune(cutoff), *address);
@@ -79,5 +79,14 @@ impl OptionalMapping {
 
     pub fn len(&self) -> usize {
         return self.possibilities.len();
+    }
+
+    pub fn augment(self, node: PathNode) -> OptionalMapping {
+        let mut new_possibilities = BTreeMap::new();
+        for (mut path, opt_address) in self.possibilities.into_iter() {
+            path.add_node(node.clone());
+            new_possibilities.insert(path.clone(), opt_address);
+        }
+        return OptionalMapping { possibilities: new_possibilities };
     }
 }

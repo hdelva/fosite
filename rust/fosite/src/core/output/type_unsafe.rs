@@ -13,6 +13,8 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
+
 
 use super::TYPE_UNSAFE;
 
@@ -34,7 +36,7 @@ impl TypeUnsafe {
 }
 
 impl MessageContent for TypeUnsafe {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
         let mut set = BTreeSet::new();
 
@@ -42,7 +44,7 @@ impl MessageContent for TypeUnsafe {
             for path in paths.iter() {
                 match path.iter().next_back() {
                     Some(thing) => set.insert((index as i16, thing.clone())),
-                    _ => set.insert((0, PathNode::Condition(0, true))),
+                    _ => set.insert((0, PathNode::Condition(vec!(0), 0, 1))),
                 };
             }
         }
@@ -53,7 +55,7 @@ impl MessageContent for TypeUnsafe {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_warning_preamble(sources, node);
         println!("  Not all code paths give {} the same type",
                  Bold.paint(self.name.clone()));

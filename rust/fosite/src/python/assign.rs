@@ -84,7 +84,7 @@ impl PythonAssign {
 
         let mut value_mappings = Vec::new();
 
-        for (_, address) in mapping.iter() {
+        for (path, address) in mapping.iter() {
             let object = vm.get_object(address);
 
             for (_, min, max) in object.size_range() {
@@ -120,11 +120,10 @@ impl PythonAssign {
 
                 let ref mut new_mapping = value_mappings[index];
 
-                for (path, address) in mapping.into_iter() {
-                    let mut new_path = path.clone();
-                    for node in path.into_iter() {
-                        new_path.add_node(node);
-                    }
+                for (element_path, address) in mapping.into_iter() {
+                    let mut new_path = vm.current_path().clone();
+                    new_path.merge_into(element_path.clone());
+                    new_path.merge_into(path.clone());
                     new_mapping.add_mapping(new_path, address);
                 }
             }
@@ -312,11 +311,11 @@ impl PythonAssign {
         let mut max = Some(1);
         for node in current_path.iter().rev() {
             match node {
-                &PathNode::Loop(_, _) => {
+                &PathNode::Loop(_, _, _) => {
                     max = None;
                     break;
                 },
-                &PathNode::Frame(_, _, _) => {
+                &PathNode::Frame(_, _, _, _) => {
                     break;
                 },
                 _ => ()
@@ -358,7 +357,7 @@ impl PythonAssign {
         if !new_type.contains(&original_type) {
             let content = HeteroCollection::new(target.to_string(), original_type, new_type);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -373,7 +372,7 @@ impl PythonAssign {
                            mapping: &Mapping)
                            -> ExecutionResult {
         // todo get rid of clone
-        let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node(),
+        let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node().clone(),
                                                                    format!("{}[{}]",
                                                                            target.to_string(),
                                                                            index.to_string())));        
@@ -445,7 +444,7 @@ impl PythonAssign {
         if errors.len() > 0 {
             let content = InsertInvalid::new(target.to_string(), errors);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -470,7 +469,7 @@ impl PythonAssign {
                            -> ExecutionResult {
 
         // todo get rid of clone
-        let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node(),
+        let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node().clone(),
                                                                    format!("{}.{}",
                                                                            parent.to_string(),
                                                                            attribute)));
@@ -532,7 +531,7 @@ impl PythonAssign {
 
         // todo get rid of clone
         let mapping = mapping.clone()
-            .augment(PathNode::Assignment(vm.current_node(), target.clone()));
+            .augment(PathNode::Assignment(vm.current_node().clone(), target.clone()));
 
         let path = vm.current_path().clone();
 

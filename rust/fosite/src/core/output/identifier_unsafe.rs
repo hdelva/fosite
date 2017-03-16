@@ -10,6 +10,7 @@ use term_painter::Attr::*;
 
 use super::GastNode;
 use super::GastID;
+use super::PathID;
 
 use std::collections::HashMap;
 
@@ -35,14 +36,14 @@ impl IdentifierUnsafe {
 }
 
 impl MessageContent for IdentifierUnsafe {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
-        let mut fingerprint = 0;
+        let mut fingerprint = &vec!(0);
 
         for path in self.paths.iter() {
             for node in path.iter() {
                 if node.get_location() > fingerprint {
-                    fingerprint = node.get_location()
+                    fingerprint = node.get_location();
                 }
             }
         }
@@ -53,7 +54,7 @@ impl MessageContent for IdentifierUnsafe {
         s.finish()
     }
 
-    fn print_message(&self, source: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, source: &Sources, _: &Nodes, node: PathID) {
         self.print_warning_preamble(source, node);
         println!("  New variable {} doesn't always exist",
                  Bold.paint(&self.name));

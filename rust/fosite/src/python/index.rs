@@ -133,7 +133,7 @@ impl IndexExecutor for PythonIndex {
         if warnings.len() > 0 {
             let content = OutOfBounds::new(target.to_string(), warnings);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -142,7 +142,7 @@ impl IndexExecutor for PythonIndex {
         if errors.len() > 0 {
             let content = IndexInvalid::new(target.to_string(), errors);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);

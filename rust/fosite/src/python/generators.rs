@@ -28,7 +28,7 @@ impl GeneratorExecutor for PythonGenerator {
         }
 
         let mapping = mapping.clone()
-            .augment(PathNode::Assignment(vm.current_node(), target.to_string()));
+            .augment(PathNode::Assignment(vm.current_node().clone(), target.to_string()));
 
         changes.push(AnalysisItem::Identifier(target.to_string()));
 

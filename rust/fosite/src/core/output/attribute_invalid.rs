@@ -8,6 +8,9 @@ use term_painter::Attr::*;
 use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
+use super::NodeType;
+
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -35,16 +38,25 @@ impl AttributeInvalid {
 }
 
 impl MessageContent for AttributeInvalid {
-    fn hash(&self) -> u64 {
+    fn hash(&self, source: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
         ATTRIBUTE_INVALID.hash(&mut s);
         self.parent.hash(&mut s);
         self.attribute.hash(&mut s);
         self.paths.hash(&mut s);
+        source.hash(&mut s);
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, nodes: &Nodes, node: PathID) {
+        let source_node = node.last().unwrap().clone();
+        let node_type = nodes.get(&source_node).unwrap();
+
+        match &node_type.kind {
+            &NodeType::Attribute {..} => (),
+            _ => return
+        }
+
         self.print_error_preamble(sources, node);
         println!("  Object {} does not have an attribute {}",
                  Bold.paint(&self.parent),

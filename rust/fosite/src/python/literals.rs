@@ -249,7 +249,10 @@ fn collection_from_comprehension(
 ) -> ExecutionResult {
 
     let mut path = vm.current_path().clone();
-    let node = PathNode::Frame(vm.current_node(), Some("comprehension".to_owned()), Box::new(Path::empty()));
+    let node = PathNode::Frame(vm.current_node().clone(), 
+        Some("comprehension".to_owned()), 
+        0, 
+        1);
     path.add_node(node);
     vm.push_path(path);
 
@@ -279,7 +282,7 @@ fn collection_from_comprehension(
         obj.define_elements(vec!(chunk), Path::empty());
     }
 
-    vm.stop_branch(&changes);
+    vm.discard_branch(&changes);
 
     let _ = vm.pop_path();
 

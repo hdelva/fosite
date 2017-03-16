@@ -73,9 +73,9 @@ impl PythonWhile {
             let current_path = vm.current_path();
 
             positive = current_path.clone();
-            positive.add_node(PathNode::Loop(vm.current_node(), true));
+            positive.add_node(PathNode::Loop(vm.current_node().clone(), 0, 2));
             negative = current_path.clone();
-            negative.add_node(PathNode::Loop(vm.current_node(), false));
+            negative.add_node(PathNode::Loop(vm.current_node().clone(), 1, 2));
         }
 
         vm.push_path(positive);
@@ -90,7 +90,7 @@ impl PythonWhile {
         total_changes.append(&mut changes);
         total_dependencies.append(&mut dependencies);
 
-        vm.change_branch(&total_changes);
+        vm.next_branch(&total_changes);
 
         self.check_changes(vm);
 
@@ -176,7 +176,7 @@ impl PythonWhile {
         if real_problem {
             let content = WhileLoopChange::new(problems);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -220,7 +220,7 @@ impl PythonWhile {
                 if all_types.len() > 1 {
                     let content = TypeUnsafe::new(change.to_string(), all_types);
                     let message = Message::Output { 
-                        source: vm.current_node(),
+                        source: vm.current_node().clone(),
                         content: Box::new(content),
                     };
                     &CHANNEL.publish(message);

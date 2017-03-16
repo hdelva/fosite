@@ -31,14 +31,12 @@ impl BlockExecutor for PythonBlock {
 
         let mut branch = None;
         
-        {
-            if let Some(node) = vm.current_branch() {
-                branch = Some(node.clone());
-            }
+        if let Some(node) = vm.current_branch() {
+            branch = Some(node.clone());
         }
 
-        if branch.is_some() {
-            vm.merge_until(&total_changes, branch);
+        if let Some(branch) = branch {
+            vm.merge_until(&total_changes, Some(&branch));
         }
 
         return ExecutionResult {

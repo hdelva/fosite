@@ -6,6 +6,7 @@ use term_painter::Attr::*;
 use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -32,7 +33,7 @@ impl HeteroCollection {
 }
 
 impl MessageContent for HeteroCollection {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
 
         HETERO_COLLECTION.hash(&mut s);
@@ -42,13 +43,13 @@ impl MessageContent for HeteroCollection {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_warning_preamble(sources, node);
         println!("  Adding an element of a new type to a collection");
         println!("  {} had type {} and became {}",
             Bold.paint(&self.target), 
             Bold.paint(&self.old_type),
             Bold.paint(&self.new_type));
-        println!("  This can make working with this collection more difficult");
+        println!("  This can make working with this collection more difficult \n");
     }
 }

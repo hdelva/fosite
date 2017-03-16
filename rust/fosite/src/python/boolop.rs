@@ -123,7 +123,7 @@ impl BoolOpExecutor for PythonBoolOp {
         if error.len() > 0 {
             let content = BinOpInvalid::new(op.to_owned(), error);
             let message = Message::Output {
-                source: vm.current_node(),
+                source: vm.current_node().clone(),
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);

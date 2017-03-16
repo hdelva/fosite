@@ -2,7 +2,7 @@ use super::AnalysisItem;
 use super::Mapping;
 use super::Pointer;
 use super::Path;
-use super::GastID;
+use super::PathID;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -15,11 +15,11 @@ pub struct Watch {
     pub identifiers_changed: HashMap<AnalysisItem, Mapping>,
     pub objects_changed: HashMap<Pointer, Vec<Path>>,
     in_setup: bool,
-    source: GastID,
+    source: PathID,
 }
 
 impl Watch {
-    pub fn new(source: GastID) -> Self {
+    pub fn new(source: PathID) -> Self {
         Watch {
             source: source,
             identifiers_before: HashMap::new(),

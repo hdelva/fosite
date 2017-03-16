@@ -83,9 +83,9 @@ impl PythonConditional {
             let current_path = vm.current_path();
 
             positive = current_path.clone();
-            positive.add_node(PathNode::Condition(vm.current_node(), true));
+            positive.add_node(PathNode::Condition(vm.current_node().clone(), 0, 2));
             negative = current_path.clone();
-            negative.add_node(PathNode::Condition(vm.current_node(), false));
+            negative.add_node(PathNode::Condition(vm.current_node().clone(), 1, 2));
         }
 
         vm.push_path(positive);
@@ -105,7 +105,7 @@ impl PythonConditional {
             total_dependencies.push(dependency.clone());
         }
 
-        vm.change_branch(&total_changes);
+        vm.next_branch(&total_changes);
 
         vm.push_path(negative);
         vm.add_restrictions(yes);
@@ -138,7 +138,7 @@ impl PythonConditional {
             (FlowControl::Continue, FlowControl::TerminateLoop) => {
                 flow = FlowControl::Continue;
                 vm.push_path(positive);
-                vm.change_branch(&total_changes);
+                vm.reset_branch_counter(&total_changes);
             },
             _ => {
                 flow = FlowControl::Continue;
@@ -164,7 +164,7 @@ impl PythonConditional {
         let last_path = vm.pop_path();
 
         let mut positive = last_path.clone();
-        positive.add_node(PathNode::Condition(vm.current_node(), true));
+        positive.add_node(PathNode::Condition(vm.current_node().clone(), 0, 2));
         vm.push_path(positive);
 
         let result = self.strict(vm, executors, body, changes, dependencies);
@@ -186,7 +186,7 @@ impl PythonConditional {
         let last_path = vm.pop_path();
 
         let mut negative = last_path.clone();
-        negative.add_node(PathNode::Condition(vm.current_node(), false));
+        negative.add_node(PathNode::Condition(vm.current_node().clone(), 1, 2));
         vm.push_path(negative);
 
         let result = self.strict(vm, executors, body, changes, dependencies);
@@ -259,7 +259,7 @@ impl PythonConditional {
                 if all_types.len() > 1 {
                     let content = TypeUnsafe::new(change.to_string(), all_types);
                     let message = Message::Output { 
-                        source: vm.current_node(),
+                        source: vm.current_node().clone(),
                         content: Box::new(content),
                     };
                     &CHANNEL.publish(message);

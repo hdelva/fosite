@@ -54,8 +54,8 @@ impl Logger {
         for message in CHANNEL.iter() {
             match message {
                 Message::Output { ref source, ref content } => {
-                    if !self.done.contains(&content.hash()) {
-                        self.done.insert(content.hash());
+                    if !self.done.contains(&content.hash(source)) {
+                        self.done.insert(content.hash(source));
                         content.print_message(&self.sources, &self.nodes, source.clone());
                     }
                 }

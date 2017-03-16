@@ -48,7 +48,7 @@ impl IdentifierExecutor for PythonIdentifier {
         if warning.len() > 0 {
             let content = IdentifierUnsafe::new(name.clone(), warning);
             let message = Message::Output {
-                source: vm.current_node(), 
+                source: vm.current_node().clone(), 
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);
@@ -57,7 +57,7 @@ impl IdentifierExecutor for PythonIdentifier {
         if unresolved.len() > 0 {
             let content = IdentifierInvalid::new(name.clone(), unresolved);
             let message = Message::Output {
-                source: vm.current_node(), 
+                source: vm.current_node().clone(), 
                 content: Box::new(content),
             };
             &CHANNEL.publish(message);

@@ -6,6 +6,7 @@ use term_painter::Color::*;
 use term_painter::Attr::*;
 
 use super::GastID;
+use super::PathID;
 use super::GastNode;
 
 use std::hash::{Hash, Hasher};
@@ -36,10 +37,10 @@ impl AttributeUnsafe {
 }
 
 impl MessageContent for AttributeUnsafe {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
 
-        let mut fingerprint = 0;
+        let mut fingerprint = &vec!(0);
 
         for path in self.paths.iter() {
             for node in path.iter() {
@@ -56,7 +57,7 @@ impl MessageContent for AttributeUnsafe {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_warning_preamble(sources, node);
         println!("  Object {} does not always have an attribute {}",
                  Bold.paint(&self.parent),

@@ -1,7 +1,7 @@
 use super::Pointer;
 use super::Path;
 use super::PathNode;
-use super::GastID;
+use super::PathID;
 
 use std::cmp;
 use super::Mapping;
@@ -348,35 +348,28 @@ impl CollectionMapping {
             path: path,
         }
     }
+
+    fn augment(mut self, node: PathNode) -> CollectionMapping {
+        self.path.add_node(node.clone());
+
+        return CollectionMapping::new(self.path, self.branch);
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct Frame {
+struct Branch {
     content: Vec<CollectionMapping>,
-    cause: PathNode,
-    parent: Option<usize>,
 }
 
-impl Frame {
-    fn new(cause: PathNode, parent: Option<usize>, content: Vec<CollectionMapping>) -> Self {
-        Frame {
-            cause: cause,
-            parent: parent,
+impl Branch {  
+    pub fn new(content: Vec<CollectionMapping>) -> Self {
+        Branch {
             content: content,
         }
     }
 
     pub fn get_content(&self) -> &Vec<CollectionMapping> {
         return &self.content;
-    }
-
-    // frame things
-    pub fn parent_index(&self) -> Option<usize> {
-        return self.parent;
-    }
-
-    pub fn get_cause(&self) -> &PathNode {
-        return &self.cause;
     }
 
     pub fn iter(&self) -> Iter<CollectionMapping> {
@@ -443,7 +436,7 @@ impl Frame {
         }
     }
 
-    pub fn get_element(&self, n: i16, node: &GastID) -> Mapping {
+    pub fn get_element(&self, n: i16, node: &PathID) -> Mapping {
         let mut result = Mapping::new();
         let mut count = 0;
         for coll_mapping in self.content.iter() {
@@ -469,7 +462,7 @@ impl Frame {
         return result;
     }
 
-    pub fn get_any_element(&self, node: &GastID) -> Mapping {
+    pub fn get_any_element(&self, node: &PathID) -> Mapping {
         let mut result = Mapping::new();
         let mut count = 0;
         for coll_mapping in self.content.iter() {
@@ -508,7 +501,7 @@ impl Frame {
         return result;
     }
 
-    pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+    pub fn get_first_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
         let mut result = Vec::new();
         for coll_mapping in self.content.iter() {
             let &CollectionMapping {ref path, ref branch} = coll_mapping;
@@ -540,7 +533,7 @@ impl Frame {
         return result;
     }
 
-    pub fn get_last_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+    pub fn get_last_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
         let mut result = Vec::new();
         for coll_mapping in self.content.iter() {
             let &CollectionMapping {ref path, ref branch} = coll_mapping;
@@ -582,20 +575,122 @@ impl Frame {
         }
         return result;
     }
+
+}
+
+#[derive(Debug, Clone)]
+pub struct Frame {
+    branches: Vec<Branch>,
+    cause: PathNode,
+    current: usize,
+}
+
+impl Frame {
+    fn new(cause: PathNode) -> Self {
+        Frame {
+            cause: cause,
+            branches: Vec::new(),
+            current: 0,
+        }
+    }
+
+    // frame things
+    fn set_content(&mut self, content: Vec<CollectionMapping>) {
+        self.branches[self.current].set_content(content);
+    }
+
+    fn get_content(&self) -> &Vec<CollectionMapping> {
+        self.branches[self.current].get_content()
+    }
+
+    fn len(&self) -> usize {
+        return self.branches.len()
+    }
+
+    fn iter(&self) -> Iter<Branch> {
+        return self.branches.iter();
+    }
+
+    fn into_iter(self) -> IntoIter<Branch> {
+        return self.branches.into_iter();
+    }
+
+    fn next_branch(&mut self) {
+        self.current += 1;
+    }
+
+    fn reset_branch_counter(&mut self) {
+        self.current = 0;
+    }
+
+    fn set_active_branch(&mut self, index: usize) {
+        self.current = index;
+    }
+
+    fn add_branch(&mut self, branch: Branch) {
+        self.branches.push(branch);
+    }
+
+    pub fn size_range(&self) -> Vec<(Path, Option<usize>, Option<usize>)> {
+        self.branches[self.current].size_range()
+    }
+
+    pub fn is_reliable(&self) -> Vec<(Path, bool)> {
+        self.branches[self.current].is_reliable()
+    }
+
+    pub fn insert(&mut self, element: CollectionChunk) {
+        self.branches[self.current].insert(element)
+    }
+
+    pub fn define(&mut self, definition: Vec<CollectionChunk>) {
+        self.branches[self.current].define(definition)
+    }
+
+    pub fn append(&mut self, element: CollectionChunk) {
+        self.branches[self.current].append(element)
+    }
+
+    pub fn prepend(&mut self, element: CollectionChunk) {
+        self.branches[self.current].prepend(element)
+    }
+
+    pub fn get_element(&self, n: i16, node: &PathID) -> Mapping {
+        self.branches[self.current].get_element(n, node)
+    }
+
+    pub fn get_any_element(&self, node: &PathID) -> Mapping {
+        self.branches[self.current].get_any_element(node)
+    }
+
+    pub fn get_types(&self) -> BTreeSet<Pointer> {
+        self.branches[self.current].get_types()
+    }
+
+    pub fn get_first_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
+        self.branches[self.current].get_first_n(n, node)
+    }
+
+    pub fn get_last_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
+        self.branches[self.current].get_last_n(n, node)
+    }
+
+    pub fn slice(&self, start: i16, end: i16) -> Vec<(Path, CollectionBranch)> {
+        self.branches[self.current].slice(start, end)
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct Collection {
     frames: Vec<Frame>,
-    path: Vec<usize>,
 }
-
 
 impl Collection {
     pub fn new() -> Collection {
+        let mut frame = Frame::new(PathNode::Frame(vec!(0), None, 0, 1));
+        frame.add_branch(Branch::new(Vec::new()));
         Collection {
-            frames: vec![Frame::new(PathNode::Frame(0, None, Box::new(Path::empty())), None, vec!())],
-            path: vec!(0),
+            frames: vec![frame],
         }
     }
 
@@ -603,14 +698,18 @@ impl Collection {
         let mut new = Collection::new();
         let mut new_content = Vec::new();
 
-        for mapping in self.current_frame().get_content().iter() {
-            for other_mapping in other.current_frame().get_content().iter() {
-                let mut new_path = mapping.path.clone();
-                new_path.merge_into(other_mapping.path.clone());
-                let mut new_branch = mapping.branch.clone();
-                new_branch.concatenate(other_mapping.branch.clone());
+        if let Some(frame) = self.frames.last(){
+            if let Some(other_frame) = other.frames.last() {
+                for mapping in frame.branches[frame.current].iter() {
+                    for other_mapping in other_frame.branches[other_frame.current].iter() {
+                        let mut new_path = mapping.path.clone();
+                        new_path.merge_into(other_mapping.path.clone());
+                        let mut new_branch = mapping.branch.clone();
+                        new_branch.concatenate(other_mapping.branch.clone());
 
-                new_content.push((new_path, new_branch));
+                        new_content.push((new_path, new_branch));
+                    }
+                }  
             }
         }
 
@@ -619,15 +718,14 @@ impl Collection {
     }
 
     pub fn set_content(&mut self, content: Vec<(Path, CollectionBranch)>) {
-        if self.frames.len() > 1 {
-            panic!("plsno");
-        }
-
         let mut mappings = Vec::new();
         for (path, branch) in content.into_iter() {
             mappings.push(CollectionMapping::new(path, branch));
         }
-        self.current_frame_mut(Path::empty()).set_content(mappings);
+
+        if let Some(frame) = self.current_frame_mut(Path::empty()) {
+            frame.set_content(mappings);
+        }
     }
 
     // collection things
@@ -636,92 +734,68 @@ impl Collection {
         return self.frames.len();
     }
 
-    pub fn current_frame(&self) -> &Frame {
-        // last possible frame
-        let mut index = self.frames.len() - 1;
-
-        // path describes offset from the last frame
-        index -= *self.path.last().unwrap();
-
-        return &self.frames[index];
+    pub fn grow(&mut self, path: &Path, start: usize) {
+        for node in path.iter().skip(start) {
+            let current_content = self.frames.last().unwrap().get_content().clone();
+            let mut frame = Frame::new(node.clone());
+            match node {
+                &PathNode::Loop(_ , x, y) |
+                &PathNode::Condition(_, x, y) |
+                &PathNode::Element(_, x, y) | // should never happen
+                &PathNode::Frame(_, _, x, y) => {
+                    for _ in 0..y {
+                        frame.add_branch(Branch::new(current_content.clone()));
+                    }
+                    frame.set_active_branch(x as usize);
+                },
+                _ => {
+                    // should never happen
+                    frame.add_branch(Branch::new(current_content.clone()));
+                }
+            }
+            self.frames.push(frame);
+        }
     }
 
-    pub fn current_frame_mut(&mut self, path: Path) -> &mut Frame {
-        let mut count = 0 as usize;
-        let mut current_index = 0 as usize;
+    pub fn current_frame_mut(&mut self, path: Path) -> Option<&mut Frame> {
+        let len = self.frames.len();
 
-        for node in path.iter() {
-            let old_index = current_index;
-
-            match node {
-                &PathNode::Condition(_, b) |
-                &PathNode::Loop(_, b) => {
-                    count += 2;
-                    if b {
-                        current_index = count - 1;
-                    } else {
-                        current_index = count;
-                    }
-                }
-                _ => {
-                    count += 1;
-                    current_index = count;
-                }
-            }
-
-            if current_index >= self.frames.len() {
-                let current_content = self.frames[old_index].get_content().clone();
-                
-                match node {
-                    &PathNode::Condition(_, b) |
-                    &PathNode::Loop(_, b) => {
-                        if b {
-                            self.path.push(1);
-                        } else {
-                            self.path.push(0);
-                        }
-                    }
-                    _ => self.path.push(0),
-                }
-
-                match node {
-                    &PathNode::Condition(l, _) => {
-                        let positive = PathNode::Condition(l, true);
-                        self.frames.push(Frame::new(positive, Some(old_index.clone()), current_content.clone()));
-                        let negative = PathNode::Condition(l, false);
-                        self.frames.push(Frame::new(negative, Some(old_index.clone()), current_content.clone()));
-                    }
-                    &PathNode::Loop(l, _) => {
-                        let positive = PathNode::Loop(l, true);
-                        self.frames.push(Frame::new(positive, Some(old_index.clone()), current_content.clone()));
-                        let negative = PathNode::Loop(l, false);
-                        self.frames.push(Frame::new(negative, Some(old_index.clone()), current_content.clone()));
-                    }
-                    _ => {
-                        self.frames.push(Frame::new(node.clone(), Some(old_index.clone()), current_content.clone()));
-                    }
-                }
-            }
+        if self.frames.len() < path.len() {
+            self.grow(&path, len);
         }
 
-        return &mut self.frames[current_index];
+        self.frames.last_mut()
     }
 
-    pub fn change_branch(&mut self) {
-        let current = self.path.pop().unwrap();
-        self.path.push((current + 1) % 2);
+    pub fn next_branch(&mut self) {
+        if let Some(frame) = self.frames.last_mut() {
+            frame.next_branch()
+        }
     }
 
-    pub fn merge_until(&mut self, cutoff: Option<GastID>) {
+    pub fn reset_branch_counter(&mut self) {
+        if let Some(frame) = self.frames.last_mut() {
+            frame.reset_branch_counter()
+        }
+    }
+
+    // collections do the same thing for lifting as for merging
+    // 
+    pub fn lift_branches(&mut self) {
+        self.merge_branches();
+    }
+
+    pub fn merge_until(&mut self, cutoff: Option<&PathID>) {
         if let Some(cutoff) = cutoff {
             while self.frames.len() > 1 {
-                let mut id = 0;
+                let mut b = false;
 
                 if let Some(frame) = self.frames.last() {
-                    id = frame.cause.get_location().clone();
+                    let id = frame.cause.get_location();
+                    b = cutoff >= id;
                 } 
 
-                if cutoff >= id {
+                if b {
                     break;
                 }
                     
@@ -732,97 +806,139 @@ impl Collection {
         }
     }
 
-    pub fn lift_branches(&mut self) {
-        self.merge_branches();
-    }
-
-    pub fn pop_branch(&mut self) {
-        let _ = self.path.pop();
-        let _ = self.frames.pop();
-    }
-
     pub fn merge_branches(&mut self) {
-        if self.frames.len() < 2 {
+        if self.frames.len() < 1 {
             return;
         }
 
+        let frame = self.frames.pop().unwrap();
+
+        // copy because frame is going to get moved
+        let cause = frame.cause.clone();
+
         let mut new_content = Vec::new();
-        let first = self.frames.pop().unwrap();
-        let second = self.frames.pop().unwrap();
 
-        let cause = first.cause.clone();
-        for mapping in first.into_iter() {
-            let CollectionMapping {mut path, branch} = mapping;
-            path.add_node(cause.clone());
-            new_content.push(CollectionMapping::new(path, branch))
+        for (index, branch) in frame.into_iter().enumerate() {
+            let index = index as i16;
+            let new_node = match &cause {
+                &PathNode::Condition(ref l, _, ref y) => {
+                    PathNode::Condition(l.clone(), index, y.clone())
+                }
+                &PathNode::Loop(ref l, _, ref y) => {
+                    PathNode::Loop(l.clone(), index, y.clone())
+                }
+                &PathNode::Frame(ref l, ref t, _, ref y) => {
+                    PathNode::Frame(l.clone(), t.clone(), index, y.clone())
+                }
+                _ => cause.clone(),
+            };
+
+            for collection_mapping in branch.into_iter() {
+                let new_mapping = collection_mapping.augment(new_node.clone());
+                new_content.push(new_mapping);
+            }
         }
 
-        let cause = second.cause.clone();
-        for mapping in second.into_iter() {
-            let CollectionMapping {mut path, branch} = mapping;
-            path.add_node(cause.clone());
-            new_content.push(CollectionMapping::new(path, branch))
-        }
-
-        let _ = self.path.pop();
-
-        let mut current_index = self.frames.len() - 1;
-
-        current_index -= *self.path.last().unwrap();
-
-        let ref mut current_frame = self.frames[current_index];
-
-        current_frame.set_content(new_content);
+        if let Some(frame) = self.frames.last_mut() {
+            frame.set_content(new_content);
+        } 
     }
 
     // interface pass-through things
-
     pub fn size_range(&self) -> Vec<(Path, Option<usize>, Option<usize>)> {
-        self.current_frame().size_range()
+        if let Some(frame) = self.frames.last() {
+            frame.size_range()
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn is_reliable(&self) -> Vec<(Path, bool)> {
-        self.current_frame().is_reliable()
+        if let Some(frame) = self.frames.last() {
+            frame.is_reliable()
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
-    pub fn get_element(&self, n: i16, node: &GastID) -> Mapping {
-        self.current_frame().get_element(n, node)
+    pub fn get_element(&self, n: i16, node: &PathID) -> Mapping {
+        if let Some(frame) = self.frames.last() {
+            frame.get_element(n, node)
+        }  else {
+            panic!("No frames in this collection")
+        }
     }
 
-    pub fn get_any_element(&self, node: &GastID) -> Mapping {
-        self.current_frame().get_any_element(node)
+    pub fn get_any_element(&self, node: &PathID) -> Mapping {
+        if let Some(frame) = self.frames.last() {
+            frame.get_any_element(node)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn get_types(&self) -> BTreeSet<Pointer> {
-        self.current_frame().get_types()
+        if let Some(frame) = self.frames.last() {
+            frame.get_types()
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
-    pub fn get_first_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
-        self.current_frame().get_first_n(n, node)
+    pub fn get_first_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
+        if let Some(frame) = self.frames.last() {
+            frame.get_first_n(n, node)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
-    pub fn get_last_n(&self, n: i16, node: &GastID) -> Vec<Mapping> {
-        self.current_frame().get_last_n(n, node)
+    pub fn get_last_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
+        if let Some(frame) = self.frames.last() {
+            frame.get_last_n(n, node)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn slice(&self, start: i16, end: i16) -> Vec<(Path, CollectionBranch)> {
-        self.current_frame().slice(start, end)
+        if let Some(frame) = self.frames.last() {
+            frame.slice(start, end)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn insert(&mut self, element: CollectionChunk, path: Path) {
-        self.current_frame_mut(path).insert(element)
+        if let Some(frame) = self.current_frame_mut(path) {
+            frame.insert(element)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn define(&mut self, definition: Vec<CollectionChunk>, path: Path) {
-        self.current_frame_mut(path).define(definition)
+        if let Some(frame) = self.current_frame_mut(path) {
+            frame.define(definition)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn append(&mut self, element: CollectionChunk, path: Path) {
-        self.current_frame_mut(path).append(element)
+        if let Some(frame) = self.current_frame_mut(path) {
+            frame.append(element)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 
     pub fn prepend(&mut self, element: CollectionChunk, path: Path) {
-        self.current_frame_mut(path).prepend(element)
+        if let Some(frame) = self.current_frame_mut(path) {
+            frame.prepend(element)
+        } else {
+            panic!("No frames in this collection")
+        }
     }
 }
 

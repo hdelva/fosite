@@ -5,32 +5,48 @@ use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::collections::btree_set::IntoIter;
 
+pub type PathID = Vec<GastID>;
+
 
 #[derive(Clone, Debug)]
 pub enum PathNode {
-    Condition(GastID, bool),
-    Assignment(GastID, String),
-    Loop(GastID, bool),
-    Return(GastID),
-    Frame(GastID, Option<String>, Box<Path>),
-    Element(GastID, i16, i16), // element x out of y elements
+    Condition(PathID, i16, i16),
+    Assignment(PathID, String),
+    Loop(PathID, i16, i16),
+    Return(PathID),
+    Frame(PathID, Option<String>, i16, i16),
+    Element(PathID, i16, i16), // element x out of y elements
 }
 
+// Element nodes are the only ones were the primary index is relevant
+// the others are entirely determined by the PathID 
+// we can't have executed different branches of the same conditional after all
 impl Ord for PathNode {
     fn cmp(&self, other: &PathNode) -> Ordering {
-        match (self, other) {
-            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
-               (l1, i1).cmp( &(l2, i2) )
-            },
-            _ => self.get_location().cmp(&other.get_location())
+        if self.is_assign() && !other.is_assign() {
+            if self.get_location().len() <= other.get_location().len() {
+                let len = self.get_location().len();
+                if self.get_location()[0..len] == other.get_location()[0..len] {
+                    return Ordering::Greater;
+                }
+            }
+        } else if other.is_assign() && !self.is_assign() {
+            if other.get_location().len() <= self.get_location().len() {
+                let len = other.get_location().len();
+                if other.get_location()[0..len] == self.get_location()[0..len] {
+                    return Ordering::Less;
+                }
+            }
         }
+
+        self.get_location().cmp(&other.get_location())
     }
 }
 
 impl PartialOrd for PathNode {
     fn partial_cmp(&self, other: &PathNode) -> Option<Ordering> {
         match (self, other) {
-            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+            (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1).partial_cmp( &(l2, i2) )
             },
             _ => self.get_location().partial_cmp(&other.get_location())
@@ -41,7 +57,7 @@ impl PartialOrd for PathNode {
 impl PartialEq for PathNode {
     fn eq(&self, other: &PathNode) -> bool {
         match (self, other) {
-            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+            (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1) == (l2, i2)
             },
             _ => self.get_location() == other.get_location(),
@@ -54,7 +70,7 @@ impl Eq for PathNode {}
 impl Hash for PathNode {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            &PathNode::Element(l, i, _) => {
+            &PathNode::Element(ref l, ref i, _) => {
                 l.hash(state);
                 i.hash(state);
             },
@@ -64,64 +80,63 @@ impl Hash for PathNode {
 }
 
 impl PathNode {
+    pub fn is_assign(&self) -> bool {
+        match self {
+            &PathNode::Assignment(_, _) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_branch(&self) -> bool {
         match self {
-            &PathNode::Condition(_, _) => true,
-            &PathNode::Loop(_, _) => true,
+            &PathNode::Condition(_, _, _) => true,
+            &PathNode::Loop(_, _, _) => true,
             _ => false,
         }
     }
 
     pub fn reverse(&self) -> Vec<PathNode> {
         match self {
-            &PathNode::Condition(l, b) => vec!(PathNode::Condition(l, !b)),
-            &PathNode::Assignment(l, ref t) => vec!(PathNode::Assignment(l, t.clone())),
-            &PathNode::Loop(l, b) => vec!(PathNode::Loop(l, !b)),
-            &PathNode::Return(l) => vec!(PathNode::Return(l)),
-            &PathNode::Frame(l, ref t, ref c) => {
-                let mut result = Vec::new();
-                for r in c.reverse() {
-                    result.push(PathNode::Frame(l, t.clone(), Box::new(r)));
+            &PathNode::Condition(ref l, ref x, ref y) => {
+                let mut v = Vec::new();
+                for i in 0..*y{
+                    if i != *x {
+                        v.push(PathNode::Condition(l.clone(), i, y.clone()));
+                    }
                 }
-                return result;
-            },
-            &PathNode::Element(l, i, t) => vec!(PathNode::Element(l, i, t)),
-        }
-    }
-
-    pub fn get_location(&self) -> GastID {
-        match self {
-            &PathNode::Condition(location, _) => location,
-            &PathNode::Assignment(location, _) => location,
-            &PathNode::Loop(location, _) => location,
-            &PathNode::Return(location) => location,
-            &PathNode::Frame(location, _, _) => location,
-            &PathNode::Element(location, _, _) => location,
-        }
-    }
-
-    fn merge_into(&mut self, other: &PathNode) {
-        match (self, other) {
-            (&mut PathNode::Frame(_, _, ref mut n1), &PathNode::Frame(_, _, ref n2)) => {
-                    n1.merge_into(n2.as_ref().clone());
+                return v;
             }
-            _ => (),
+            &PathNode::Loop(ref l, ref x, ref y) => {
+                let mut v = Vec::new();
+                for i in 0..*y{
+                    if i != *x {
+                        v.push(PathNode::Condition(l.clone(), i, y.clone()));
+                    }
+                }
+                return v;
+            }
+            _ => return vec!(self.clone()),
+        }
+    }
+
+    pub fn get_location(&self) -> &PathID {
+        match self {
+            &PathNode::Condition(ref location, _, _) => location,
+            &PathNode::Assignment(ref location, _) => location,
+            &PathNode::Loop(ref location, _, _) => location,
+            &PathNode::Return(ref location) => location,
+            &PathNode::Frame(ref location, _, _, _) => location,
+            &PathNode::Element(ref location, _, _) => location,
         }
     }
 
     fn mergeable(&self, other: &PathNode) -> bool {
         match (self, other) {
-            (&PathNode::Condition(l1, n1), &PathNode::Condition(l2, n2)) => {
+            (&PathNode::Condition(ref l1, ref n1, _), &PathNode::Condition(ref l2, ref n2, _)) => {
                 return l1 != l2 || n1 == n2;
             }
-            (&PathNode::Loop(l1, t1), &PathNode::Loop(l2, t2)) => {
+            (&PathNode::Loop(ref l1, ref t1, _), &PathNode::Loop(ref l2, ref t2, _)) => {
                 return l1 != l2 || t1 == t2;
-            }
-            (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
-                return n1.mergeable(n2);
-            }
-            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
-                return l1 != l2 || i1 == i2;
             }
             _ => true, // other kinds of nodes can't contradict each other
         }
@@ -131,34 +146,25 @@ impl PathNode {
     // this is used to check whether or a path is contained in another
     fn equals(&self, other: &PathNode) -> bool {
         match (self, other) {
-            (&PathNode::Condition(l1, n1), &PathNode::Condition(l2, n2)) => {
-                return l1 == l2 && n1 == n2;
+            (&PathNode::Condition(ref l1, ref i1, _), &PathNode::Condition(ref l2, ref i2, _)) => {
+                return l1 == l2 && i1 == i2;
             }
-            (&PathNode::Loop(l1, t1), &PathNode::Loop(l2, t2)) => {
-                return l1 == l2 && t1 == t2;
+            (&PathNode::Loop(ref l1, ref i1, _), &PathNode::Loop(ref l2, ref i2, _)) => {
+                return l1 == l2 && i1 == i2;
             }
-            (&PathNode::Frame(_, _, ref n1), &PathNode::Frame(_, _, ref n2)) => {
-                return n1.mergeable(n2);
+            (&PathNode::Frame(ref l1, _, ref i1, _), &PathNode::Frame(ref l2, _, ref i2, _)) => {
+                return l1 == l2 && i1 == i2;
             }
-            (&PathNode::Return(l1), &PathNode::Return(l2)) => {
+            (&PathNode::Return(ref l1), &PathNode::Return(ref l2)) => {
                 return l1 == l2;
             }
-            (&PathNode::Assignment(l1, ..), &PathNode::Assignment(l2, ..)) => {
+            (&PathNode::Assignment(ref l1, ..), &PathNode::Assignment(ref l2, ..)) => {
                 return l1 == l2;
             }
-            (&PathNode::Element(l1, i1, _), &PathNode::Element(l2, i2, _)) => {
+            (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                 return l1 == l2 && i1 == i2;
             }
             _ => false,
-        }
-    }
-
-    fn add_node(&mut self, other: PathNode) {
-        match self {
-            &mut PathNode::Frame(_, _, ref mut nodes) => {
-                nodes.add_node(other);
-            }
-            _ => unreachable!("Trying to add to something that isn't a Frame node"),
         }
     }
 }
@@ -190,21 +196,8 @@ impl Path {
     }
 
     pub fn merge_into(&mut self, other: Path) {
-        for node in other.get_nodes() {
-            let new;
-
-            {
-                let original_opt = self.nodes.get(node);
-                if let Some(original) = original_opt {
-                    let mut original = original.clone();
-                    original.merge_into(node);
-                    new = original
-                } else {
-                    new = node.clone();
-                }
-            }
-
-            self.nodes.insert(new);
+        for node in other.into_iter() {
+            self.nodes.insert(node);
         }
     }
 
@@ -259,10 +252,10 @@ impl Path {
         return result;
     } 
 
-    pub fn prune(&self, cutoff: &GastID) -> Path {
+    pub fn prune(&self, cutoff: &PathID) -> Path {
         let mut new = Path::empty();
         for node in self.nodes.iter() {
-            if node.get_location() > *cutoff {
+            if node.get_location() > cutoff {
                 new.add_node(node.clone());
             }
         }

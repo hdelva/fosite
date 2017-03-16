@@ -8,6 +8,8 @@ use term_painter::Attr::*;
 use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
+
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -33,7 +35,7 @@ impl OutOfBounds {
 
 
 impl MessageContent for OutOfBounds {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
 
         let mut fingerprint = Path::empty();
@@ -50,7 +52,7 @@ impl MessageContent for OutOfBounds {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_warning_preamble(sources, node);
         println!("  Index might be out of bounds");
         println!("  {} does not always have enough elements",
@@ -61,7 +63,7 @@ impl MessageContent for OutOfBounds {
         for (index, &(ref path, max)) in self.cases.iter().enumerate() {
             println!("  Case {}",
                     Bold.paint(format!("{}", index + 1)));
-            println!("    {} has {} elements at most in the following case", self.target, max);
+            println!("    {} has at most {} elements in the following case", self.target, max);
             if path.len() > 0 {
                 self.print_path(sources, &path, "    ");
             } else {

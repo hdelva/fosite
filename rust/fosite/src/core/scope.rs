@@ -1,23 +1,24 @@
 use super::{Path, PathNode};
 use super::{Mapping, OptionalMapping};
-use super::GastID;
+use super::PathID;
 
 use std::collections::BTreeSet;
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
+
+use std::slice::Iter;
+use std::vec::IntoIter;
+
 
 #[derive(Debug)]
-struct Frame {
+struct Branch {
     content: HashMap<String, OptionalMapping>,
-    cause: PathNode,
-    parent: Option<usize>,
 }
 
-impl Frame {
-    fn new(cause: PathNode, parent: Option<usize>) -> Frame {
-        Frame {
-            cause: cause,
-            parent: parent,
+
+impl Branch {
+    fn new() -> Branch {
+        Branch {
             content: HashMap::new(),
         }
     }
@@ -40,22 +41,95 @@ impl Frame {
         self.set_optional_mapping(name, new_mapping);
     }
 
-    fn parent_index(&self) -> Option<usize> {
-        return self.parent;
-    }
-
-    fn get_cause(&self) -> &PathNode {
-        return &self.cause;
-    }
-
+    // why is this even a thing
+    /*
     fn get_content(&self) -> &HashMap<String, OptionalMapping> {
         return &self.content;
+    }
+    */
+}
+
+
+#[derive(Debug)]
+struct Frame {
+    cause: PathNode,
+    branches: Vec<Branch>,
+    current: usize,
+}
+
+impl Frame {
+    fn new(cause: PathNode) -> Self {
+        let mut branches = Vec::new();
+
+        let count = match &cause {
+            &PathNode::Condition(_ , _, y) | 
+            &PathNode::Loop(_, _, y) | 
+            &PathNode::Frame(_, _, _, y) => {
+                y
+            }
+            _ => 1,
+        };
+
+        for _ in 0..count {
+            branches.push(Branch::new());
+        }
+
+        Frame {
+            cause: cause,
+            branches: branches,
+            current: 0,
+        }
+    }
+
+    fn len(&self) -> usize {
+        return self.branches.len()
+    }
+
+    fn iter(&self) -> Iter<Branch> {
+        return self.branches.iter();
+    }
+
+    fn into_iter(self) -> IntoIter<Branch> {
+        return self.branches.into_iter();
+    }
+
+    fn next_branch(&mut self) {
+        self.current += 1;
+    }
+
+    fn reset_branch_counter(&mut self) {
+        self.current = 0;
+    }
+
+    fn set_active_branch(&mut self, index: usize) {
+        self.current = index;
+    }
+
+    fn add_branch(&mut self, branch: Branch) {
+        self.branches.push(branch);
+    }
+
+    fn resolve_identifier(&self, name: &String) -> Option<&OptionalMapping> {
+        return self.branches[self.current].resolve_identifier(name);
+    }
+
+    fn set_optional_mapping(&mut self, name: String, mapping: OptionalMapping) {
+        self.branches[self.current].set_optional_mapping(name, mapping);
+    }
+
+    fn set_mapping(&mut self, name: String, mapping: Mapping) {
+        let mut new_mapping = OptionalMapping::new();
+
+        for (path, address) in mapping.iter() {
+            new_mapping.add_mapping(path.clone(), Some(address.clone()));
+        }
+
+        self.set_optional_mapping(name, new_mapping);
     }
 }
 
 pub struct Scope {
     frames: Vec<Frame>,
-    path: Vec<usize>,
     default: OptionalMapping,
     constants: BTreeSet<String>,
 }
@@ -66,9 +140,8 @@ impl Scope {
         default.add_mapping(Path::empty(), None);
 
         Scope {
-            frames: vec![Frame::new(PathNode::Frame(0, None, Box::new(Path::empty())), None)],
+            frames: vec![],
             default: default,
-            path: vec![0],
             constants: BTreeSet::new(),
         }
     }
@@ -77,38 +150,39 @@ impl Scope {
         return self.frames.len();
     }
 
-    pub fn resolve_identifier(&self, name: &String) -> Mapping {
-        let mut mapping = Mapping::new();
+    pub fn resolve_optional_identifier(&self, name: &String) -> &OptionalMapping {
+        if self.frames.len() > 0 {
+            let mut index = self.frames.len() - 1;
 
-        for (path, opt_address) in self.resolve_optional_identifier(name).iter() {
-            if let &Some(address) = opt_address {
-                mapping.add_mapping(path.clone(), address);
-            } else {
-                panic!("no valid mapping under the current conditions")
-            }
-        }
+            while let Some(frame) = self.frames.get(index){
+                if let Some(result) = frame.resolve_identifier(name) {
+                    return result;
+                }
 
-        return mapping;
+                if index == 0 {
+                    break;
+                }
+
+                index -= 1;
+            } 
+        }  
+        
+        return &self.default;
     }
 
-    pub fn resolve_optional_identifier(&self, name: &String) -> &OptionalMapping {
-        // last possible frame
-        let mut current_index = self.frames.len() - 1;
-
-        // path describes offset from the last frame
-        current_index -= *self.path.last().unwrap();
-
-        loop {
-            if let Some(result) = self.frames[current_index].resolve_identifier(name) {
-                return result;
+    fn grow(&mut self, path: &Path, start: usize) {
+        for node in path.iter().skip(start) {
+            let mut frame = Frame::new(node.clone());
+            match node {
+                &PathNode::Loop(_ , x, _) |
+                &PathNode::Condition(_, x, _) |
+                &PathNode::Element(_, x, _) | // should never happen
+                &PathNode::Frame(_, _, x, _) => {
+                    frame.set_active_branch(x as usize);
+                },
+                _ => ()
             }
-
-            if let Some(parent) = self.frames[current_index].parent_index() {
-                current_index = parent;
-            } else {
-                return &self.default;
-            }
-
+            self.frames.push(frame);
         }
     }
 
@@ -118,125 +192,15 @@ impl Scope {
             return;
         }
 
-        let mut count = 0 as usize;
-        let mut current_index = 0 as usize;
+        let len = self.frames.len();
 
-        for node in path.iter() {
-            let old_index = current_index;
-
-            match node {
-                &PathNode::Condition(_, b) |
-                &PathNode::Loop(_, b) => {
-                    count += 2;
-                    if b {
-                        current_index = count - 1;
-                    } else {
-                        current_index = count;
-                    }
-                }
-                _ => {
-                    count += 1;
-                    current_index = count;
-                }
-            }
-
-            if current_index >= self.frames.len() {
-                match node {
-                    &PathNode::Condition(_, b) |
-                    &PathNode::Loop(_, b) => {
-                        if b {
-                            self.path.push(1);
-                        } else {
-                            self.path.push(0);
-                        }
-                    }
-                    _ => self.path.push(0),
-                }
-
-                match node {
-                    &PathNode::Condition(l, _) => {
-                        let positive = PathNode::Condition(l, true);
-                        self.frames.push(Frame::new(positive, Some(old_index.clone())));
-                        let negative = PathNode::Condition(l, false);
-                        self.frames.push(Frame::new(negative, Some(old_index.clone())));
-                    }
-                    &PathNode::Loop(l, _) => {
-                        let positive = PathNode::Loop(l, true);
-                        self.frames.push(Frame::new(positive, Some(old_index.clone())));
-                        let negative = PathNode::Loop(l, false);
-                        self.frames.push(Frame::new(negative, Some(old_index.clone())));
-                    }
-                    _ => {
-                        self.frames.push(Frame::new(node.clone(), Some(old_index.clone())));
-                    }
-                }
-            }
+        if self.frames.len() < path.len() {
+            self.grow(&path, len);
         }
 
-        self.frames[current_index].set_mapping(name, mapping)
-    }
-
-    pub fn lift_branches(&mut self) {
-        if self.frames.len() == 1 {
-            return;
-        }
-
-        let mut new_content = HashMap::new();
-
-        // first branch
-        {
-            let ref frame = self.frames[self.frames.len() - 1];
-            let cause = frame.get_cause();
-
-            for name in self.frames[self.frames.len() - 1].get_content().keys() {
-                let old_mapping = self.resolve_optional_identifier(name);
-                let mut new_mapping = OptionalMapping::new();
-
-                for (old_path, address) in old_mapping.iter() {
-                    let mut new_path = old_path.clone();
-                    new_path.add_node(cause.clone());
-                    new_mapping.add_mapping(new_path, address.clone());
-                }
-
-                new_content.insert(name.clone(), new_mapping);
-            }
-        }
-
-        // hard coded swap
-        {
-            let current = self.path.pop().unwrap();
-            self.path.push(current + 1);
-        }
-
-        // second branch
-        {
-            let ref frame = self.frames[self.frames.len() - 2];
-            let cause = frame.get_cause();
-
-            for name in self.frames[self.frames.len() - 2].get_content().keys() {
-                let old_mapping = self.resolve_optional_identifier(name);
-                let mut new_mapping = new_content.get_mut(name).unwrap();
-
-                for (old_path, address) in old_mapping.iter() {
-                    let mut new_path = old_path.clone();
-                    new_path.add_node(cause.clone());
-                    new_mapping.add_mapping(new_path, address.clone());
-                }
-            }
-        }
-
-        let _ = self.path.pop();
-        let _ = self.frames.pop();
-        let _ = self.frames.pop();
-
-        let mut current_index = self.frames.len() - 1;
-
-        current_index -= *self.path.last().unwrap();
-
-        let ref mut current_frame = self.frames[current_index];
-
-        for (name, mapping) in new_content.into_iter() {
-            current_frame.set_optional_mapping(name.clone(), mapping)
+        // there should always be one
+        if let Some(frame) = self.frames.last_mut() {
+            frame.set_mapping(name, mapping);
         }
     }
 
@@ -245,23 +209,29 @@ impl Scope {
         self.constants.insert(name);
     }
 
-    pub fn change_branch(&mut self) {
-        let current = self.path.pop().unwrap();
-        self.path.push((current + 1) % 2);
+    pub fn next_branch(&mut self) {
+        if let Some(frame) = self.frames.last_mut() {
+            frame.next_branch();
+        }
     }
 
-    pub fn merge_until(&mut self, cutoff: Option<GastID>) {
+    pub fn reset_branch_counter(&mut self) {
+        if let Some(frame) = self.frames.last_mut() {
+            frame.reset_branch_counter();
+        }
+    }
+
+    pub fn merge_until(&mut self, cutoff: Option<&PathID>) {
         if let Some(cutoff) = cutoff {
             while self.frames.len() > 1 {
-                let mut id = 0;
-
                 if let Some(frame) = self.frames.last() {
-                    id = frame.cause.get_location().clone();
-                } 
+                    let id = frame.cause.get_location();
 
-                if cutoff >= id {
-                    break;
-                }
+                    if cutoff >= id {
+                        break;
+                    } else {
+                    }
+                } 
                     
                 self.merge_branches();
             }
@@ -270,83 +240,114 @@ impl Scope {
         }
     }
 
-    pub fn pop_branch(&mut self) {
-        let _ = self.path.pop();
-        let _ = self.frames.pop();
+    // only call this when you're certain a single branch was taken
+    pub fn lift_branches(&mut self) {
+        if self.frames.len() < 2 {
+            // should never happen
+            return;
+        }
+
+        let frame = self.frames.pop().unwrap();
+
+        // copy because frame is about to move
+        let cause = frame.cause.clone();
+
+        for (index, branch) in frame.into_iter().enumerate() {
+            // todo: maybe better to put usizes in the nodes?
+            let index = index as i16; 
+            let new_node = match &cause {
+                &PathNode::Condition(ref l, _, ref y) => {
+                    PathNode::Condition(l.clone(), index, y.clone())
+                }
+                &PathNode::Loop(ref l, _, ref y) => {
+                    PathNode::Loop(l.clone(), index, y.clone())
+                }
+                &PathNode::Frame(ref l, ref t, _, ref y) => {
+                    PathNode::Frame(l.clone(), t.clone(), index, y.clone())
+                }
+                _ => cause.clone(),
+            };
+
+            for (name, mapping) in branch.content.into_iter() {
+                let new_mapping = mapping.augment(new_node.clone());
+
+                // there should always be one
+                if let Some(new_frame) = self.frames.last_mut() {
+                    new_frame.set_optional_mapping(name, new_mapping);
+                }
+            }            
+        }
     }
 
     // should only be called when the last frames are Conditions or Loops
     fn merge_branches(&mut self) {
-        if self.frames.len() == 1 {
+        if self.frames.len() < 2 {
             return;
         }
 
+        let cause;
+        let mut identifiers;
+        let len;
+
+        {
+            let frame = self.frames.last().unwrap();    
+            identifiers = BTreeSet::new();    
+
+            for branch in frame.iter() {
+                for name in branch.content.keys() {
+                    identifiers.insert(name.clone());
+                }
+            }    
+
+            cause = frame.cause.clone();
+            len = frame.len();
+        }
+
+        self.reset_branch_counter();
+
         let mut new_content = HashMap::new();
 
-        let mut identifiers = HashSet::new();
-
-        for name in self.frames[self.frames.len() - 2].get_content().keys() {
-            identifiers.insert(name.clone());
-        }
-
-        for name in self.frames[self.frames.len() - 1].get_content().keys() {
-            identifiers.insert(name.clone());
-        }
-
-        // first branch
-        {
-            let ref frame = self.frames[self.frames.len() - 1];
-            let cause = frame.get_cause();
-
-            for name in &identifiers {
-                let old_mapping = self.resolve_optional_identifier(name);
-                let mut new_mapping = OptionalMapping::new();
-
-                for (old_path, address) in old_mapping.iter() {
-                    let mut new_path = old_path.clone();
-                    new_path.add_node(cause.clone());
-                    new_mapping.add_mapping(new_path, address.clone());
+        for i in 0..len {
+            let i = i as i16;
+            let new_node = match &cause {
+                &PathNode::Condition(ref l, _, ref y) => {
+                    PathNode::Condition(l.clone(), i, y.clone())
                 }
+                &PathNode::Loop(ref l, _, ref y) => {
+                    PathNode::Loop(l.clone(), i, y.clone())
+                }
+                &PathNode::Frame(ref l, ref t, _, ref y) => {
+                    PathNode::Frame(l.clone(), t.clone(), i, y.clone())
+                }
+                _ => cause.clone(),
+            };
 
-                new_content.insert(name.clone(), new_mapping);
-            }
-        }
+            for name in identifiers.iter() {
+                let old_mapping = self.resolve_optional_identifier(name).clone();
+                let new_mapping = old_mapping.augment(new_node.clone());
 
-        // hard coded swap
-        {
-            let current = self.path.pop().unwrap();
-            self.path.push(current + 1);
-        }
-
-        // second branch
-        {
-            let ref frame = self.frames[self.frames.len() - 2];
-            let cause = frame.get_cause();
-
-            for name in &identifiers {
-                let old_mapping = self.resolve_optional_identifier(name);
-                let mut new_mapping = new_content.get_mut(name).unwrap();
-
-                for (old_path, address) in old_mapping.iter() {
-                    let mut new_path = old_path.clone();
-                    new_path.add_node(cause.clone());
-                    new_mapping.add_mapping(new_path, address.clone());
+                match new_content.entry(name.clone()) {
+                    Entry::Vacant(m) => {
+                        m.insert(new_mapping);
+                    }
+                    Entry::Occupied(mut m) => {
+                        let mut old_mapping = m.get_mut();
+                        for (path, address) in new_mapping.into_iter() {
+                            old_mapping.add_mapping(path, address);
+                        }
+                    }
                 }
             }
+
+            self.next_branch();
         }
 
-        let _ = self.path.pop();
-        let _ = self.frames.pop();
         let _ = self.frames.pop();
 
-        let mut current_index = self.frames.len() - 1;
-
-        current_index -= *self.path.last().unwrap();
-
-        let ref mut current_frame = self.frames[current_index];
-
-        for (name, mapping) in new_content.into_iter() {
-            current_frame.set_optional_mapping(name.clone(), mapping)
-        }
+        if let Some(frame) = self.frames.last_mut() {
+            for (name, mapping) in new_content.into_iter() {
+                frame.set_optional_mapping(name, mapping)
+            }
+        }        
     }
 }

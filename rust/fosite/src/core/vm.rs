@@ -14,49 +14,52 @@ pub struct VirtualMachine {
     // todo, can we use a single Path
     // would require a way to shrink Paths
     paths: Vec<Path>,
-    nodes: Vec<GastID>,
+    nodes: Vec<PathID>,
+    default: PathID,
 
     // control flow might keep us into some paths
     // even though the actual code branch is no longer being executed 
     // sometimes we do need to know what the last code branch was
-    branches: Vec<GastID>,
+    branches: Vec<PathID>,
 
     restrictions: Vec<Vec<Path>>,
     watches: Vec<Watch>,
-
-    
 }
 
 impl VirtualMachine {
     pub fn new() -> VirtualMachine {
+        let mut path = Path::empty();
+        path.add_node(PathNode::Frame(vec!(0), None, 0, 1));
+
         let memory = Memory::new();
         let knowledge = KnowledgeBase::new();
         VirtualMachine {
             scopes: Vec::new(),
             memory: memory,
             knowledge_base: knowledge,
-            nodes: vec![],
-            paths: vec![Path::empty()],
+            nodes: vec![vec!(0)],
+            paths: vec![path],
             branches: vec!(),
             restrictions: Vec::new(),
             watches: Vec::new(),
+            default: vec!(0),
         }
     }
 
-    pub fn push_branch(&mut self, node: GastID) {
+    pub fn push_branch(&mut self, node: PathID) {
         self.branches.push(node);
     }
 
-    pub fn pop_branch(&mut self) -> Option<GastID> {
+    pub fn pop_branch(&mut self) -> Option<PathID> {
         self.branches.pop()
     }
 
-    pub fn current_branch(&self) -> Option<&GastID> {
+    pub fn current_branch(&self) -> Option<&PathID> {
         self.branches.last()
     }
 
     pub fn start_watch(&mut self) {
-        let node = self.current_node();
+        let node = self.current_node().clone();
         self.watches.push(Watch::new(node));
     }
 
@@ -452,7 +455,9 @@ impl VirtualMachine {
         let ref id = node.id;
         let ref kind = node.kind;
 
-        self.nodes.push(id.clone());
+        let mut current = self.nodes.pop().unwrap();
+        current.push(id.clone());
+        self.nodes.push(current);
 
         let result = match kind {
             &NodeType::Boolean { ref value } => self.boolean(executors, *value),
@@ -520,14 +525,16 @@ impl VirtualMachine {
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };
 
-        let _ = self.nodes.pop();
+        let mut current = self.nodes.pop().unwrap();
+        let _ = current.pop();
+        self.nodes.push(current);
 
         let result = self.filter(result);
 
         return result;
     }
 
-    pub fn change_branch(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn next_branch(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -536,14 +543,34 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object(ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.change_branch();
+                object.next_branch();
             } else if let &AnalysisItem::Identifier( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().change_branch();
+            self.scopes.last_mut().unwrap().next_branch();
+        }
+    }
+
+    pub fn reset_branch_counter(&mut self, changes: &Vec<AnalysisItem>) {
+        let mut identifier_changed = false;
+
+        let set: HashSet<_> = changes.iter().collect(); // dedup
+        let changes: Vec<_> = set.into_iter().collect();
+
+        for change in changes {
+            if let &AnalysisItem::Object(ref address) = change {
+                let mut object = self.memory.get_object_mut(address);
+                object.reset_branch_counter();
+            } else if let &AnalysisItem::Identifier( _ ) = change {
+                identifier_changed = true;
+            }
+        }
+
+        if identifier_changed {
+            self.scopes.last_mut().unwrap().reset_branch_counter();
         }
     }
 
@@ -551,7 +578,7 @@ impl VirtualMachine {
         self.merge_once(changes, None)
     }
 
-    fn merge_once(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<GastID>) {
+    fn merge_once(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<&PathID>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -571,7 +598,8 @@ impl VirtualMachine {
         }
     }
 
-    pub fn stop_branch(&mut self, changes: &Vec<AnalysisItem>) {
+    // TODO!!
+    pub fn discard_branch(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -580,29 +608,30 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.pop_branch();
+                //object.discard_branch();
             } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().pop_branch();
+            //self.scopes.last_mut().unwrap().discard_branch();
         }
     }
 
     // merge branches as long as the last node's id is too big
     // if there's no cutoff, collapse a single branch
-    pub fn merge_until(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<GastID>) {
+    pub fn merge_until(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<&PathID>) {
         if let Some(cutoff) = cutoff {
             while let Some(path) = self.paths.pop() {
-                let mut id = 0;
-
-                if let Some(node) = path.iter().last() {
-                    id = node.get_location()
+                let mut b = false;
+                if let Some(node) = path.iter().last() {    
+                    let id = node.get_location();
+                    b = cutoff >= id;
+                    
                 } 
-                
-                if cutoff >= id {
+
+                if b {
                     self.paths.push(path);
                     break;
                 }
@@ -758,8 +787,8 @@ impl VirtualMachine {
         return intersection;
     }
 
-    pub fn current_node(&self) -> GastID {
-        self.nodes.last().unwrap_or(&0).clone()
+    pub fn current_node(&self) -> &PathID {
+        self.nodes.last().unwrap_or(&self.default)
     }
 
     pub fn knowledge(&self) -> &KnowledgeBase {

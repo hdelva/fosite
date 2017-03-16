@@ -4,10 +4,10 @@ use super::Path;
 use super::Collection;
 use super::Scope;
 use super::Mapping;
-use super::GastID;
 use super::CollectionBranch;
 use super::CollectionChunk;
 use super::KnowledgeBase;
+use super::PathID;
 
 
 /// objects
@@ -64,22 +64,27 @@ impl Object {
         return &mut self.extensions;
     }
 
-    pub fn change_branch(&mut self) {
+    pub fn next_branch(&mut self) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
-            self.elements.change_branch()
+            self.elements.next_branch()
         } 
         
         if self.elements.num_frames() <= self.attributes.num_frames() {
-            self.attributes.change_branch()
+            self.attributes.next_branch()
         } 
     }
 
-    pub fn pop_branch(&mut self) {
-        self.elements.pop_branch();
-        self.attributes.pop_branch();
+    pub fn reset_branch_counter(&mut self) {
+        if self.attributes.num_frames() <= self.elements.num_frames() {
+            self.elements.reset_branch_counter()
+        } 
+        
+        if self.elements.num_frames() <= self.attributes.num_frames() {
+            self.attributes.reset_branch_counter()
+        } 
     }
 
-    pub fn merge_until(&mut self, cutoff: Option<GastID>) {
+    pub fn merge_until(&mut self, cutoff: Option<&PathID>) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
             self.elements.merge_until(cutoff)
         } 
@@ -145,19 +150,19 @@ impl Object {
         self.elements.is_reliable()
     }
 
-    pub fn get_element(&self, n: i16, node: &GastID) -> Mapping {
+    pub fn get_element(&self, n: i16, node: &PathID) -> Mapping {
         self.elements.get_element(n, node)
     }
 
-    pub fn get_any_element(&self, node: &GastID) -> Mapping {
+    pub fn get_any_element(&self, node: &PathID) -> Mapping {
         self.elements.get_any_element(node)
     }
 
-    pub fn get_first_n_elements(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+    pub fn get_first_n_elements(&self, n: i16, node: &PathID) -> Vec<Mapping> {
         self.elements.get_first_n(n, node)
     }
 
-    pub fn get_last_n_elements(&self, n: i16, node: &GastID) -> Vec<Mapping> {
+    pub fn get_last_n_elements(&self, n: i16, node: &PathID) -> Vec<Mapping> {
         self.elements.get_last_n(n, node)
     }
 

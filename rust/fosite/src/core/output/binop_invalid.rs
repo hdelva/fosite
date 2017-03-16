@@ -10,6 +10,8 @@ use std::collections::BTreeSet;
 use std::collections::BTreeMap;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
+
 
 type Sources = HashMap<GastID, (i16, i16)>;
 type Nodes = HashMap<GastID, GastNode>;
@@ -34,7 +36,7 @@ impl BinOpInvalid {
 }
 
 impl MessageContent for BinOpInvalid {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
         BINOP_INVALID.hash(&mut s);
         self.operator.hash(&mut s);
@@ -42,7 +44,7 @@ impl MessageContent for BinOpInvalid {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_error_preamble(sources, node);
         println!("  Incompatible types for operation {}",
             Bold.paint(&self.operator));

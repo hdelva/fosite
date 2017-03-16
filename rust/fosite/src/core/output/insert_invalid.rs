@@ -6,6 +6,8 @@ use term_painter::Attr::*;
 use std::collections::HashMap;
 use super::GastID;
 use super::GastNode;
+use super::PathID;
+
 
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -34,7 +36,7 @@ impl InsertInvalid {
 }
 
 impl MessageContent for InsertInvalid {
-    fn hash(&self) -> u64 {
+    fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
 
         INSERT_INVALID.hash(&mut s);
@@ -43,7 +45,7 @@ impl MessageContent for InsertInvalid {
         s.finish()
     }
 
-    fn print_message(&self, sources: &Sources, _: &Nodes, node: GastID) {
+    fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_error_preamble(sources, node);
         println!("  {} does not support item assignment", 
             Bold.paint(&self.target));
