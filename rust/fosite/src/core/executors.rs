@@ -165,7 +165,7 @@ pub trait AndThenExecutor {
 }
 
 pub trait CallExecutor {
-    fn execute(&self, env: Environment, target: &GastNode, args: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, target: &GastNode, args: &[GastNode]) -> ExecutionResult;
 }
 
 pub struct Environment<'a> {

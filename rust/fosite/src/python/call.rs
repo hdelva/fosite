@@ -7,7 +7,7 @@ pub struct PythonCall {
 }
 
 impl CallExecutor for PythonCall {
-    fn execute(&self, env: Environment, target: &GastNode, args: &Vec<GastNode>) -> ExecutionResult {
+    fn execute(&self, env: Environment, target: &GastNode, args: &[GastNode]) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let mut total_changes: Vec<AnalysisItem> = Vec::new();
@@ -31,13 +31,6 @@ impl CallExecutor for PythonCall {
             vm.push_path(current_path);
 
             if let Some(mut body_result) = vm.call(executors, &address, args) {
-                // todo, have the merge step return all the values
-                for (result_path, result_address) in body_result.result.into_iter() {
-                    let mut new_path = result_path.clone();
-                    new_path.merge_into(path.clone());
-                    mapping.add_mapping(result_path, result_address);
-                }
-
                 total_changes.append(&mut body_result.changes);
                 total_dependencies.append(&mut body_result.dependencies);
             }
@@ -47,8 +40,15 @@ impl CallExecutor for PythonCall {
             vm.next_branch(&total_changes);
         }
 
-        // todo, don't merge; discard
-        vm.merge_branches(&total_changes);
+        let result = vm.discard_branches(&total_changes);
+
+        for (path, opt_address) in result.into_iter() {
+            if let Some(address) = opt_address {
+                mapping.add_mapping(path, address);
+            } else {
+                // warning
+            }
+        }
 
         // append these at the end
         // these changes shouldn't influence the merging of the frame nodes

@@ -41,12 +41,13 @@ impl Branch {
         self.set_optional_mapping(name, new_mapping);
     }
 
-    // why is this even a thing
-    /*
-    fn get_content(&self) -> &HashMap<String, OptionalMapping> {
-        return &self.content;
+    fn set_result(&mut self, mapping: Mapping) {
+        self.set_mapping("___result".to_owned(), mapping);
     }
-    */
+
+    fn get_result(&self) -> Option<&OptionalMapping> {
+        return self.resolve_identifier(&"___result".to_owned());
+    }
 }
 
 
@@ -126,6 +127,25 @@ impl Frame {
 
         self.set_optional_mapping(name, new_mapping);
     }
+
+
+    fn set_result(&mut self, mapping: Mapping) {
+        self.set_mapping("___result".to_owned(), mapping);
+    }
+
+    fn get_result(&self) -> OptionalMapping {
+        let mut mapping = OptionalMapping::new();
+
+        for branch in self.branches.iter() {
+            if let Some(m) = branch.resolve_identifier(&"___result".to_owned()) {
+                for (path, address) in m.iter() {
+                    mapping.add_mapping(path.clone(), address.clone());
+                }
+            }
+        }
+        
+        return mapping;
+    }
 }
 
 pub struct Scope {
@@ -204,6 +224,10 @@ impl Scope {
         }
     }
 
+    pub fn set_result(&mut self, path: Path, mapping: Mapping) {
+        self.set_mapping("___result".to_owned(), path, mapping);
+    }
+
     pub fn set_constant(&mut self, name: String, path: Path, mapping: Mapping) {
         self.set_mapping(name.clone(), path, mapping);
         self.constants.insert(name);
@@ -240,6 +264,19 @@ impl Scope {
         }
     }
 
+    pub fn discard_branch(&mut self) -> OptionalMapping {
+        if self.frames.len() < 2 {
+            // shouldn't happen
+            return OptionalMapping::new();
+        }
+
+        let frame = self.frames.pop().unwrap();
+
+        println!("{:#?}", frame);
+
+        return frame.get_result();
+    }
+
     // only call this when you're certain a single branch was taken
     pub fn lift_branches(&mut self) {
         if self.frames.len() < 2 {
@@ -252,6 +289,7 @@ impl Scope {
         // copy because frame is about to move
         let cause = frame.cause.clone();
 
+        // lift the mappings
         for (index, branch) in frame.into_iter().enumerate() {
             // todo: maybe better to put usizes in the nodes?
             let index = index as i16; 

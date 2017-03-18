@@ -28,6 +28,7 @@ use core::Path;
 use core::ExecutionResult;
 use core::FlowControl;
 use core::GastNode;
+use core::AnalysisItem;
 
 use python::*;
 
@@ -216,18 +217,20 @@ fn define_builtins(vm: &mut VirtualMachine) {
 fn define_int_cast(vm: &mut VirtualMachine) {
     let ptr = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();
 
-    let fun = | env: Environment, args: &Vec<GastNode>, kwargs: &HashMap<String, GastNode> | {
+    let fun = | env: Environment, args: &[GastNode], kwargs: &HashMap<String, GastNode> | {
         let Environment { vm, .. } = env;
         let type_name = "int".to_owned();
         let pointer = vm.object_of_type(&type_name);
 
         let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![],
-            result: mapping,
+            changes: vec![AnalysisItem::Identifier("___result".to_owned())],
+            result: Mapping::new(),
         };
 
         execution_result

@@ -241,6 +241,7 @@ fn make_collection(
     }
 }
 
+// different from normal generators because these make their own scope
 fn collection_from_comprehension(
     vm: &mut VirtualMachine, 
     executors: &Executors, 
@@ -282,7 +283,8 @@ fn collection_from_comprehension(
         obj.define_elements(vec!(chunk), Path::empty());
     }
 
-    vm.discard_branch(&changes);
+    // disregard the return value
+    let _ = vm.discard_branches(&changes);
 
     let _ = vm.pop_path();
 

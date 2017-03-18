@@ -449,7 +449,7 @@ fn build_call(id: GastID, node: &Json) -> GastNode {
     let target_json = obj.get("name").unwrap();
     let target = build(target_json);
 
-    let args = obj.get("args").unwrap().as_array().unwrap();
+    let args = obj.get("positional_args").unwrap().as_array().unwrap();
     let mut content = Vec::new();
 
     for element in args {

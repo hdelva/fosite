@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 use std::slice::Iter;
 use std::collections::HashMap;
 
-type Callable = Fn(Environment, &Vec<GastNode>, &HashMap<String, GastNode>) -> ExecutionResult;
+type Callable = Fn(Environment, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult;
 
 pub struct VirtualMachine {
     // todo call stack
@@ -53,11 +53,11 @@ impl VirtualMachine {
     }
 
     pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
-        T : for<'r> Fn(Environment<'r>, &Vec<GastNode>, &HashMap<String, GastNode>) -> ExecutionResult {
+        T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
         self.callables.insert(address, Box::new(callable));
     }
 
-    pub fn call(&mut self, executors: &Executors, address: &Pointer, args: &Vec<GastNode>) -> Option<ExecutionResult> {
+    pub fn call(&mut self, executors: &Executors, address: &Pointer, args: &[GastNode]) -> Option<ExecutionResult> {
         let result;
         if let Some(callable) = self.callables.remove(address) {
             {
@@ -427,6 +427,16 @@ impl VirtualMachine {
         }
     }
 
+    pub fn _call(&mut self, executors: &Executors, target: &GastNode, args: &[GastNode]) -> ExecutionResult {
+        match executors.call {
+            Some(ref call) => {
+                let env = Environment::new(self, executors);
+                call.execute(env, target, args)
+            }
+            None => panic!("VM is not setup to execute break statements"),
+        }
+    }
+
     pub fn continue_loop(&mut self, executors: &Executors) -> ExecutionResult {
         match executors.continue_loop {
             Some(ref continue_loop) => {
@@ -548,6 +558,9 @@ impl VirtualMachine {
             &NodeType::ForEach {ref before, ref body} => {
                 self.foreach(executors, before, body)
             }
+            &NodeType::Call {ref target, ref args} => {
+                self._call(executors, target, args)
+            }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };
 
@@ -600,6 +613,12 @@ impl VirtualMachine {
         }
     }
 
+    pub fn set_result(&mut self, path: Path, mapping: Mapping) {
+        if let Some(scope) = self.scopes.last_mut() {
+            scope.set_result(path, mapping)
+        }
+    }
+
     pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>) {
         self.merge_once(changes, None)
     }
@@ -624,8 +643,7 @@ impl VirtualMachine {
         }
     }
 
-    // TODO!!
-    pub fn discard_branch(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn discard_branches(&mut self, changes: &Vec<AnalysisItem>) -> OptionalMapping {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -634,14 +652,16 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                //object.discard_branch();
+                object.merge_until(None);
             } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            //self.scopes.last_mut().unwrap().discard_branch();
+            self.scopes.last_mut().unwrap().discard_branch()
+        } else {
+            OptionalMapping::new()
         }
     }
 
