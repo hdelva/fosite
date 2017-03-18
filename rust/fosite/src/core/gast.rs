@@ -96,6 +96,11 @@ pub enum NodeType {
     AndThen {
         first: Box<GastNode>,
         second: Box<GastNode>,
+    },
+    Call {
+        target: Box<GastNode>,
+        args: Vec<GastNode>,
+        // kwargs: HashMap<String, GastNode>,
     }
 }
 
@@ -176,6 +181,7 @@ pub fn build(node: &Json) -> GastNode {
         "filter" => build_filter(id, node),
         "map" => build_map(id, node),
         "andthen" => build_andthen(id, node),
+        "call" => build_call(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -435,6 +441,22 @@ fn build_list(id: GastID, node: &Json) -> GastNode {
     }
 
     return GastNode::new(id, NodeType::List { content: content });
+}
+
+fn build_call(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let target_json = obj.get("name").unwrap();
+    let target = build(target_json);
+
+    let args = obj.get("args").unwrap().as_array().unwrap();
+    let mut content = Vec::new();
+
+    for element in args {
+        content.push(build(element));
+    }
+
+    return GastNode::new(id, NodeType::Call { target: Box::new(target), args: content });
 }
 
 fn build_set(id: GastID, node: &Json) -> GastNode {

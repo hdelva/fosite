@@ -12,6 +12,7 @@ mod continue_loop;
 mod index;
 mod generators;
 mod for_loop;
+mod call;
 
 pub use self::block::*;
 pub use self::binop::*;
@@ -27,3 +28,4 @@ pub use self::continue_loop::*;
 pub use self::index::*;
 pub use self::generators::*;
 pub use self::for_loop::*;
+pub use self::call::*;

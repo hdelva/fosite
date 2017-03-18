@@ -3,7 +3,10 @@ use bidir_map::BidirMap;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use super::ExecutionResult;
 
+use super::Environment;
+use super::GastNode;
 
 pub struct KnowledgeBase {
     types: BidirMap<String, Pointer>,

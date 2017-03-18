@@ -14,12 +14,20 @@ pub mod python;
 pub use core::VirtualMachine;
 use core::build;
 
+use std::collections::HashMap;
+
 use std::io::prelude::*;
 use std::fs::File;
 use core::Worker;
 //use core::Collection;
 //use core::Representant;
 use core::Executors;
+use core::Environment;
+use core::Mapping;
+use core::Path;
+use core::ExecutionResult;
+use core::FlowControl;
+use core::GastNode;
 
 use python::*;
 
@@ -102,6 +110,7 @@ fn test_vm() {
         map: Some(Box::new(PythonMap {})),
         andthen: Some(Box::new(PythonAndThen {})),
         foreach: Some(Box::new(PythonFor {})),
+        call: Some(Box::new(PythonCall {})),
     };
 
     let mut s = String::new();
@@ -192,8 +201,37 @@ fn test_vm() {
         kb.add_arithmetic_type("set", "-");
     }
 
+    define_builtins(&mut vm);
+
     // global scope
     vm.new_scope();
 
     vm.execute(&executors, &stuff);
+}
+
+fn define_builtins(vm: &mut VirtualMachine) {
+    define_int_cast(vm);
+}
+
+fn define_int_cast(vm: &mut VirtualMachine) {
+    let ptr = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();
+
+    let fun = | env: Environment, args: &Vec<GastNode>, kwargs: &HashMap<String, GastNode> | {
+        let Environment { vm, .. } = env;
+        let type_name = "int".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: vec![],
+            changes: vec![],
+            result: mapping,
+        };
+
+        execution_result
+    };
+
+    vm.set_callable(ptr, fun);
 }

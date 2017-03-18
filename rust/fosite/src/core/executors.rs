@@ -29,6 +29,7 @@ pub struct Executors {
     pub map: Option<Box<MapExecutor>>,
     pub andthen: Option<Box<AndThenExecutor>>,
     pub foreach: Option<Box<ForEachExecutor>>,
+    pub call: Option<Box<CallExecutor>>,
 }
 
 pub trait AssignExecutor {
@@ -161,6 +162,10 @@ pub trait MapExecutor {
 
 pub trait AndThenExecutor {
     fn execute(&self, env: Environment, first: &GastNode, second: &GastNode) -> ExecutionResult;
+}
+
+pub trait CallExecutor {
+    fn execute(&self, env: Environment, target: &GastNode, args: &Vec<GastNode>) -> ExecutionResult;
 }
 
 pub struct Environment<'a> {

@@ -4,6 +4,9 @@ use std::collections::HashSet;
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
 use std::slice::Iter;
+use std::collections::HashMap;
+
+type Callable = Fn(Environment, &Vec<GastNode>, &HashMap<String, GastNode>) -> ExecutionResult;
 
 pub struct VirtualMachine {
     // todo call stack
@@ -24,6 +27,8 @@ pub struct VirtualMachine {
 
     restrictions: Vec<Vec<Path>>,
     watches: Vec<Watch>,
+
+    callables: HashMap<Pointer, Box<Callable>>,
 }
 
 impl VirtualMachine {
@@ -43,7 +48,28 @@ impl VirtualMachine {
             restrictions: Vec::new(),
             watches: Vec::new(),
             default: vec!(0),
+            callables: HashMap::new(),
         }
+    }
+
+    pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
+        T : for<'r> Fn(Environment<'r>, &Vec<GastNode>, &HashMap<String, GastNode>) -> ExecutionResult {
+        self.callables.insert(address, Box::new(callable));
+    }
+
+    pub fn call(&mut self, executors: &Executors, address: &Pointer, args: &Vec<GastNode>) -> Option<ExecutionResult> {
+        let result;
+        if let Some(callable) = self.callables.remove(address) {
+            {
+                let env = Environment {vm: self, executors: executors};
+                result = Some(callable(env, args, &HashMap::new()));
+            }
+            self.callables.insert(address.clone(), callable);
+        } else {
+            result = None;
+        }
+
+        return result;
     }
 
     pub fn push_branch(&mut self, node: PathID) {
