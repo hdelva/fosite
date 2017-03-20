@@ -15,6 +15,7 @@ pub use core::VirtualMachine;
 use core::build;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use std::io::prelude::*;
 use std::fs::File;
@@ -29,6 +30,12 @@ use core::ExecutionResult;
 use core::FlowControl;
 use core::GastNode;
 use core::AnalysisItem;
+
+use core::ArgInvalid;
+use core::Message;
+use core::CHANNEL;
+
+
 
 use python::*;
 
@@ -212,13 +219,67 @@ fn test_vm() {
 
 fn define_builtins(vm: &mut VirtualMachine) {
     define_int_cast(vm);
+    define_float_cast(vm);
+    define_abs(vm);
+    define_all(vm);
+    define_any(vm);
+    define_ord(vm);
+    define_len(vm);
+    define_repr(vm);
+    define_string_cast(vm);
+    define_round(vm);
+}
+
+fn check_arg(vm: &mut VirtualMachine, executors: &Executors, arg: &GastNode, index: &'static str, permitted: Vec<&'static str>) -> ExecutionResult {
+    let eval = vm.execute(executors, arg);
+    let permitted_ptr: HashSet<_> = permitted
+        .iter()
+        .map(|x| *vm.knowledge().get_type(&x.to_string()).unwrap_or(&0))
+        .collect();
+
+    let mut problems = Vec::new();
+
+    'outer:
+    for (path, address) in eval.result.iter() {
+        let types = vm.ancestors(address);
+        for t in types.iter() {
+            if permitted_ptr.contains(&t) {
+                continue 'outer;
+            }
+        }
+
+        let last_type = types.first().unwrap(); // there's always one
+        let type_name = vm.knowledge().get_type_name(last_type);
+        problems.push((path.clone(), type_name.clone()));
+    }
+
+    if problems.len() > 0 {
+        let content = ArgInvalid::new(arg.to_string(), index, permitted, problems);
+        let message = Message::Output { 
+            source: vm.current_node().clone(),
+            content: Box::new(content)};
+        &CHANNEL.publish(message);
+    }
+
+    return eval;
 }
 
 fn define_int_cast(vm: &mut VirtualMachine) {
     let ptr = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();
 
-    let fun = | env: Environment, args: &[GastNode], kwargs: &HashMap<String, GastNode> | {
-        let Environment { vm, .. } = env;
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("number", "string"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
         let type_name = "int".to_owned();
         let pointer = vm.object_of_type(&type_name);
 
@@ -228,8 +289,8 @@ fn define_int_cast(vm: &mut VirtualMachine) {
 
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
-            dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier("___result".to_owned())],
+            dependencies: total_dependencies,
+            changes: total_changes,
             result: Mapping::new(),
         };
 
@@ -237,4 +298,310 @@ fn define_int_cast(vm: &mut VirtualMachine) {
     };
 
     vm.set_callable(ptr, fun);
+}
+
+fn define_float_cast(vm: &mut VirtualMachine) {
+    let ptr = vm.knowledge().get_type(&"float".to_owned()).unwrap().clone();
+
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("number", "string"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "float".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.set_callable(ptr, fun);
+}
+
+fn define_string_cast(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("object", "NoneType"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "string".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("str".to_owned(), fun);
+}
+
+fn define_abs(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("number"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "int".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("abs".to_owned(), fun);
+}
+
+fn define_round(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("number"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "int".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("round".to_owned(), fun);
+}
+
+fn define_len(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("collection"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "int".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("len".to_owned(), fun);
+}
+
+fn define_repr(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("object", "NoneType"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "string".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("repr".to_owned(), fun);
+}
+
+fn define_ord(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("string"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+
+        
+        let type_name = "int".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("ord".to_owned(), fun);
+}
+
+fn define_all(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("collection"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+    
+        let type_name = "bool".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("all".to_owned(), fun);
+}
+
+fn define_any(vm: &mut VirtualMachine) {
+    let fun = | env: Environment, args: &[GastNode], _: &HashMap<String, GastNode> | {
+        let mut total_changes = vec![AnalysisItem::Identifier("___result".to_owned())];
+        let mut total_dependencies = Vec::new();
+
+        let Environment { vm, executors } = env;
+
+        if args.len() > 0 {
+            let mut arg_result = check_arg(vm, executors, &args[0], "first", vec!("collection"));
+            total_changes.append(&mut arg_result.changes);
+            total_dependencies.append(&mut arg_result.dependencies);
+        }
+    
+        let type_name = "bool".to_owned();
+        let pointer = vm.object_of_type(&type_name);
+
+        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let path = vm.current_path().clone();
+        vm.set_result(path, mapping);
+
+        let execution_result = ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: Mapping::new(),
+        };
+
+        execution_result
+    };
+
+    vm.define_function("any".to_owned(), fun);
 }

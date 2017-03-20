@@ -52,6 +52,22 @@ impl VirtualMachine {
         }
     }
 
+    pub fn define_function<T: 'static>(&mut self, name: String, callable: T) where
+        T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
+        let pointer = self.memory.new_object();
+        {
+            let mut object = self.memory.get_object_mut(&pointer);
+        }
+
+        self.set_callable(pointer.clone(), callable);
+
+        let mapping = Mapping::simple(Path::empty(), pointer);
+        let mut scope = self.scopes.last_mut().unwrap();
+        scope.set_mapping(name,
+                          self.paths.last().unwrap().clone(),
+                          mapping.clone());
+    }
+
     pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
         T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
         self.callables.insert(address, Box::new(callable));

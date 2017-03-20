@@ -272,8 +272,6 @@ impl Scope {
 
         let frame = self.frames.pop().unwrap();
 
-        println!("{:#?}", frame);
-
         return frame.get_result();
     }
 

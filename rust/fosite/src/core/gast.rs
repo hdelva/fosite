@@ -123,6 +123,10 @@ impl NodeType {
             &NodeType::String {ref value} => {
                 format!("{}", value)
             }
+            &NodeType::Call {ref target, ref args} => {
+                let pls: Vec<String> = args.iter().map(|x| x.to_string()).collect();
+                format!("{}({})", target.to_string(), pls.join(", "))
+            }
             _ => format!("Node {:?} doesn't have a string representation", self),
         }
     }
