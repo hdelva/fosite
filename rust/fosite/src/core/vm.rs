@@ -55,17 +55,32 @@ impl VirtualMachine {
     pub fn define_function<T: 'static>(&mut self, name: String, callable: T) where
         T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
         let pointer = self.memory.new_object();
-        {
-            let mut object = self.memory.get_object_mut(&pointer);
-        }
-
         self.set_callable(pointer.clone(), callable);
 
         let mapping = Mapping::simple(Path::empty(), pointer);
+
+        let path = self.current_path().clone();
         let mut scope = self.scopes.last_mut().unwrap();
-        scope.set_mapping(name,
-                          self.paths.last().unwrap().clone(),
-                          mapping.clone());
+        scope.set_mapping(name, path, mapping);
+    }
+
+    pub fn define_method<T: 'static>(&mut self, tpe: String, name: String, callable: T) where
+        T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
+
+        let pointer = self.memory.new_object();
+        self.set_callable(pointer.clone(), callable);
+
+        let parent_ptr = self.knowledge().get_type(&tpe).unwrap().clone();
+
+        let mapping = Mapping::simple(Path::empty(), pointer);
+
+        let path = self.current_path().clone();
+        let mut object = self.get_object_mut(&parent_ptr);
+        object.assign_attribute(name, path, mapping);
+    }
+
+    pub fn is_callable(&self, address: &Pointer) -> bool {
+        return self.callables.contains_key(address);
     }
 
     pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
@@ -201,6 +216,16 @@ impl VirtualMachine {
             changes: input.changes,
             dependencies: input.dependencies,
             result: new_mapping,
+        }
+    }
+
+    pub fn make_method_object(&mut self, executors: &Executors, parent: &Pointer, address: &Pointer) -> ExecutionResult {
+        match executors.method {
+            Some(ref method) => {
+                let env = Environment::new(self, executors);
+                method.execute(env, parent, address)
+            }
+            None => panic!("VM is not setup to create method objects"),
         }
     }
 

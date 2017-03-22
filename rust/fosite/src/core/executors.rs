@@ -2,6 +2,7 @@ use super::GastNode;
 use super::ExecutionResult;
 use super::VirtualMachine;
 use super::KnowledgeBase;
+use super::Pointer;
 
 pub struct Executors {
     pub binop: Option<Box<BinOpExecutor>>,
@@ -30,6 +31,15 @@ pub struct Executors {
     pub andthen: Option<Box<AndThenExecutor>>,
     pub foreach: Option<Box<ForEachExecutor>>,
     pub call: Option<Box<CallExecutor>>,
+    pub method: Option<Box<MethodExecutor>>,
+}
+
+pub trait MethodExecutor {
+    fn execute(&self,
+               env: Environment,
+               parent: &Pointer,
+               address: &Pointer)
+               -> ExecutionResult;
 }
 
 pub trait AssignExecutor {
