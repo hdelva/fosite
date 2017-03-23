@@ -98,8 +98,11 @@ pub trait MessageContent: Send {
                                  "Element of the collection at",
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
-                    _ => {
-                        println!("Frame?");
+                    &PathNode::Frame(_, ref target, _, _) => {
+                        println!("{}Call to {} at {}",
+                                 padding,
+                                 Bold.paint(target.as_ref().unwrap()),
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
                 }
             }
