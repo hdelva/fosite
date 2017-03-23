@@ -573,9 +573,10 @@ class Assert(GastNode):
     return constants.ASSERT
 
 class Import(GastNode):
-  def __init__(self, module: 'str', aliases: '[Pair]', line, col):
+  def __init__(self, module: 'str', parts: '[Pair]', into: 'str', line, col):
     self.module = module
-    self.aliases = aliases
+    self.parts = parts
+    self.into = into
     global count
     self.id = count
     count += 1
@@ -583,7 +584,7 @@ class Import(GastNode):
     self.col = col
 
   def kind(self):
-    return constants.Import
+    return constants.IMPORT
 
 class AnonymousFunction(GastNode):
   def __init__(self, args: '[Argument]', body: 'Block', line, col):

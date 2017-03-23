@@ -27,12 +27,12 @@ class Scan:
 
         self.count += 1
         content = self.statement(t)
-        body.append(content)
+        body.extend(content)
     else:
       for _, b in iter_fields(code):
         for t in b:
           content = self.statement(t)
-          body.append(content)
+          body.extend(content)
 
     result = gast.Block(body)
 
@@ -42,70 +42,66 @@ class Scan:
     names = []
 
     for mod in code.names:
-      original = gast.String(mod.name)
+      original = mod.name
 
       if mod.asname is None:
         alias = original
       else:
-        alias = gast.String(mod.asname)
+        alias = mod.asname
 
-      names.append(gast.Pair(original, alias))
-
-    return gast.Import(constants.MODULE_NAME, names)
+      yield gast.Import(original, [], alias, code.lineno, code.col_offset)
 
 
   def import_from(self, code):
     names = []
 
     for mod in code.names:
-      original = gast.String(mod.name)
+      original = mod.name
 
       if mod.asname is None:
         alias = original
       else:
-        alias = gast.String(mod.asname)
+        alias = mod.asname
 
-      names.append(gast.Pair(original, alias))
+      names.append(gast.Pair(original, alias, code.lineno, code.col_offset))
 
-    module = gast.String(code.module)
-
-    return gast.Import(module, names)
+    return gast.Import(code.module, names, None, code.lineno, code.col_offset)
 
   def statement(self, code):
     if type(code) is Expr:
-      return self.expression(code.value)
+      yield self.expression(code.value)
     elif type(code) is Break:
-      return self.break_loop(code)
+      yield self.break_loop(code)
     elif type(code) is Continue:
-      return self.continue_loop(code)
+      yield self.continue_loop(code)
     elif type(code) is FunctionDef:
-      return self.function(code)
+      yield self.function(code)
     elif type(code) is AugAssign or type(code) is Assign:
-      return self.assign(code)
+      yield self.assign(code)
     elif type(code) is Return:
-      return self.ret(code)
+      yield self.ret(code)
     elif type(code) is Yield:
-      return self.ret_yield(code)
+      yield self.ret_yield(code)
     elif type(code) is Raise:
-      return self.ret_raise(code)
+      yield self.ret_raise(code)
     elif type(code) is If:
-      return self.conditional(code)
+      yield self.conditional(code)
     elif type(code) is For:
-      return self.for_loop(code)
+      yield self.for_loop(code)
     elif type(code) is While:
-      return self.while_loop(code)
+      yield self.while_loop(code)
     elif type(code) is Try:
-      return self.try_except(code)
+      yield self.try_except(code)
     elif type(code) is With:
-      return self.with_block(code)
+      yield self.with_block(code)
     elif type(code) is Import:
-      return self.imports(code)
+      yield from self.imports(code)
     elif type(code) is ImportFrom:
-      return self.import_from(code)
+      yield self.import_from(code)
     elif type(code) is Lambda:
-      return self.anonymous_function(code)
-
-    raise Exception('Unsupported node:', code)
+      yield self.anonymous_function(code)
+    else:
+      raise Exception('Unsupported node:', code)
 
   def expression(self, code):
     if type(code) is Call:
@@ -393,6 +389,7 @@ class Scan:
       keyword = arg.arg
       value = self.expression(arg.value)
       kwargs.append(self.argument(keyword, value))
+      args.append(value) # even keyword arguments have a position
 
     return gast.Call(name, args, code.lineno, code.col_offset, kwargs)    
 
