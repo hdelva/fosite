@@ -120,6 +120,7 @@ fn test_vm() {
         foreach: Some(Box::new(PythonFor {})),
         call: Some(Box::new(PythonCall {})),
         method: Some(Box::new(PythonMethod {})),
+        import: Some(Box::new(PythonImport {})),
     };
 
     let mut s = String::new();
@@ -149,6 +150,7 @@ fn test_vm() {
     // 
     vm.declare_sub_type(&executors, &"function".to_owned(), &"object".to_owned());
     vm.declare_sub_type(&executors, &"method".to_owned(), &"function".to_owned());
+    vm.declare_sub_type(&executors, &"module".to_owned(), &"object".to_owned());
 
     vm.declare_sub_type(&executors, &"number".to_owned(), &"object".to_owned());
     vm.declare_sub_type(&executors, &"int".to_owned(), &"number".to_owned());

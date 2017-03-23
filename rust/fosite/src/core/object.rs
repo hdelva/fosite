@@ -141,6 +141,10 @@ impl Object {
         return self.attributes.resolve_optional_identifier(name);
     }
 
+    pub fn get_scope_mut(&mut self) -> &mut Scope {
+        return &mut self.attributes;
+    }
+
     // elements
     pub fn size_range(&self) -> Vec<(Path, Option<usize>, Option<usize>)> {
         self.elements.size_range()

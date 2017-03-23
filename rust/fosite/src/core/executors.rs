@@ -32,6 +32,7 @@ pub struct Executors {
     pub foreach: Option<Box<ForEachExecutor>>,
     pub call: Option<Box<CallExecutor>>,
     pub method: Option<Box<MethodExecutor>>,
+    pub import: Option<Box<ImportExecutor>>,
 }
 
 pub trait MethodExecutor {
@@ -47,6 +48,15 @@ pub trait AssignExecutor {
                env: Environment,
                targets: &Vec<GastNode>,
                value: &GastNode)
+               -> ExecutionResult;
+}
+
+pub trait ImportExecutor {
+    fn execute(&self,
+               env: Environment,
+               module: &String,
+               parts: &Vec<(String, String)>,
+               into: &Option<String>)
                -> ExecutionResult;
 }
 

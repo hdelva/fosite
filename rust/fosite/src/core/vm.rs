@@ -519,6 +519,21 @@ impl VirtualMachine {
         }
     }
 
+    pub fn import(&mut self,
+                       executors: &Executors,
+                       module: &String,
+                       parts: &Vec<(String, String)>,
+                       into: &Option<String>)
+                       -> ExecutionResult {
+        match executors.import {
+            Some(ref import) => {
+                let env = Environment::new(self, executors);
+                import.execute(env, module, parts,  into)
+            }
+            None => panic!("VM is not setup to execute imports"),
+        }
+    }
+
     pub fn assign(&mut self,
                   executors: &Executors,
                   targets: &Vec<GastNode>,
@@ -676,6 +691,9 @@ impl VirtualMachine {
             }
             &NodeType::Call {ref target, ref args} => {
                 self._call(executors, target, args)
+            }
+            &NodeType::Import {ref module, ref parts, ref into} => {
+                self.import(executors, module, parts, into)
             }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };

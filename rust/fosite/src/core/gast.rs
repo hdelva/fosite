@@ -102,7 +102,7 @@ pub enum NodeType {
         args: Vec<GastNode>,
         // kwargs: HashMap<String, GastNode>,
     },
-    Module {
+    Import {
         module: String,
         parts: Vec<(String, String)>,
         into: Option<String>,
@@ -235,7 +235,7 @@ fn build_import(id: GastID, node: &Json) -> GastNode {
     }
 
     return GastNode::new(id,
-                         NodeType::Module {
+                         NodeType::Import {
                              module: module,
                              parts: parts,
                              into: into,
