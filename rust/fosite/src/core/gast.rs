@@ -101,6 +101,11 @@ pub enum NodeType {
         target: Box<GastNode>,
         args: Vec<GastNode>,
         // kwargs: HashMap<String, GastNode>,
+    },
+    Module {
+        module: String,
+        parts: Vec<(String, String)>,
+        into: Option<String>,
     }
 }
 
@@ -186,6 +191,7 @@ pub fn build(node: &Json) -> GastNode {
         "map" => build_map(id, node),
         "andthen" => build_andthen(id, node),
         "call" => build_call(id, node),
+        "import" => build_import(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -201,6 +207,39 @@ pub fn build(node: &Json) -> GastNode {
     }
 
     return node;
+}
+
+fn build_import(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_module = obj.get("module").unwrap();
+    let module = json_module.as_string().unwrap().to_owned();
+
+    let json_into = obj.get("into").unwrap();
+    let into = if !json_into.is_null() {
+        Some(json_into.as_string().unwrap().to_owned())
+    } else {
+        None
+    };
+
+    let json_parts = obj.get("parts").unwrap();
+    let array = json_parts.as_array().unwrap();
+    
+    let mut parts = Vec::new();
+
+    for part in array {
+        let pair = part.as_array().unwrap();
+        let original = pair[0].as_string().unwrap().to_owned();
+        let alias = pair[1].as_string().unwrap().to_owned();
+        parts.push((original, alias));
+    }
+
+    return GastNode::new(id,
+                         NodeType::Module {
+                             module: module,
+                             parts: parts,
+                             into: into,
+                         });
 }
 
 fn build_binop(id: GastID, node: &Json) -> GastNode {

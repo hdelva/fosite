@@ -55,7 +55,13 @@ impl AttributeExecutor for PythonAttribute {
 
             for (path, opt_address) in actual_paths.into_iter() {
                 if let Some(address) = opt_address {
-                    mapping.add_mapping(path, address.clone());
+                    // make a method object is necessary
+                    if vm.is_instance(&address, &"method".to_owned()) {
+                        let method = vm.make_method_object(executors, parent_address, &address);
+                        mapping.add_mapping(path, method.clone());
+                    } else {
+                        mapping.add_mapping(path, address.clone());
+                    }
                 } else {
                     unresolved.insert(path.clone());
 

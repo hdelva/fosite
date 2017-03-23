@@ -22,16 +22,14 @@ use std::collections::hash_map::DefaultHasher;
 use super::ARGUMENT_INVALID;
 
 pub struct ArgInvalid {
-    argument: String,
     index: &'static str,
     permitted: Vec<&'static str>,
     actual: Vec<(Path, String)>,
 }
 
 impl ArgInvalid {
-    pub fn new(arg: String, index: &'static str, permitted: Vec<&'static str>, actual: Vec<(Path, String)>) -> Self {
+    pub fn new(index: &'static str, permitted: Vec<&'static str>, actual: Vec<(Path, String)>) -> Self {
         ArgInvalid {
-            argument: arg,
             index: index,
             permitted: permitted,
             actual: actual,
@@ -43,7 +41,6 @@ impl MessageContent for ArgInvalid {
     fn hash(&self, _: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
         ARGUMENT_INVALID.hash(&mut s);
-        self.argument.hash(&mut s);
         self.index.hash(&mut s);
         self.permitted.hash(&mut s);
         self.actual.hash(&mut s);
@@ -53,9 +50,8 @@ impl MessageContent for ArgInvalid {
     fn print_message(&self, sources: &Sources, _: &Nodes, node: PathID) {
         self.print_error_preamble(sources, node);
         println!("  Invalid argument type");
-        println!("  The {} Argument, {}, should have one of the following types:\n      {:?}",
+        println!("  The {} Argument should have one of the following types:\n      {:?}",
             &self.index,
-            Bold.paint(&self.argument),
             Bold.paint(&self.permitted));
         println!("  It has an invalid type in the following cases:");
 

@@ -39,7 +39,7 @@ pub trait MethodExecutor {
                env: Environment,
                parent: &Pointer,
                address: &Pointer)
-               -> ExecutionResult;
+               -> Pointer;
 }
 
 pub trait AssignExecutor {

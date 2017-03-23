@@ -14,6 +14,7 @@ mod mapping;
 mod channel;
 mod executors;
 mod watch;
+mod module;
 
 mod output;
 
@@ -37,5 +38,6 @@ pub use self::mapping::*;
 pub use self::channel::*;
 pub use self::executors::*;
 pub use self::watch::*;
+pub use self::module::*;
 
 pub use self::output::*;

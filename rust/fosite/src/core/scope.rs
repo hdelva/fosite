@@ -148,6 +148,7 @@ impl Frame {
     }
 }
 
+#[derive(Debug)]
 pub struct Scope {
     frames: Vec<Frame>,
     default: OptionalMapping,
@@ -264,15 +265,21 @@ impl Scope {
         }
     }
 
-    pub fn discard_branch(&mut self) -> OptionalMapping {
-        if self.frames.len() < 2 {
-            // shouldn't happen
-            return OptionalMapping::new();
+    pub fn discard(mut self) -> OptionalMapping {
+        if let Some(frame) = self.frames.pop() {
+            return frame.get_result();
         }
 
-        let frame = self.frames.pop().unwrap();
+        return self.default;
+    }
 
-        return frame.get_result();
+    pub fn discard_branch(&mut self) {
+        if self.frames.len() < 2 {
+            // shouldn't happen
+            return;
+        }
+
+        let _ = self.frames.pop().unwrap();
     }
 
     // only call this when you're certain a single branch was taken

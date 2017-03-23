@@ -6,11 +6,11 @@ use std::iter::FromIterator;
 use std::slice::Iter;
 use std::collections::HashMap;
 
-type Callable = Fn(Environment, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult;
+type Callable = Fn(Environment, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult;
 
 pub struct VirtualMachine {
-    // todo call stack
     scopes: Vec<Scope>,
+    shadow_scopes: Vec<Scope>,
     pub memory: Memory, // todo make private
     knowledge_base: KnowledgeBase,
 
@@ -28,7 +28,13 @@ pub struct VirtualMachine {
     restrictions: Vec<Vec<Path>>,
     watches: Vec<Watch>,
 
+    // calls
     callables: HashMap<Pointer, Box<Callable>>,
+    closures: HashMap<Pointer, Scope>,
+    results: Vec<OptionalMapping>,
+
+    // modules 
+    modules: HashMap<String, Module>,
 }
 
 impl VirtualMachine {
@@ -40,6 +46,7 @@ impl VirtualMachine {
         let knowledge = KnowledgeBase::new();
         VirtualMachine {
             scopes: Vec::new(),
+            shadow_scopes: Vec::new(),
             memory: memory,
             knowledge_base: knowledge,
             nodes: vec![vec!(0)],
@@ -49,12 +56,23 @@ impl VirtualMachine {
             watches: Vec::new(),
             default: vec!(0),
             callables: HashMap::new(),
+            closures: HashMap::new(),
+            results: Vec::new(),
+            modules: HashMap::new(),
         }
     }
 
+    pub fn retrieve_module(&mut self, name: &String) -> Option<Module> {
+        return self.modules.remove(name);
+    }
+
+    pub fn insert_module(&mut self, name: String, module: Module) {
+        self.modules.insert(name, module);
+    }
+
     pub fn define_function<T: 'static>(&mut self, name: String, callable: T) where
-        T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
-        let pointer = self.memory.new_object();
+        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult {
+        let pointer = self.object_of_type(&"function".to_owned());
         self.set_callable(pointer.clone(), callable);
 
         let mapping = Mapping::simple(Path::empty(), pointer);
@@ -65,9 +83,8 @@ impl VirtualMachine {
     }
 
     pub fn define_method<T: 'static>(&mut self, tpe: String, name: String, callable: T) where
-        T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
-
-        let pointer = self.memory.new_object();
+        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult {
+        let pointer = self.object_of_type(&"method".to_owned());
         self.set_callable(pointer.clone(), callable);
 
         let parent_ptr = self.knowledge().get_type(&tpe).unwrap().clone();
@@ -84,23 +101,81 @@ impl VirtualMachine {
     }
 
     pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
-        T : for<'r> Fn(Environment<'r>, &[GastNode], &HashMap<String, GastNode>) -> ExecutionResult {
+        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult {
         self.callables.insert(address, Box::new(callable));
     }
 
-    pub fn call(&mut self, executors: &Executors, address: &Pointer, args: &[GastNode]) -> Option<ExecutionResult> {
-        let result;
+    pub fn set_closure(&mut self, address: Pointer, scope: Scope) {
+        self.closures.insert(address, scope);
+    }
+
+    pub fn get_results(&mut self) -> Vec<OptionalMapping> {
+        let results = self.results.clone();
+        self.results = Vec::new();
+        return results;
+    }
+
+    pub fn call(&mut self, executors: &Executors, address: &Pointer, args: Vec<Mapping>) -> Option<ExecutionResult> {
+        let b = self.scopes.len() > 2;
+
+        // move the current function scope to the shadows
+        if b {
+            let s1 = self.scopes.pop().unwrap();
+            let s2 = self.scopes.pop().unwrap();
+            self.shadow_scopes.push(s2);
+            self.shadow_scopes.push(s1);
+        }
+
+        // take ownership of the closure scope
+        let closure = self.closures.remove(address);
+        if let Some(closure) = closure {
+            self.scopes.push(closure);
+        } else {
+            self.scopes.push(Scope::new());
+        }
+        
+        // local scope
+        self.scopes.push(Scope::new());
+
+        let analysis;
+        // take ownership of the callable
         if let Some(callable) = self.callables.remove(address) {
             {
                 let env = Environment {vm: self, executors: executors};
-                result = Some(callable(env, args, &HashMap::new()));
+                analysis = Some(callable(env, args, &HashMap::new()));
             }
+            // give the callable back back to the VM
             self.callables.insert(address.clone(), callable);
         } else {
-            result = None;
+            analysis = None;
         }
 
-        return result;
+        // remove the new scopes
+        let function_scope = self.scopes.pop().unwrap();
+        let closure = self.scopes.pop().unwrap();
+
+        // put the closure back into the VM 
+        self.closures.insert(address.clone(), closure);
+
+        // restore the previous function scopes if necessary
+        if b {
+            let s1 = self.shadow_scopes.pop().unwrap();
+            let s2 = self.shadow_scopes.pop().unwrap();
+
+            self.scopes.push(s2);
+            self.scopes.push(s1);
+        }
+
+        // take ownership of the return value of the call
+        // stored in the `___result` identifier
+        let function_result = function_scope.discard();
+
+        // store the result somewhere
+        // an executor will collect them when the time is right
+        self.results.push(function_result);
+
+        // return the dependency information
+        return analysis;
     }
 
     pub fn push_branch(&mut self, node: PathID) {
@@ -219,7 +294,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn make_method_object(&mut self, executors: &Executors, parent: &Pointer, address: &Pointer) -> ExecutionResult {
+    pub fn make_method_object(&mut self, executors: &Executors, parent: &Pointer, address: &Pointer) -> Pointer {
         match executors.method {
             Some(ref method) => {
                 let env = Environment::new(self, executors);
@@ -684,7 +759,8 @@ impl VirtualMachine {
         }
     }
 
-    pub fn discard_branches(&mut self, changes: &Vec<AnalysisItem>) -> OptionalMapping {
+    // used to discard identifiers introduced inside of comprehensions
+    pub fn discard_branches(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -700,10 +776,8 @@ impl VirtualMachine {
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().discard_branch()
-        } else {
-            OptionalMapping::new()
-        }
+            self.scopes.last_mut().unwrap().discard_branch();
+        } 
     }
 
     // merge branches as long as the last node's id is too big

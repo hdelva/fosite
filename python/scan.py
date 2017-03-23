@@ -63,7 +63,7 @@ class Scan:
       else:
         alias = mod.asname
 
-      names.append(gast.Pair(original, alias, code.lineno, code.col_offset))
+      names.append([original, alias])
 
     return gast.Import(code.module, names, None, code.lineno, code.col_offset)
 
