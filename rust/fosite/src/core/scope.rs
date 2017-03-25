@@ -64,7 +64,6 @@ impl Frame {
 
         let count = match &cause {
             &PathNode::Condition(_ , _, y) | 
-            &PathNode::Loop(_, _, y) | 
             &PathNode::Frame(_, _, _, y) => {
                 y
             }
@@ -195,7 +194,6 @@ impl Scope {
         for node in path.iter().skip(start) {
             let mut frame = Frame::new(node.clone());
             match node {
-                &PathNode::Loop(_ , x, _) |
                 &PathNode::Condition(_, x, _) |
                 &PathNode::Element(_, x, _) | // should never happen
                 &PathNode::Frame(_, _, x, _) => {
@@ -302,9 +300,6 @@ impl Scope {
                 &PathNode::Condition(ref l, _, ref y) => {
                     PathNode::Condition(l.clone(), index, y.clone())
                 }
-                &PathNode::Loop(ref l, _, ref y) => {
-                    PathNode::Loop(l.clone(), index, y.clone())
-                }
                 &PathNode::Frame(ref l, ref t, _, ref y) => {
                     PathNode::Frame(l.clone(), t.clone(), index, y.clone())
                 }
@@ -355,9 +350,6 @@ impl Scope {
             let new_node = match &cause {
                 &PathNode::Condition(ref l, _, ref y) => {
                     PathNode::Condition(l.clone(), i, y.clone())
-                }
-                &PathNode::Loop(ref l, _, ref y) => {
-                    PathNode::Loop(l.clone(), i, y.clone())
                 }
                 &PathNode::Frame(ref l, ref t, _, ref y) => {
                     PathNode::Frame(l.clone(), t.clone(), i, y.clone())

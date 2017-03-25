@@ -65,30 +65,7 @@ fn main() {
     let _ = worker.finalize();
     // test_collection();
 }
-/*
-fn test_collection() {
-    let mut collection = Collection::empty();
-    let mut definition = vec![];
-    definition.push(Representant::new(1, 1));
-    definition.push(Representant::new(2, 1));
-    definition.push(Representant::new(3, 0));
-    collection.define(definition);
 
-    println!("{:?}", collection.get_first_n(1));
-    println!("{:?}", collection.get_last_n(1));
-    println!("{:?}", collection.get_first_n(2));
-    println!("{:?}", collection.get_last_n(2));
-
-    println!("");
-
-    collection.prepend(Representant::new(4, 4), 0, 2);
-    println!("{:?}", collection.get_first_n(3));
-
-    println!("");
-
-    println!("{:?}", collection.slice(1, 1));
-}
-*/
 
 
 fn test_vm() {
@@ -198,6 +175,9 @@ fn test_vm() {
         kb.add_arithmetic_type("int", "**");
         kb.add_arithmetic_type("int", "%");
 
+        kb.add_arithmetic_type("bool", "or");
+        kb.add_arithmetic_type("bool", "and");
+
         kb.add_arithmetic_type("number", "<");
         kb.add_arithmetic_type("number", ">");
         kb.add_arithmetic_type("number", "<=");
@@ -222,9 +202,10 @@ fn test_vm() {
         kb.add_arithmetic_type("set", "-");
     }
 
-    define_builtins(&mut vm);
+    define_modules(&mut vm);
 
     vm.import(&executors, &"builtin".to_owned(), &vec!(), &None);
+    vm.import(&executors, &"string".to_owned(), &vec!(), &Some("string".to_owned()));
 
     // global scope
     vm.new_scope();
@@ -232,15 +213,17 @@ fn test_vm() {
     vm.execute(&executors, &stuff);
 }
 
-fn define_builtins(vm: &mut VirtualMachine) {
-    let mut builtins = Module::new();
-    define_input(&mut builtins, vm);
+fn define_modules(vm: &mut VirtualMachine) {
+    let builtins = new_builtin_module(vm);
     vm.insert_module("builtin".to_owned(), builtins);
     
-    let mut math = Module::new();
-    define_math_cos(&mut math, vm);
+    let math = new_math_module(vm);
     vm.insert_module("math".to_owned(), math);
 
+    let string = new_string_module(vm);
+    vm.insert_module("string".to_owned(), string);
+
+/*
     define_int_cast(vm);
     define_float_cast(vm);
     define_abs(vm);
@@ -254,176 +237,14 @@ fn define_builtins(vm: &mut VirtualMachine) {
     //define_input(vm);
     define_print(vm);
     define_string_format(vm);
+    */
 }
 
-fn define_input(module: &mut Module, vm: &mut VirtualMachine) {
-    let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.object_of_type(&"function".to_owned());
+/*
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
-            let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
-                check_arg(vm, &args[0], "first", vec!("object", "NoneType"));
-            }
 
-            let type_name = "string".to_owned();
-            let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
-            let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
-
-            let execution_result = ExecutionResult {
-                flow: FlowControl::Continue,
-                dependencies: vec!(AnalysisItem::Object(5)),
-                changes: vec!(AnalysisItem::Object(5)),
-                result: Mapping::new(),
-            };
-
-            execution_result
-        };
-
-        vm.set_callable(pointer.clone(), inner);
-
-        pointer
-    };
-
-    module.add_part("input".to_owned(), Box::new(outer));
-}
-
-fn define_math_cos(module: &mut Module, vm: &mut VirtualMachine) {
-    let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.object_of_type(&"function".to_owned());
-
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
-            let Environment { vm, .. } = env;
-
-            if args.len() > 0 {
-                check_arg(vm, &args[0], "first", vec!("number"));
-            }
-
-            let type_name = "float".to_owned();
-            let pointer = vm.object_of_type(&type_name);
-
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
-            let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
-
-            let execution_result = ExecutionResult {
-                flow: FlowControl::Continue,
-                dependencies: vec!(AnalysisItem::Object(5)),
-                changes: vec!(AnalysisItem::Object(5)),
-                result: Mapping::new(),
-            };
-
-            execution_result
-        };
-
-        vm.set_callable(pointer.clone(), inner);
-
-        pointer
-    };
-
-    module.add_part("cos".to_owned(), Box::new(outer));
-}
-
-fn check_arg(vm: &mut VirtualMachine, arg: &Mapping, index: &'static str, permitted: Vec<&'static str>) {
-    let permitted_ptr: HashSet<_> = permitted
-        .iter()
-        .map(|x| *vm.knowledge().get_type(&x.to_string()).unwrap_or(&0))
-        .collect();
-
-    let mut problems = Vec::new();
-
-    'outer:
-    for (path, address) in arg.iter() {
-        let types = vm.ancestors(address);
-        for t in types.iter() {
-            if permitted_ptr.contains(&t) {
-                continue 'outer;
-            }
-        }
-
-        let last_type = types.first().unwrap(); // there's always one
-        let type_name = vm.knowledge().get_type_name(last_type);
-        problems.push((path.clone(), type_name.clone()));
-    }
-
-    if problems.len() > 0 {
-        let content = ArgInvalid::new(index, permitted, problems);
-        let message = Message::Output { 
-            source: vm.current_node().clone(),
-            content: Box::new(content)};
-        &CHANNEL.publish(message);
-    }
-}
-
-fn define_string_format(vm: &mut VirtualMachine) {
-    let ptr = vm.knowledge().get_type(&"string".to_owned()).unwrap().clone();
-
-    let fun = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
-        let mut total_changes = Vec::new();
-        let mut total_dependencies = Vec::new();
-
-        let Environment { vm, .. } = env;
-
-        if args.len() > 0 {
-            check_arg(vm, &args[0], "first", vec!("number", "string"));
-        }
-
-        let type_name = "string".to_owned();
-        let pointer = vm.object_of_type(&type_name);
-
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
-        let path = vm.current_path().clone();
-        vm.set_result(path, mapping);
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: total_dependencies,
-            changes: total_changes,
-            result: Mapping::new(),
-        };
-
-        execution_result
-    };
-
-    vm.define_method("string".to_owned(), "format".to_owned(), fun);
-}
-
-fn define_int_cast(vm: &mut VirtualMachine) {
-    let ptr = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();
-
-    let fun = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
-        let mut total_changes = Vec::new();
-        let mut total_dependencies = Vec::new();
-
-        let Environment { vm, .. } = env;
-
-        if args.len() > 0 {
-            check_arg(vm, &args[0], "first", vec!("number", "string"));
-        }
-        
-        let type_name = "int".to_owned();
-        let pointer = vm.object_of_type(&type_name);
-
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
-        let path = vm.current_path().clone();
-        vm.set_result(path, mapping);
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: total_dependencies,
-            changes: total_changes,
-            result: Mapping::new(),
-        };
-
-        execution_result
-    };
-
-    vm.set_callable(ptr, fun);
-}
 
 fn define_float_cast(vm: &mut VirtualMachine) {
     let ptr = vm.knowledge().get_type(&"float".to_owned()).unwrap().clone();
@@ -486,56 +307,7 @@ fn define_string_cast(vm: &mut VirtualMachine) {
     vm.define_function("str".to_owned(), fun);
 }
 
-/*
-fn define_input(vm: &mut VirtualMachine) {
-    let fun = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
-        let Environment { vm, .. } = env;
 
-        if args.len() > 0 {
-            check_arg(vm, &args[0], "first", vec!("object", "NoneType"));
-        }
-
-        let type_name = "string".to_owned();
-        let pointer = vm.object_of_type(&type_name);
-
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
-        let path = vm.current_path().clone();
-        vm.set_result(path, mapping);
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec!(AnalysisItem::Object(5)),
-            changes: vec!(AnalysisItem::Object(5)),
-            result: Mapping::new(),
-        };
-
-        execution_result
-    };
-
-    vm.define_function("input".to_owned(), fun);
-}
-*/
-
-fn define_print(vm: &mut VirtualMachine) {
-    let fun = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
-        let Environment { vm, .. } = env;
-
-        for arg in args.iter() {
-            check_arg(vm, &args[0], "any", vec!("object", "NoneType"));
-        }
-
-        let execution_result = ExecutionResult {
-            flow: FlowControl::Continue,
-            dependencies: vec!(AnalysisItem::Object(5)),
-            changes: vec!(AnalysisItem::Object(5)),
-            result: Mapping::new(),
-        };
-
-        execution_result
-    };
-
-    vm.define_function("print".to_owned(), fun);
-}
 
 fn define_abs(vm: &mut VirtualMachine) {
     let fun = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
@@ -731,4 +503,4 @@ fn define_any(vm: &mut VirtualMachine) {
     };
 
     vm.define_function("any".to_owned(), fun);
-}
+}*/

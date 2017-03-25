@@ -67,37 +67,32 @@ impl PythonWhile {
         let mut total_changes = c;
         let mut total_dependencies = d;
 
-        let mut positive;
-        let mut negative;
-        {
-            let current_path = vm.current_path();
 
-            positive = current_path.clone();
-            positive.add_node(PathNode::Loop(vm.current_node().clone(), 0, 2));
-            negative = current_path.clone();
-            negative.add_node(PathNode::Loop(vm.current_node().clone(), 1, 2));
-        }
+        let mut new_path = vm.current_path().clone();
+        new_path.add_node(PathNode::Loop(vm.current_node().clone()));
 
-        vm.push_path(positive);
-        vm.add_restrictions(no);
-        let body_result = vm.execute(executors, body);
-        vm.drop_restrictions();
+
+        vm.push_path(new_path);
+
+        // first iter
+        let mut body_result = vm.execute(executors, body);
+
+        total_changes.append(&mut body_result.changes);
+        total_dependencies.append(&mut body_result.dependencies);
+
+        // second iter
+        let mut body_result = vm.execute(executors, body);
+
+        total_changes.append(&mut body_result.changes);
+        total_dependencies.append(&mut body_result.dependencies);
+
         let _ = vm.pop_path();
-
-        let mut changes = body_result.changes;
-        let mut dependencies = body_result.dependencies;
-
-        total_changes.append(&mut changes);
-        total_dependencies.append(&mut dependencies);
-
-        vm.next_branch(&total_changes);
 
         self.check_changes(vm);
 
-        // labels all changes made with the Loop id
+        // bit of legacy code 
+        // merges a single frame
         vm.merge_branches(&total_changes);
-
-        self.check_types(vm, executors, &total_changes);
 
         return ExecutionResult {
             changes: total_changes,
@@ -135,6 +130,12 @@ impl PythonWhile {
                     pls.insert(address, pls2);
                 }
                 identifier_invariants = pls;
+            }
+
+            // quit early when there's something that hasn't changed
+            // 
+            if identifier_invariants.len() == 0 {
+                return;
             }
 
             for (address, identifier_paths) in identifier_invariants.into_iter() {
@@ -182,52 +183,6 @@ impl PythonWhile {
             &CHANNEL.publish(message);
         }
     }
-
-    fn check_types(&self,
-             vm: &mut VirtualMachine,
-             executors: &Executors,
-             changes: &Vec<AnalysisItem>) {
-        for change in changes {
-            if !change.is_object() {
-                let mut all_types = BTreeMap::new();
-
-                let execution_result = match change {
-                    &AnalysisItem::Identifier (ref name) => vm.load_identifier(executors, name),
-                    &AnalysisItem::Attribute (ref parent, ref name) => {
-                        vm.load_attribute(executors, &parent.as_node(), name)
-                    }
-                    _ => {
-                        unreachable!("AnalysisItem is an object when a previous check should've \
-                                      excluded this")
-                    }
-                };
-
-                let result = execution_result.result;
-                for (path, address) in result.iter() {
-                    let object = vm.get_object(address);
-                    let type_name = object.get_type_name(vm.knowledge());
-
-                    match all_types.entry(type_name.clone()) {
-                        Entry::Vacant(v) => {
-                            v.insert(vec![path.clone()]);
-                        }
-                        Entry::Occupied(mut o) => {
-                            o.get_mut().push(path.clone());
-                        }
-                    };
-                }
-
-                if all_types.len() > 1 {
-                    let content = TypeUnsafe::new(change.to_string(), all_types);
-                    let message = Message::Output { 
-                        source: vm.current_node().clone(),
-                        content: Box::new(content),
-                    };
-                    &CHANNEL.publish(message);
-                }
-            }
-        }
-    }
 }
 
 fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> BTreeMap<Pointer, BTreeSet<Path>> {
@@ -255,11 +210,11 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
             match all_reversals.entry(*address) {
                 Entry::Vacant(v) => {
                     let mut acc = BTreeSet::new();
-                    acc.insert(path.clone());
+                    acc.insert(reversal.clone());
                     v.insert(acc);
                 }
                 Entry::Occupied(mut o) => {
-                    o.get_mut().insert(path.clone());
+                    o.get_mut().insert(reversal.clone());
                 }
             };
         }

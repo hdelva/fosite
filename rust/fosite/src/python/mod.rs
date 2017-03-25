@@ -15,6 +15,7 @@ mod for_loop;
 mod call;
 mod method;
 mod import;
+pub mod modules;
 
 pub use self::block::*;
 pub use self::binop::*;
@@ -33,3 +34,4 @@ pub use self::for_loop::*;
 pub use self::call::*;
 pub use self::method::*;
 pub use self::import::*;
+pub use self::modules::*;

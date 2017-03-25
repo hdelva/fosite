@@ -311,7 +311,7 @@ impl PythonAssign {
         let mut max = Some(1);
         for node in current_path.iter().rev() {
             match node {
-                &PathNode::Loop(_, _, _) => {
+                &PathNode::Loop(_) => {
                     max = None;
                     break;
                 },

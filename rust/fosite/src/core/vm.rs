@@ -6,6 +6,8 @@ use std::iter::FromIterator;
 use std::slice::Iter;
 use std::collections::HashMap;
 
+use python::modules::*;
+
 type Callable = Fn(Environment, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult;
 
 pub struct VirtualMachine {

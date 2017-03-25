@@ -23,7 +23,17 @@ impl ImportExecutor for PythonImport {
                 let mut scope;
                 let path = vm.current_path().clone();
                 if let &Some(ref into) = into {
-                    let ptr = vm.object_of_type(&"module".to_owned());
+                    // where should this thing go
+                    let mut ptr = -1;
+                    if let Some(existing) = vm.knowledge().get_type(into) {
+                        // `into` is a typename, we're defining class attributes
+                        ptr = existing.clone();
+                    } 
+                    
+                    if ptr < 0 {
+                        // create a new module of this name
+                        ptr = vm.object_of_type(&"module".to_owned());
+                    }
 
                     {
                         let mut vm_scope = vm.last_scope_mut();

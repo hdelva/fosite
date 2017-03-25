@@ -53,35 +53,31 @@ impl PythonFor {
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
 
-        let mut positive;
-        let mut negative;
-        {
-            let current_path = vm.current_path();
+        let mut new_path = vm.current_path().clone();
+        new_path.add_node(PathNode::Loop(vm.current_node().clone()));
 
-            positive = current_path.clone();
-            positive.add_node(PathNode::Loop(vm.current_node().clone(), 0, 2));
-            negative = current_path.clone();
-            negative.add_node(PathNode::Loop(vm.current_node().clone(), 1, 2));
-        }
 
-        vm.push_path(positive);
-        let body_result = vm.execute(executors, body);
+        vm.push_path(new_path);
+
+        // first iter
+        let mut body_result = vm.execute(executors, body);
+
+        total_changes.append(&mut body_result.changes);
+        total_dependencies.append(&mut body_result.dependencies);
+
+        // second iter
+        let mut body_result = vm.execute(executors, body);
+
+        total_changes.append(&mut body_result.changes);
+        total_dependencies.append(&mut body_result.dependencies);
+
         let _ = vm.pop_path();
-
-        let mut changes = body_result.changes;
-        let mut dependencies = body_result.dependencies;
-
-        total_changes.append(&mut changes);
-        total_dependencies.append(&mut dependencies);
-
-        vm.next_branch(&total_changes);
 
         self.check_changes(vm);
 
-        // labels all changes made with the Loop id
+        // bit of legacy code 
+        // merges a single frame
         vm.merge_branches(&total_changes);
-
-        self.check_types(vm, executors, &total_changes);
 
         return ExecutionResult {
             changes: total_changes,

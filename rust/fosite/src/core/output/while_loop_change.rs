@@ -45,7 +45,7 @@ impl MessageContent for WhileLoopChange {
         println!("  There's a risk of endless loops");
         println!("  In the following cases:");
 
-        if self.paths.first().unwrap().len() == 0 {
+        if self.paths.len() == 0 || self.paths.first().unwrap().len() == 0{
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         } else {

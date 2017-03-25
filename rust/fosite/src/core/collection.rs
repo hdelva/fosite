@@ -739,7 +739,6 @@ impl Collection {
             let current_content = self.frames.last().unwrap().get_content().clone();
             let mut frame = Frame::new(node.clone());
             match node {
-                &PathNode::Loop(_ , x, y) |
                 &PathNode::Condition(_, x, y) |
                 &PathNode::Element(_, x, y) | // should never happen
                 &PathNode::Frame(_, _, x, y) => {
@@ -749,7 +748,7 @@ impl Collection {
                     frame.set_active_branch(x as usize);
                 },
                 _ => {
-                    // should never happen
+                    // probably a loop then
                     frame.add_branch(Branch::new(current_content.clone()));
                 }
             }
@@ -823,9 +822,6 @@ impl Collection {
             let new_node = match &cause {
                 &PathNode::Condition(ref l, _, ref y) => {
                     PathNode::Condition(l.clone(), index, y.clone())
-                }
-                &PathNode::Loop(ref l, _, ref y) => {
-                    PathNode::Loop(l.clone(), index, y.clone())
                 }
                 &PathNode::Frame(ref l, ref t, _, ref y) => {
                     PathNode::Frame(l.clone(), t.clone(), index, y.clone())

@@ -12,7 +12,7 @@ pub type PathID = Vec<GastID>;
 pub enum PathNode {
     Condition(PathID, i16, i16),
     Assignment(PathID, String),
-    Loop(PathID, i16, i16),
+    Loop(PathID),
     Return(PathID),
     Frame(PathID, Option<String>, i16, i16),
     Element(PathID, i16, i16), // element x out of y elements
@@ -90,7 +90,6 @@ impl PathNode {
     pub fn is_branch(&self) -> bool {
         match self {
             &PathNode::Condition(_, _, _) => true,
-            &PathNode::Loop(_, _, _) => true,
             _ => false,
         }
     }
@@ -98,15 +97,6 @@ impl PathNode {
     pub fn reverse(&self) -> Vec<PathNode> {
         match self {
             &PathNode::Condition(ref l, ref x, ref y) => {
-                let mut v = Vec::new();
-                for i in 0..*y{
-                    if i != *x {
-                        v.push(PathNode::Condition(l.clone(), i, y.clone()));
-                    }
-                }
-                return v;
-            }
-            &PathNode::Loop(ref l, ref x, ref y) => {
                 let mut v = Vec::new();
                 for i in 0..*y{
                     if i != *x {
@@ -123,7 +113,7 @@ impl PathNode {
         match self {
             &PathNode::Condition(ref location, _, _) => location,
             &PathNode::Assignment(ref location, _) => location,
-            &PathNode::Loop(ref location, _, _) => location,
+            &PathNode::Loop(ref location) => location,
             &PathNode::Return(ref location) => location,
             &PathNode::Frame(ref location, _, _, _) => location,
             &PathNode::Element(ref location, _, _) => location,
@@ -134,9 +124,6 @@ impl PathNode {
         match (self, other) {
             (&PathNode::Condition(ref l1, ref n1, _), &PathNode::Condition(ref l2, ref n2, _)) => {
                 return l1 != l2 || n1 == n2;
-            }
-            (&PathNode::Loop(ref l1, ref t1, _), &PathNode::Loop(ref l2, ref t2, _)) => {
-                return l1 != l2 || t1 == t2;
             }
             _ => true, // other kinds of nodes can't contradict each other
         }
@@ -149,8 +136,8 @@ impl PathNode {
             (&PathNode::Condition(ref l1, ref i1, _), &PathNode::Condition(ref l2, ref i2, _)) => {
                 return l1 == l2 && i1 == i2;
             }
-            (&PathNode::Loop(ref l1, ref i1, _), &PathNode::Loop(ref l2, ref i2, _)) => {
-                return l1 == l2 && i1 == i2;
+            (&PathNode::Loop(ref l1), &PathNode::Loop(ref l2)) => {
+                return l1 == l2;
             }
             (&PathNode::Frame(ref l1, _, ref i1, _), &PathNode::Frame(ref l2, _, ref i2, _)) => {
                 return l1 == l2 && i1 == i2;

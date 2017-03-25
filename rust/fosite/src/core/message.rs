@@ -72,13 +72,10 @@ pub trait MessageContent: Send {
                                  Bold.paint(format!("row {}, column {}", row, col + 1)),
                                  Bold.paint(format!("{}", condition)));
                     }
-                    &PathNode::Loop(_, b, _) => {
-                        let taken = if b == 0 { "executed" } else { "not executed" };
-                        println!("{}{} {} is {}",
+                    &PathNode::Loop(_) => {
+                        println!("{}Loop at {}",
                                  padding,
-                                 "Loop at",
-                                 Bold.paint(format!("row {}, column {}", row, col + 1)),
-                                 Bold.paint(format!("{}", taken)));
+                                 Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
                     &PathNode::Assignment(_, ref name) => {
                         println!("{}Assignment to {} at {}",

@@ -129,6 +129,11 @@ impl BoolOpExecutor for PythonBoolOp {
             &CHANNEL.publish(message);
         }
 
+        if result.len() == 0 {
+            let new_object = vm.object_of_type(&"bool".to_owned());
+            result.add_mapping(Path::empty(), new_object);
+        }
+
         let execution_result = ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
