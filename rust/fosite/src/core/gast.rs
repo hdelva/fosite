@@ -106,6 +106,9 @@ pub enum NodeType {
         module: String,
         parts: Vec<(String, String)>,
         into: Option<String>,
+    },
+    Negate {
+        value: Box<GastNode>,
     }
 }
 
@@ -192,6 +195,7 @@ pub fn build(node: &Json) -> GastNode {
         "andthen" => build_andthen(id, node),
         "call" => build_call(id, node),
         "import" => build_import(id, node),
+        "negate" => build_negate(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -263,6 +267,18 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_negate(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_value = obj.get("value").unwrap();
+    let value = Box::new(build(json_value));
+
+    return GastNode::new(id,
+                         NodeType::Negate {
+                             value: value,
                          });
 }
 

@@ -487,6 +487,16 @@ impl VirtualMachine {
         }
     }
 
+    pub fn negate(&mut self, executors: &Executors, content: &GastNode) -> ExecutionResult {
+        match executors.negate {
+            Some(ref negate) => {
+                let env = Environment::new(self, executors);
+                negate.execute(env, content)
+            }
+            None => panic!("VM is not setup to execute negations"),
+        }
+    }
+
     pub fn int(&mut self, executors: &Executors) -> ExecutionResult {
         match executors.int {
             Some(ref int) => {
@@ -696,6 +706,9 @@ impl VirtualMachine {
             }
             &NodeType::Import {ref module, ref parts, ref into} => {
                 self.import(executors, module, parts, into)
+            }
+            &NodeType::Negate {ref value} => {
+                self.negate(executors, value)
             }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };

@@ -98,6 +98,7 @@ fn test_vm() {
         call: Some(Box::new(PythonCall {})),
         method: Some(Box::new(PythonMethod {})),
         import: Some(Box::new(PythonImport {})),
+        negate: Some(Box::new(PythonNegate {})),
     };
 
     let mut s = String::new();

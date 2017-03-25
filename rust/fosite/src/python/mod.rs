@@ -16,6 +16,7 @@ mod call;
 mod method;
 mod import;
 pub mod modules;
+mod negate;
 
 pub use self::block::*;
 pub use self::binop::*;
@@ -35,3 +36,4 @@ pub use self::call::*;
 pub use self::method::*;
 pub use self::import::*;
 pub use self::modules::*;
+pub use self::negate::*;

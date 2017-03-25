@@ -33,6 +33,7 @@ pub struct Executors {
     pub call: Option<Box<CallExecutor>>,
     pub method: Option<Box<MethodExecutor>>,
     pub import: Option<Box<ImportExecutor>>,
+    pub negate: Option<Box<NegateExecutor>>,
 }
 
 pub trait MethodExecutor {
@@ -48,6 +49,13 @@ pub trait AssignExecutor {
                env: Environment,
                targets: &Vec<GastNode>,
                value: &GastNode)
+               -> ExecutionResult;
+}
+
+pub trait NegateExecutor {
+    fn execute(&self,
+               env: Environment,
+               content: &GastNode)
                -> ExecutionResult;
 }
 
