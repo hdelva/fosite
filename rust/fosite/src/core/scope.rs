@@ -465,6 +465,41 @@ impl Scope {
         } 
     }
 
+    pub fn merge_function(&mut self) {
+        if self.frames.len() < 2 {
+            return;
+        }
+
+        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!());
+
+        if let Some(old_frame) = self.frames.pop() {
+            for subframe in old_frame.branches.into_iter() {
+                for (path, branch) in subframe.frozen_loop.content.into_iter() {
+                    new_loop.content.insert(path, branch);
+                } 
+
+                for (path, branch) in subframe.frozen_function.content.into_iter() {
+                    new_function.content.insert(path, branch);
+                }  
+            }
+        } 
+
+        if let Some(frame) = self.frames.last_mut() {
+            // transfer the hidden mappings
+            for (name, mapping) in new_content.content.into_iter() {
+                frame.set_optional_mapping(name, mapping);
+            }
+
+            for (name, mapping) in new_loop.thaw().into_iter() {
+                frame.add_optional_mapping(name, mapping);
+            }
+
+            for (name, mapping) in new_function.thaw().into_iter() {
+                frame.add_optional_mapping(name, mapping);
+            }
+        } 
+    }
+
     fn prepare_merge(&mut self, hide_as_loop: Vec<Option<bool>>) 
         -> (Branch, StatisChamber, StatisChamber) {
             

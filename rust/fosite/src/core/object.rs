@@ -94,14 +94,14 @@ impl Object {
         } 
     }
 
-    pub fn discard_function(&mut self) {
+    pub fn merge_function(&mut self) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
             self.elements.merge_branches();
         } 
         
         if self.elements.num_frames() <= self.attributes.num_frames() {
             // objects don't return anything, suppress the return value
-            self.attributes.discard_function();
+            self.attributes.merge_function();
         } 
     }
 
