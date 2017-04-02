@@ -13,7 +13,7 @@ impl MethodExecutor for PythonMethod {
         address: &Pointer)
         -> Pointer {
 
-        let Environment {vm, executors} = env;
+        let Environment {vm, ..} = env;
         let parent = parent.clone();
         let address = address.clone();
 

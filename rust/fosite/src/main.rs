@@ -14,27 +14,10 @@ pub mod python;
 pub use core::VirtualMachine;
 use core::build;
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-
 use std::io::prelude::*;
 use std::fs::File;
 use core::Worker;
-//use core::Collection;
-//use core::Representant;
 use core::Executors;
-use core::Environment;
-use core::Mapping;
-use core::Path;
-use core::ExecutionResult;
-use core::FlowControl;
-use core::GastNode;
-use core::AnalysisItem;
-
-use core::ArgInvalid;
-use core::Message;
-use core::CHANNEL;
-use core::Module;
 
 
 use python::*;
@@ -99,6 +82,8 @@ fn test_vm() {
         method: Some(Box::new(PythonMethod {})),
         import: Some(Box::new(PythonImport {})),
         negate: Some(Box::new(PythonNegate {})),
+        unop: Some(Box::new(PythonUnOp {})),
+        slice: Some(Box::new(PythonSlice {})),
     };
 
     let mut s = String::new();
@@ -215,13 +200,13 @@ fn test_vm() {
 }
 
 fn define_modules(vm: &mut VirtualMachine) {
-    let builtins = new_builtin_module(vm);
+    let builtins = new_builtin_module();
     vm.insert_module("builtin".to_owned(), builtins);
     
-    let math = new_math_module(vm);
+    let math = new_math_module();
     vm.insert_module("math".to_owned(), math);
 
-    let string = new_string_module(vm);
+    let string = new_string_module();
     vm.insert_module("string".to_owned(), string);
 
 /*

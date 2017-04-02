@@ -20,23 +20,12 @@ impl BlockExecutor for PythonBlock {
             total_dependencies.append(&mut dependencies);
             total_changes.append(&mut changes);
 
-            match intermediate.flow {
-                FlowControl::TerminateLoop | FlowControl::TerminateCall => {
-                    flow = intermediate.flow;
-                    break;
-                },
-                _ => ()
+            flow = intermediate.flow;
+
+            match &flow {
+                &FlowControl::Continue => (),
+                _ => (),
             }
-        }
-
-        let mut branch = None;
-        
-        if let Some(node) = vm.current_branch() {
-            branch = Some(node.clone());
-        }
-
-        if let Some(branch) = branch {
-            vm.merge_until(&total_changes, Some(&branch));
         }
 
         return ExecutionResult {

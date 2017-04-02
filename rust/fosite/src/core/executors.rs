@@ -34,6 +34,8 @@ pub struct Executors {
     pub method: Option<Box<MethodExecutor>>,
     pub import: Option<Box<ImportExecutor>>,
     pub negate: Option<Box<NegateExecutor>>,
+    pub unop: Option<Box<UnOpExecutor>>,
+    pub slice: Option<Box<SliceExecutor>>,
 }
 
 pub trait MethodExecutor {
@@ -44,6 +46,15 @@ pub trait MethodExecutor {
                -> Pointer;
 }
 
+pub trait SliceExecutor {
+    fn execute(&self,
+               env: Environment,
+               target: &GastNode,
+               lower: &GastNode,
+               upper: &GastNode)
+               -> ExecutionResult;
+}
+
 pub trait AssignExecutor {
     fn execute(&self,
                env: Environment,
@@ -52,10 +63,17 @@ pub trait AssignExecutor {
                -> ExecutionResult;
 }
 
+pub trait UnOpExecutor {
+    fn execute(&self,
+               env: Environment,
+               value: &GastNode)
+               -> ExecutionResult;
+}
+
 pub trait NegateExecutor {
     fn execute(&self,
                env: Environment,
-               content: &GastNode)
+               value: &GastNode)
                -> ExecutionResult;
 }
 

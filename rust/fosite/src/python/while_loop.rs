@@ -16,10 +16,6 @@ impl WhileExecutor for PythonWhile {
                -> ExecutionResult {
         let Environment { vm, executors } = env;
 
-        // register this node as a branch
-        let id = vm.current_node().clone();
-        vm.push_branch(id);
-
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
 
@@ -46,10 +42,7 @@ impl WhileExecutor for PythonWhile {
             }
         }
 
-        let result = self.branch(vm, executors, body, no, total_changes, total_dependencies);
-
-        // register this node as a branch
-        vm.pop_branch();
+        let result = self.branch(vm, executors, body, total_changes, total_dependencies);
 
         return result;
     }
@@ -60,27 +53,18 @@ impl PythonWhile {
               vm: &mut VirtualMachine,
               executors: &Executors,
               body: &GastNode,
-              no: Vec<Path>,
               c: Vec<AnalysisItem>,
               d: Vec<AnalysisItem>) -> ExecutionResult {
-                          
+
         let mut total_changes = c;
         let mut total_dependencies = d;
 
 
         let mut new_path = vm.current_path().clone();
         new_path.add_node(PathNode::Loop(vm.current_node().clone()));
-
-
         vm.push_path(new_path);
 
         // first iter
-        let mut body_result = vm.execute(executors, body);
-
-        total_changes.append(&mut body_result.changes);
-        total_dependencies.append(&mut body_result.dependencies);
-
-        // second iter
         let mut body_result = vm.execute(executors, body);
 
         total_changes.append(&mut body_result.changes);
@@ -90,9 +74,7 @@ impl PythonWhile {
 
         self.check_changes(vm);
 
-        // bit of legacy code 
-        // merges a single frame
-        vm.merge_branches(&total_changes);
+        vm.merge_loop(&total_changes);
 
         return ExecutionResult {
             changes: total_changes,

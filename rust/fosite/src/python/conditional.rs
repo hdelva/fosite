@@ -1,8 +1,5 @@
 use core::*;
 
-use std::collections::btree_map::Entry;
-use std::collections::BTreeMap;
-
 pub struct PythonConditional { }
 
 impl ConditionalExecutor for PythonConditional {
@@ -13,10 +10,6 @@ impl ConditionalExecutor for PythonConditional {
                or_else: &GastNode)
                -> ExecutionResult {
         let Environment { vm, executors } = env;
-
-        // register this node as a branch
-        let id = vm.current_node().clone();
-        vm.push_branch(id);
 
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
@@ -37,8 +30,6 @@ impl ConditionalExecutor for PythonConditional {
         let t = vm.knowledge().constant(&"True".to_owned());
         let f = vm.knowledge().constant(&"False".to_owned());
 
-        let total = test_result.result.len();
-
         // split up the test result into yes/no/maybe
         for (path, address) in test_result.result.into_iter() {
             if address == t {
@@ -48,17 +39,7 @@ impl ConditionalExecutor for PythonConditional {
             }
         }
 
-        let result = if no.len() == total {
-                        self.strict_negative(vm, executors, or_else, total_changes, total_dependencies)
-                    } else if yes.len() == total {
-                        self.strict_positive(vm, executors, body, total_changes, total_dependencies)
-                    } else {
-                        self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies)
-                    };
-
-        // reregister this node as a branch
-        let _ = vm.pop_branch();
-
+        let result = self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies);
         return result
     }
 }
@@ -73,7 +54,8 @@ impl PythonConditional {
               no: Vec<Path>,
               c: Vec<AnalysisItem>,
               d: Vec<AnalysisItem>) -> ExecutionResult {
-                          
+        let original_restriction = vm.get_branch_restrictions().clone();
+
         let mut total_changes = c;
         let mut total_dependencies = d;
 
@@ -89,10 +71,9 @@ impl PythonConditional {
         }
 
         vm.push_path(positive);
-        vm.add_restrictions(no);
+        vm.add_branch_restrictions(no);
         let body_result = vm.execute(executors, body);
-        vm.drop_restrictions();
-        let positive = vm.pop_path();
+        vm.set_branch_restrictions(original_restriction.clone());
 
         let changes = body_result.changes;
         let dependencies = body_result.dependencies;
@@ -108,10 +89,9 @@ impl PythonConditional {
         vm.next_branch(&total_changes);
 
         vm.push_path(negative);
-        vm.add_restrictions(yes);
+        vm.add_branch_restrictions(yes);
         let else_result = vm.execute(executors, or_else);
-        vm.drop_restrictions();
-        let negative = vm.pop_path();
+        vm.set_branch_restrictions(original_restriction.clone());
 
         let changes = else_result.changes;
         let dependencies = else_result.dependencies;
@@ -124,28 +104,59 @@ impl PythonConditional {
             total_dependencies.push(dependency.clone());
         }
 
+        let mut hide_as_loop = Vec::new();
         let flow;
+        
+        // lawd jezus why
         match (body_result.flow, else_result.flow) {
-            (FlowControl::TerminateLoop, FlowControl::TerminateLoop) => {
-                flow = FlowControl::TerminateLoop;
-                vm.merge_branches(&total_changes);
-                self.check(vm, executors, &total_changes);
-            },
-            (FlowControl::TerminateLoop, FlowControl::Continue) => {
+            (FlowControl::Continue, FlowControl::Continue) => {
                 flow = FlowControl::Continue;
-                vm.push_path(negative);
-            },
+                hide_as_loop.push(None);
+                hide_as_loop.push(None);
+            }
+            (FlowControl::Continue, FlowControl::TerminateCall) => {
+                flow = FlowControl::Continue;
+                hide_as_loop.push(None);
+                hide_as_loop.push(Some(false));
+            }
             (FlowControl::Continue, FlowControl::TerminateLoop) => {
                 flow = FlowControl::Continue;
-                vm.push_path(positive);
-                vm.reset_branch_counter(&total_changes);
-            },
-            _ => {
-                flow = FlowControl::Continue;
-                vm.merge_branches(&total_changes);
-                self.check(vm, executors, &total_changes);
+                hide_as_loop.push(None);
+                hide_as_loop.push(Some(true));
             }
+            (FlowControl::TerminateCall, FlowControl::Continue) => {
+                flow = FlowControl::Continue;
+                hide_as_loop.push(Some(false));
+                hide_as_loop.push(None);
+            }
+            (FlowControl::TerminateLoop, FlowControl::Continue) => {
+                flow = FlowControl::Continue;
+                hide_as_loop.push(Some(true));
+                hide_as_loop.push(None);
+            }
+            (FlowControl::TerminateCall, FlowControl::TerminateCall) => {
+                hide_as_loop.push(Some(false));
+                hide_as_loop.push(Some(false));
+                flow = FlowControl::TerminateCall;
+            },
+            (FlowControl::TerminateLoop, FlowControl::TerminateCall) => {
+                hide_as_loop.push(Some(true));
+                hide_as_loop.push(Some(false));
+                flow = FlowControl::TerminateLoop;
+            },
+            (FlowControl::TerminateCall, FlowControl::TerminateLoop) => {
+                hide_as_loop.push(Some(false));
+                hide_as_loop.push(Some(true));
+                flow = FlowControl::TerminateLoop;
+            },
+            (FlowControl::TerminateLoop, FlowControl::TerminateLoop) => {
+                hide_as_loop.push(Some(false));
+                hide_as_loop.push(Some(false));
+                flow = FlowControl::TerminateLoop;
+            },
         }
+
+        vm.merge_branches(&total_changes, hide_as_loop);
 
         return ExecutionResult {
             changes: total_changes,
@@ -153,118 +164,5 @@ impl PythonConditional {
             flow: flow,
             result: Mapping::new(),
         };
-    }
-
-    fn strict_positive(&self,
-                       vm: &mut VirtualMachine,
-                       executors: &Executors,
-                       body: &GastNode,
-                       changes: Vec<AnalysisItem>,
-                       dependencies: Vec<AnalysisItem>) -> ExecutionResult {
-        let last_path = vm.pop_path();
-
-        let mut positive = last_path.clone();
-        positive.add_node(PathNode::Condition(vm.current_node().clone(), 0, 2));
-        vm.push_path(positive);
-
-        let result = self.strict(vm, executors, body, changes, dependencies);
-
-        let _ = vm.pop_path();
-        vm.push_path(last_path);
-
-        vm.lift_branches(&result.changes);
-
-        return result;
-    }
-
-    fn strict_negative(&self,
-                       vm: &mut VirtualMachine,
-                       executors: &Executors,
-                       body: &GastNode,
-                       changes: Vec<AnalysisItem>,
-                       dependencies: Vec<AnalysisItem>) -> ExecutionResult {
-        let last_path = vm.pop_path();
-
-        let mut negative = last_path.clone();
-        negative.add_node(PathNode::Condition(vm.current_node().clone(), 1, 2));
-        vm.push_path(negative);
-
-        let result = self.strict(vm, executors, body, changes, dependencies);
-
-        let _ = vm.pop_path();
-        vm.push_path(last_path);
-
-        return result;
-    }
-
-    fn strict(&self, 
-              vm: &mut VirtualMachine, 
-              executors: &Executors, 
-              body: &GastNode,
-              mut changes: Vec<AnalysisItem>,
-              mut dependencies: Vec<AnalysisItem>) -> ExecutionResult {
-        
-        let result = vm.execute(executors, body);
-
-        for change in result.changes.into_iter() {
-            changes.push(change);
-        }
-
-        for dependency in result.dependencies.into_iter() {
-            dependencies.push(dependency);
-        }
-
-        return ExecutionResult {
-            changes: changes,
-            dependencies: dependencies,
-            flow: FlowControl::Continue,
-            result: Mapping::new(),
-        };
-    }
-
-    fn check(&self,
-             vm: &mut VirtualMachine,
-             executors: &Executors,
-             changes: &Vec<AnalysisItem>) {
-        for change in changes {
-            if !change.is_object() {
-                let mut all_types = BTreeMap::new();
-
-                let execution_result = match change {
-                    &AnalysisItem::Identifier (ref name) => vm.load_identifier(executors, name),
-                    &AnalysisItem::Attribute (ref parent, ref name) => {
-                        vm.load_attribute(executors, &parent.as_node(), name)
-                    }
-                    _ => {
-                        unreachable!("AnalysisItem is an object when a previous check should've \
-                                      excluded this")
-                    }
-                };
-
-                let result = execution_result.result;
-                for (path, address) in result.iter() {
-                    let object = vm.get_object(address);
-                    let type_name = object.get_type_name(vm.knowledge());
-
-                    match all_types.entry(type_name.clone()) {
-                        Entry::Vacant(v) => {
-                            v.insert(vec![path.clone()]);
-                        }
-                        Entry::Occupied(mut o) => {
-                            o.get_mut().push(path.clone());
-                        }
-                    };
-                }
-
-                if all_types.len() > 1 {
-                    let content = TypeUnsafe::new(change.to_string(), all_types);
-                    let message = Message::Output { 
-                        source: vm.current_node().clone(),
-                        content: Box::new(content),
-                    };
-                    &CHANNEL.publish(message);
-                }
-            }
-        }
     }
 }

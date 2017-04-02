@@ -109,6 +109,11 @@ pub enum NodeType {
     },
     Negate {
         value: Box<GastNode>,
+    },
+    Slice {
+        target: Box<GastNode>,
+        lower: Box<GastNode>,
+        upper: Box<GastNode>,
     }
 }
 
@@ -196,6 +201,7 @@ pub fn build(node: &Json) -> GastNode {
         "call" => build_call(id, node),
         "import" => build_import(id, node),
         "negate" => build_negate(id, node),
+        "slice" => build_slice(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -267,6 +273,26 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_slice(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_target = obj.get("target").unwrap();
+    let target = Box::new(build(json_target));
+
+    let json_lower = obj.get("lower").unwrap();
+    let lower = Box::new(build(json_lower));
+
+    let json_upper = obj.get("upper").unwrap();
+    let upper = Box::new(build(json_upper));
+
+    return GastNode::new(id,
+                         NodeType::Slice {
+                             target: target,
+                             lower: lower,
+                             upper: upper,
                          });
 }
 

@@ -6,8 +6,6 @@ use std::iter::FromIterator;
 use std::slice::Iter;
 use std::collections::HashMap;
 
-use python::modules::*;
-
 type Callable = Fn(Environment, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult;
 
 pub struct VirtualMachine {
@@ -22,13 +20,9 @@ pub struct VirtualMachine {
     nodes: Vec<PathID>,
     default: PathID,
 
-    // control flow might keep us into some paths
-    // even though the actual code branch is no longer being executed 
-    // sometimes we do need to know what the last code branch was
-    branches: Vec<PathID>,
-
-    restrictions: Vec<Vec<Path>>,
     watches: Vec<Watch>,
+
+    branch_restrictions: Vec<Vec<Path>>,
 
     // calls
     callables: HashMap<Pointer, Box<Callable>>,
@@ -53,8 +47,7 @@ impl VirtualMachine {
             knowledge_base: knowledge,
             nodes: vec![vec!(0)],
             paths: vec![path],
-            branches: vec!(),
-            restrictions: Vec::new(),
+            branch_restrictions: Vec::new(),
             watches: Vec::new(),
             default: vec!(0),
             callables: HashMap::new(),
@@ -153,7 +146,7 @@ impl VirtualMachine {
         }
 
         // remove the new scopes
-        let function_scope = self.scopes.pop().unwrap();
+        let mut function_scope = self.scopes.pop().unwrap();
         let closure = self.scopes.pop().unwrap();
 
         // put the closure back into the VM 
@@ -170,7 +163,7 @@ impl VirtualMachine {
 
         // take ownership of the return value of the call
         // stored in the `___result` identifier
-        let function_result = function_scope.discard();
+        let function_result = function_scope.discard_function();
 
         // store the result somewhere
         // an executor will collect them when the time is right
@@ -178,18 +171,6 @@ impl VirtualMachine {
 
         // return the dependency information
         return analysis;
-    }
-
-    pub fn push_branch(&mut self, node: PathID) {
-        self.branches.push(node);
-    }
-
-    pub fn pop_branch(&mut self) -> Option<PathID> {
-        self.branches.pop()
-    }
-
-    pub fn current_branch(&self) -> Option<&PathID> {
-        self.branches.last()
     }
 
     pub fn start_watch(&mut self) {
@@ -249,29 +230,45 @@ impl VirtualMachine {
         self.paths.last().unwrap()
     }
 
-    pub fn add_restrictions(&mut self, mut new: Vec<Path>) {
-        let mut old = match self.restrictions.last() {
-            Some(o) => o.clone(),
-            _ => Vec::new(),
-        };
-
-        old.append(&mut new);
-
-        self.restrictions.push(old);
+    pub fn add_branch_restrictions(&mut self, new: Vec<Path>) {
+        self.branch_restrictions.push(new);
     }
 
-    pub fn drop_restrictions(&mut self) {
-        self.restrictions.pop();
+    pub fn get_branch_restrictions(&self) -> &Vec<Vec<Path>> {
+        return &self.branch_restrictions;
     }
 
-    pub fn filter(&self, input: ExecutionResult) -> ExecutionResult {
-        if self.restrictions.len() == 0 {
-            return input;
-        }
+    pub fn set_branch_restrictions(&mut self, restrictions: Vec<Vec<Path>>) {
+        self.branch_restrictions = restrictions;
+    }
 
-        let restrictions = self.restrictions.last().unwrap();
+/*
+    pub fn add_loop_restrictions(&mut self, new: Vec<Path>) {
+        self.loop_restrictions.push(new);
+    }
 
-        if restrictions.len() == 0 {
+    pub fn get_loop_restrictions(&self) -> &Vec<Vec<Path>> {
+        return &self.loop_restrictions;
+    }
+
+    pub fn set_loop_restrictions(&mut self, restrictions: Vec<Vec<Path>>) {
+        self.loop_restrictions = restrictions;
+    }
+
+    pub fn add_function_restrictions(&mut self, new: Vec<Path>) {
+        self.function_restrictions.push(new);
+    }
+
+    pub fn get_function_restrictions(&self) -> &Vec<Vec<Path>> {
+        return &self.function_restrictions;
+    }
+
+    pub fn set_function_restrictions(&mut self, restrictions: Vec<Vec<Path>>) {
+        self.function_restrictions = restrictions;
+    }
+*/
+    pub fn filter(&mut self, input: ExecutionResult) -> ExecutionResult {
+        if self.branch_restrictions.len() == 0 {
             return input;
         }
 
@@ -279,10 +276,12 @@ impl VirtualMachine {
 
         'outer:
         for (path, address) in input.result.into_iter() {
-            for restriction in restrictions {
-                if path.contains(restriction) {
-                    continue 'outer;
-                }
+            for restriction_set in self.branch_restrictions.iter() {
+                for restriction in restriction_set.iter() {
+                    if path.contains(restriction) {
+                        continue 'outer;
+                    }
+                }   
             }
 
             new_mapping.add_mapping(path, address);
@@ -590,6 +589,16 @@ impl VirtualMachine {
         }
     }
 
+    pub fn unop(&mut self, executors: &Executors, value: &GastNode) -> ExecutionResult {
+        match executors.unop {
+            Some(ref unop) => {
+                let env = Environment::new(self, executors);
+                unop.execute(env, value)
+            }
+            None => panic!("VM is not setup to execute unary operations"),
+        }
+    }
+
     pub fn generator(&mut self, executors: &Executors, source: &GastNode, target: &GastNode) -> ExecutionResult {
         match executors.generator {
             Some(ref generator) => {
@@ -630,6 +639,28 @@ impl VirtualMachine {
         }
     }
 
+    pub fn slice(&mut self, executors: &Executors, target: &GastNode, lower: &GastNode, upper: &GastNode) -> ExecutionResult {
+        match executors.slice {
+            Some(ref slice) => {
+                let env = Environment::new(self, executors);
+                slice.execute(env, target, lower, upper)
+            }
+            None => panic!("VM is not setup to execute slices"),
+        }
+    }
+
+/*
+    pub fn duplicate_last_node(&mut self) {
+        let mut current = self.nodes.pop().unwrap();
+        let new = current.last().unwrap().clone();
+        current.push(new);
+        self.nodes.push(current);
+    }
+
+    pub fn set_nodes(&mut self, nodes: PathID) {
+        self.nodes = vec!(nodes);
+    }
+*/
     pub fn execute(&mut self, executors: &Executors, node: &GastNode) -> ExecutionResult {
         let ref id = node.id;
         let ref kind = node.kind;
@@ -710,11 +741,20 @@ impl VirtualMachine {
             &NodeType::Negate {ref value} => {
                 self.negate(executors, value)
             }
+            &NodeType::UnOp {ref value, ..} => {
+                self.unop(executors, value)
+            }
+            &NodeType::Slice {ref target, ref lower, ref upper} => {
+                self.slice(executors, target, lower, upper)
+            }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };
 
         let mut current = self.nodes.pop().unwrap();
         let _ = current.pop();
+        /*if last != *id {
+            current.push(last);
+        }*/
         self.nodes.push(current);
 
         let result = self.filter(result);
@@ -768,11 +808,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>) {
-        self.merge_once(changes, None)
-    }
-
-    fn merge_once(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<&PathID>) {
+    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>, hide_as_loop: Vec<Option<bool>>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -781,19 +817,18 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.merge_until(cutoff);
+                object.merge_branches(hide_as_loop.clone());
             } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().merge_until(cutoff);
+            self.scopes.last_mut().unwrap().merge_branches(hide_as_loop.clone());
         }
     }
 
-    // used to discard identifiers introduced inside of comprehensions
-    pub fn discard_branches(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn merge_loop(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -802,54 +837,35 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.merge_until(None);
+                object.merge_loop();
             } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().discard_branch();
-        } 
+            self.scopes.last_mut().unwrap().merge_loop();
+        }
     }
 
-    // merge branches as long as the last node's id is too big
-    // if there's no cutoff, collapse a single branch
-    pub fn merge_until(&mut self, changes: &Vec<AnalysisItem>, cutoff: Option<&PathID>) {
-        if let Some(cutoff) = cutoff {
-            while let Some(path) = self.paths.pop() {
-                let mut b = false;
-                if let Some(node) = path.iter().last() {    
-                    let id = node.get_location();
-                    b = cutoff >= id;
-                    
-                } 
-
-                if b {
-                    self.paths.push(path);
-                    break;
-                }
-            }
-        } 
-
-        self.merge_once(changes, cutoff);
-    }
-
-    pub fn lift_branches(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn discard_function(&mut self, changes: &Vec<AnalysisItem>) {
         let mut identifier_changed = false;
+
+        let set: HashSet<_> = changes.iter().collect(); // dedup
+        let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.lift_branches();
+                object.discard_function();
             } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().lift_branches();
-        }
+            self.scopes.last_mut().unwrap().discard_function();
+        } 
     }
 
     pub fn object_of_type(&mut self, type_name: &String) -> Pointer {

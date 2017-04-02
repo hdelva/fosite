@@ -13,10 +13,6 @@ impl ForEachExecutor for PythonFor {
                -> ExecutionResult {
         let Environment { vm, executors } = env;
 
-        // register this node as a branch
-        let id = vm.current_node().clone();
-        vm.push_branch(id);
-
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
 
@@ -32,9 +28,6 @@ impl ForEachExecutor for PythonFor {
         total_changes.append(&mut result.changes);
         total_dependencies.append(&mut result.dependencies);
 
-        // register this node as a branch
-        vm.pop_branch();
-
         return ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
@@ -49,6 +42,7 @@ impl PythonFor {
               vm: &mut VirtualMachine,
               executors: &Executors,
               body: &GastNode) -> ExecutionResult {
+        //let restrictions = vm.get_loop_restrictions().clone();
                           
         let mut total_changes = Vec::new();
         let mut total_dependencies = Vec::new();
@@ -65,19 +59,11 @@ impl PythonFor {
         total_changes.append(&mut body_result.changes);
         total_dependencies.append(&mut body_result.dependencies);
 
-        // second iter
-        let mut body_result = vm.execute(executors, body);
-
-        total_changes.append(&mut body_result.changes);
-        total_dependencies.append(&mut body_result.dependencies);
-
         let _ = vm.pop_path();
 
         self.check_changes(vm);
 
-        // bit of legacy code 
-        // merges a single frame
-        vm.merge_branches(&total_changes);
+        vm.merge_loop(&total_changes);
 
         return ExecutionResult {
             changes: total_changes,

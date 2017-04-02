@@ -3,6 +3,8 @@ use super::Path;
 use super::GastNode;
 use super::PathNode;
 
+use std::collections::BTreeSet;
+
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
@@ -45,7 +47,47 @@ pub trait MessageContent: Send {
             Red.bold().paint(format!("Error at row {}, column {}", row, col + 1)));
     }
 
+    fn reduce_paths(&self, sources: &Sources, paths: &BTreeSet<Path>) -> BTreeSet<Path> {
+        let mut result = BTreeSet::new();
+
+        for path in paths.iter() {
+            let mut new_path = Path::empty();
+            let mut current_node: Option<&PathNode> = None;
+            let mut current_col = 0;
+
+            for node in path.iter() {           
+                if let Some(source_node) = node.get_location().last(){
+                    if let Some( &(_, col) ) = sources.get(&source_node) {
+                        if col <= current_col {
+                            if let Some(acc) = current_node {
+                                new_path.add_node(acc.clone());
+                            }
+                        } 
+                        
+                        if col < current_col {
+                            current_node = None;
+                        } else {
+                            current_node = Some(node);
+                        }
+
+                        current_col = col;
+                    }                   
+                } 
+            }
+
+            if let Some(acc) = current_node {
+                new_path.add_node(acc.clone());
+            }
+
+            result.insert(new_path);
+        }
+
+        return result;
+    }
+
     fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {
+        //println!("{:#?}", path);
+
         if path.len() != 0 {
             for node in path.iter() {
                 let row;
@@ -73,7 +115,7 @@ pub trait MessageContent: Send {
                                  Bold.paint(format!("{}", condition)));
                     }
                     &PathNode::Loop(_) => {
-                        println!("{}Loop at {}",
+                        println!("{} Iteration of the loop at {}",
                                  padding,
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }

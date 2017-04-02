@@ -1,9 +1,5 @@
 use super::VirtualMachine;
 use super::Pointer;
-use super::ExecutionResult;
-use super::Mapping;
-use super::GastNode;
-use super::Environment;
 
 use std::collections::HashMap;
 

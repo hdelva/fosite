@@ -791,7 +791,7 @@ impl Collection {
 
                 if let Some(frame) = self.frames.last() {
                     let id = frame.cause.get_location();
-                    b = cutoff >= id;
+                    b = cutoff > id;
                 } 
 
                 if b {

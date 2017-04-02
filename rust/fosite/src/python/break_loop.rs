@@ -8,6 +8,10 @@ impl BreakExecutor for PythonBreak {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
+        let relevant_node = vm.current_path().iter().last().unwrap().clone();
+        let mut relevant_path = Path::empty();
+        relevant_path.add_node(relevant_node);
+
         return ExecutionResult {
             flow: FlowControl::TerminateLoop,
             dependencies: vec!(),

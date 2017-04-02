@@ -284,7 +284,7 @@ fn collection_from_comprehension(
     }
 
     // disregard the return value
-    vm.discard_branches(&changes);
+    vm.discard_function(&changes);
 
     let _ = vm.pop_path();
 

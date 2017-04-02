@@ -20,7 +20,11 @@ impl AssignExecutor for PythonAssign {
 
         let mut value_changes = value_execution.changes;
         let mut value_dependencies = value_execution.dependencies;
-        let value_mapping = value_execution.result;
+        let mut value_mapping = OptionalMapping::new(); 
+        
+        for (path, address) in value_execution.result.into_iter(){
+            value_mapping.add_mapping(path, Some(address));
+        }
 
         total_changes.append(&mut value_changes);
         total_dependencies.append(&mut value_dependencies);
@@ -50,7 +54,7 @@ impl PythonAssign {
                         vm: &mut VirtualMachine,
                         executors: &Executors,
                         target: &GastNode,
-                        mapping: &Mapping)
+                        mapping: &OptionalMapping)
                         -> ExecutionResult {
         match &target.kind {
             &NodeType::Identifier { ref name } => {
@@ -74,7 +78,7 @@ impl PythonAssign {
                            vm: &mut VirtualMachine,
                            executors: &Executors,
                            content: &[GastNode], 
-                           mapping: &Mapping,
+                           mapping: &OptionalMapping,
                            num: usize,
                            fun: F)
                            -> ExecutionResult
@@ -84,8 +88,15 @@ impl PythonAssign {
 
         let mut value_mappings = Vec::new();
 
-        for (path, address) in mapping.iter() {
-            let object = vm.get_object(address);
+        for (path, opt_address) in mapping.iter() {
+            if opt_address.is_none() {
+                // todo, propagate the results of the masked values here
+                continue;
+            }
+
+            let address = opt_address.unwrap();
+
+            let object = vm.get_object(&address);
 
             for (_, min, max) in object.size_range() {
                 if let Some(max) = max {
@@ -115,7 +126,7 @@ impl PythonAssign {
             // the the mapping for the first assign target
             for (index, mapping) in possibilities.into_iter().enumerate() {
                 if value_mappings.len() <= index {
-                    value_mappings.push(Mapping::new());
+                    value_mappings.push(OptionalMapping::new());
                 }
 
                 let ref mut new_mapping = value_mappings[index];
@@ -124,7 +135,7 @@ impl PythonAssign {
                     let mut new_path = vm.current_path().clone();
                     new_path.merge_into(element_path.clone());
                     new_path.merge_into(path.clone());
-                    new_mapping.add_mapping(new_path, address);
+                    new_mapping.add_mapping(new_path, Some(address));
                 }
             }
         }
@@ -147,16 +158,23 @@ impl PythonAssign {
 
     fn slice(&self, 
               vm: &mut VirtualMachine,
-              mapping: &Mapping,
+              mapping: &OptionalMapping,
               left: i16,
               right: i16)
               -> Mapping {
         let mut result_mapping = Mapping::new();
 
-        for (path, address) in mapping.iter() {
+        for (path, opt_address) in mapping.iter() {
+            if opt_address.is_none() {
+                // todo, propagate the results of the masks here
+                continue;
+            }
+
+            let address = opt_address.unwrap();
+
             let elements;
             {
-                let object = vm.get_object(address);
+                let object = vm.get_object(&address);
                 // one way to fix an off-by-one error
                 elements = object.slice_elements(left, right);
             }
@@ -180,7 +198,7 @@ impl PythonAssign {
                           vm: &mut VirtualMachine,
                           executors: &Executors,
                           content: &[GastNode], 
-                          mapping: &Mapping) 
+                          mapping: &OptionalMapping) 
                           -> ExecutionResult {
         let mut dependencies = Vec::new();
         let mut changes = Vec::new();
@@ -217,7 +235,11 @@ impl PythonAssign {
             dependencies.append(&mut partial_result.dependencies);
 
             let slice_mapping = self.slice(vm, mapping, index as i16, pls as i16);
-            let mut partial_result = self.assign_to_target(vm, executors, target, &slice_mapping);
+            let mut new_mapping = OptionalMapping::new();
+            for (path, address) in slice_mapping.into_iter() {
+                new_mapping.add_mapping(path, Some(address));
+            }
+            let mut partial_result = self.assign_to_target(vm, executors, target, &new_mapping);
             changes.append(&mut partial_result.changes);
             dependencies.append(&mut partial_result.dependencies);
         } else {
@@ -244,7 +266,7 @@ impl PythonAssign {
         vm: &mut VirtualMachine, 
         target_address: &Pointer, 
         index_mapping: &Mapping,
-        value_mapping: &Mapping) {
+        value_mapping: &OptionalMapping) {
 
         // todo this clone shouldn't be necessary
         let current_path = vm.current_path().clone();
@@ -262,8 +284,15 @@ impl PythonAssign {
         let mut key_chunk = CollectionChunk::empty();
         let mut value_chunk = CollectionChunk::empty();
 
-        for (path, pointer) in value_mapping.iter() {
-            let value_obj = vm.get_object(pointer);
+        for (path, opt_pointer) in value_mapping.iter() {
+            if opt_pointer.is_none() {
+                // todo propagate results of masks here
+                continue;
+            }
+
+            let pointer = opt_pointer.unwrap();
+
+            let value_obj = vm.get_object(&pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
             value_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
@@ -301,7 +330,7 @@ impl PythonAssign {
         vm: &mut VirtualMachine, 
         target: &GastNode,
         target_address: &Pointer, 
-        mapping: &Mapping) {
+        mapping: &OptionalMapping) {
 
         // todo this clone shouldn't be necessary
         let current_path = vm.current_path().clone();
@@ -322,8 +351,14 @@ impl PythonAssign {
             }
         }
 
-        for (path, pointer) in mapping.iter() {
-            let value_obj = vm.get_object(pointer);
+        for (path, opt_pointer) in mapping.iter() {
+            if opt_pointer.is_none() {
+                continue;
+            }
+
+            let pointer = opt_pointer.unwrap();
+
+            let value_obj = vm.get_object(&pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
             chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
@@ -369,7 +404,7 @@ impl PythonAssign {
                            executors: &Executors,
                            target: &GastNode,
                            index: &GastNode,
-                           mapping: &Mapping)
+                           mapping: &OptionalMapping)
                            -> ExecutionResult {
         // todo get rid of clone
         let mapping = mapping.clone().augment(PathNode::Assignment(vm.current_node().clone(),
@@ -465,7 +500,7 @@ impl PythonAssign {
                            executors: &Executors,
                            parent: &GastNode,
                            attribute: &String,
-                           mapping: &Mapping)
+                           mapping: &OptionalMapping)
                            -> ExecutionResult {
 
         // todo get rid of clone
@@ -494,7 +529,7 @@ impl PythonAssign {
             vm.store_object_change(parent_address.clone(), &new_path);
 
             let mut parent_object = vm.get_object_mut(parent_address);
-            parent_object.assign_attribute(attribute.clone(), new_path, mapping.clone())
+            parent_object.assign_opt_attribute(attribute.clone(), new_path, mapping.clone())
         }
 
         if let Some(item) = parent.kind.to_analysis_item() {
@@ -525,7 +560,7 @@ impl PythonAssign {
                             vm: &mut VirtualMachine,
                             _: &Executors,
                             target: &String,
-                            mapping: &Mapping)
+                            mapping: &OptionalMapping)
                             -> ExecutionResult {
         let changes = vec![AnalysisItem::Identifier (target.clone())];
 
@@ -535,11 +570,20 @@ impl PythonAssign {
 
         let path = vm.current_path().clone();
 
-        vm.store_identifier_change(AnalysisItem::Identifier(target.clone()), &path, &mapping);
+        {
+            let mut new_mapping = Mapping::new();
+            for (path, address) in mapping.iter() {
+                if let &Some(ref address) = address {
+                    new_mapping.add_mapping(path.clone(), address.clone());
+                }
+            }
+            vm.store_identifier_change(AnalysisItem::Identifier(target.clone()), &path, &new_mapping);
+        }
+        
 
         {
             let mut scope = vm.last_scope_mut();
-            scope.set_mapping(target.clone(), path, mapping.clone());
+            scope.set_optional_mapping(target.clone(), path, mapping.clone());
         }
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));

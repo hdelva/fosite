@@ -6,7 +6,7 @@ use super::{GastNode, NodeType};
 pub enum FlowControl {
     Continue,
     TerminateLoop,
-    TerminateCall,
+    TerminateCall, 
 }
 
 #[derive(Debug, Clone)]

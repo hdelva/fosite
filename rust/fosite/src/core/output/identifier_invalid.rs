@@ -60,12 +60,14 @@ impl MessageContent for IdentifierInvalid {
                  Bold.paint(&self.name));
         println!("  In the following cases:");
 
-        if self.paths.len() == 0 {
+        let relevant_paths = self.reduce_paths(sources, &self.paths);
+
+        if relevant_paths.len() == 0 {
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         }
 
-        for (index, path) in self.paths.iter().enumerate() {
+        for (index, path) in relevant_paths.iter().enumerate() {
             println!("  Case {}",
                 Bold.paint(format!("{}", index + 1)));
             self.print_path(sources, path, "    ");
@@ -73,3 +75,4 @@ impl MessageContent for IdentifierInvalid {
         }
     }
 }
+

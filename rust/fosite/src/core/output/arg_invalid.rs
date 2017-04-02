@@ -2,12 +2,9 @@ use super::Path;
 use super::MessageContent;
 
 use term_painter::ToStyle;
-use term_painter::Color::*;
 use term_painter::Attr::*;
 
 use std::collections::HashMap;
-use std::collections::BTreeSet;
-use std::collections::BTreeMap;
 use super::GastID;
 use super::GastNode;
 use super::PathID;

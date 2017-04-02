@@ -84,23 +84,34 @@ impl Object {
         } 
     }
 
-    pub fn merge_until(&mut self, cutoff: Option<&PathID>) {
+    pub fn merge_branches(&mut self, hide_as_loop: Vec<Option<bool>> ) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
-            self.elements.merge_until(cutoff)
+            self.elements.merge_branches()
         } 
         
         if self.elements.num_frames() <= self.attributes.num_frames() {
-            self.attributes.merge_until(cutoff)
+            self.attributes.merge_branches(hide_as_loop)
         } 
     }
 
-    pub fn lift_branches(&mut self) {
+    pub fn discard_function(&mut self) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
-            self.elements.lift_branches()
+            self.elements.merge_branches();
         } 
         
         if self.elements.num_frames() <= self.attributes.num_frames() {
-            self.attributes.lift_branches()
+            // objects don't return anything, suppress the return value
+            self.attributes.discard_function();
+        } 
+    }
+
+    pub fn merge_loop(&mut self) {
+        if self.attributes.num_frames() <= self.elements.num_frames() {
+            self.elements.merge_branches()
+        } 
+        
+        if self.elements.num_frames() <= self.attributes.num_frames() {
+            self.attributes.merge_loop()
         } 
     }
 
@@ -135,6 +146,10 @@ impl Object {
     // attributes
     pub fn assign_attribute(&mut self, name: String, path: Path, mapping: Mapping) {
         self.attributes.set_mapping(name, path, mapping);
+    }
+
+    pub fn assign_opt_attribute(&mut self, name: String, path: Path, mapping: OptionalMapping) {
+        self.attributes.set_optional_mapping(name, path, mapping);
     }
 
     pub fn get_attribute(&self, name: &String) -> &OptionalMapping {

@@ -15,8 +15,9 @@ mod for_loop;
 mod call;
 mod method;
 mod import;
-pub mod modules;
 mod negate;
+mod unop;
+mod slice;
 
 pub use self::block::*;
 pub use self::binop::*;
@@ -37,3 +38,7 @@ pub use self::method::*;
 pub use self::import::*;
 pub use self::modules::*;
 pub use self::negate::*;
+pub use self::unop::*;
+pub use self::slice::*;
+
+pub mod modules;

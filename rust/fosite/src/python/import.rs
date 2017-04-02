@@ -12,7 +12,7 @@ impl ImportExecutor for PythonImport {
                into: &Option<String>)
                -> ExecutionResult {
 
-        let Environment {mut vm, executors} = env;
+        let Environment {mut vm, ..} = env;
 
         let module = vm.retrieve_module(module_name);
 

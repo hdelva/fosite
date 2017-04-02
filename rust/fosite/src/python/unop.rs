@@ -1,8 +1,8 @@
 use core::*;
 
-pub struct PythonNegate { }
+pub struct PythonUnOp { }
 
-impl NegateExecutor for PythonNegate {
+impl UnOpExecutor for PythonUnOp {
     fn execute(&self, env: Environment, value: &GastNode) -> ExecutionResult {
         let Environment { mut vm, executors } = env;
 
@@ -10,9 +10,18 @@ impl NegateExecutor for PythonNegate {
         let dependencies = value_result.dependencies;
         let changes = value_result.changes;
 
-        let ptr = vm.object_of_type(&"bool".to_owned());
+        let mut result_mapping = Mapping::new();
 
-        let result_mapping = Mapping::simple(Path::empty(), ptr);
+        for (path, address) in value_result.result.into_iter() {
+            let t;
+            {
+                let o = vm.get_object(&address);
+                t = o.get_extension().last().unwrap().clone();
+            }
+            
+            let n = vm.object_of_type_pointer(&t);
+            result_mapping.add_mapping(path, n);
+        }
 
         return ExecutionResult {
             flow: FlowControl::Continue,
