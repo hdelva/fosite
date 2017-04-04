@@ -2,8 +2,6 @@ use core::*;
 
 use super::check_arg;
 
-use std::collections::HashMap;
-
 pub fn new_math_module() -> Module {
     let mut math = Module::new();
     
@@ -22,7 +20,7 @@ fn define_sin(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -58,7 +56,7 @@ fn define_cos(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -94,7 +92,7 @@ fn define_radians(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -130,7 +128,7 @@ fn define_floor(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {

@@ -1,7 +1,5 @@
 use core::*;
 
-use std::collections::HashMap;
-
 pub struct PythonMethod {
 
 }
@@ -17,13 +15,13 @@ impl MethodExecutor for PythonMethod {
         let parent = parent.clone();
         let address = address.clone();
 
-        let fun = move | env: Environment, mut args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let fun = move | env: Environment, mut args: Vec<Mapping>, kwargs: Vec<(String, Mapping)> | {
             let mut new_args = vec!(Mapping::simple(Path::empty(), parent.clone()));
             new_args.append(&mut args);
 
             let Environment { vm, executors } = env;
 
-            vm.call(executors, &address, new_args).unwrap()
+            vm.call(executors, &address, new_args, kwargs).unwrap()
         };
 
         let pointer = vm.object_of_type(&"method".to_owned());

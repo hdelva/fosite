@@ -47,6 +47,39 @@ impl AssignExecutor for PythonAssign {
             result: mapping,
         };
     }
+
+    fn direct(&self,
+               env: Environment,
+               target: String,
+               value: Mapping)
+               -> ExecutionResult {
+        let Environment { vm, executors } = env;
+
+        let mut total_changes = Vec::new();
+        let mut total_dependencies = Vec::new();
+
+        let mut value_mapping = OptionalMapping::new();
+        
+        for (path, address) in value.into_iter(){
+            value_mapping.add_mapping(path, Some(address));
+        }
+
+        let target_result = self.assign_to_identifier(vm, executors, &target, &value_mapping);
+        let mut target_dependencies = target_result.dependencies;
+        let mut target_changes = target_result.changes;
+
+        total_changes.append(&mut target_changes);
+        total_dependencies.append(&mut target_dependencies);
+
+        let mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
+
+        return ExecutionResult {
+            flow: FlowControl::Continue,
+            dependencies: total_dependencies,
+            changes: total_changes,
+            result: mapping,
+        };
+    }
 }
 
 impl PythonAssign {

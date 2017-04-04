@@ -5,7 +5,11 @@ pub struct PythonCall {
 }
 
 impl CallExecutor for PythonCall {
-    fn execute(&self, env: Environment, target: &GastNode, arg_nodes: &[GastNode]) -> ExecutionResult {
+    fn execute(&self, 
+               env: Environment, 
+               target: &GastNode, 
+               arg_nodes: &[GastNode], 
+               kwarg_nodes: &[GastNode]) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let mut total_changes: Vec<AnalysisItem> = Vec::new();
@@ -14,11 +18,22 @@ impl CallExecutor for PythonCall {
 
         // evaluate the arguments first
         let mut args: Vec<Mapping> = Vec::new();
+        let mut kwargs: Vec<(String, Mapping)> = Vec::new();
+
         for arg in arg_nodes.iter() {
             let mut arg_result = vm.execute(executors, arg);
             total_changes.append(&mut arg_result.changes);
             total_dependencies.append(&mut arg_result.dependencies);
             args.push(arg_result.result);
+        }
+
+        for kwarg in kwarg_nodes.iter() {
+            if let &NodeType::Argument{ref name, ref value} = &kwarg.kind {
+                let mut kwarg_result = vm.execute(executors, value);
+                total_changes.append(&mut kwarg_result.changes);
+                total_dependencies.append(&mut kwarg_result.dependencies);
+                kwargs.push( (name.clone(), kwarg_result.result) );
+            }
         }
 
         let mut target_result = vm.execute(executors, target);
@@ -53,7 +68,7 @@ impl CallExecutor for PythonCall {
 
             vm.push_path(current_path);
 
-            if let Some(mut body_result) = vm.call(executors, &address, args.clone()) {
+            if let Some(mut body_result) = vm.call(executors, &address, args.clone(), kwargs.clone()) {
                 body_changes.append(&mut body_result.changes);
                 body_dependencies.append(&mut body_result.dependencies);
             }

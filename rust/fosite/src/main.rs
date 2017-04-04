@@ -84,6 +84,7 @@ fn test_vm() {
         negate: Some(Box::new(PythonNegate {})),
         unop: Some(Box::new(PythonUnOp {})),
         slice: Some(Box::new(PythonSlice {})),
+        function: Some(Box::new(PythonFunction {})),
     };
 
     let mut s = String::new();

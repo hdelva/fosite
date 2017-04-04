@@ -393,13 +393,15 @@ class Argument(Named):
     return constants.ARGUMENT
 
 class Function(Named):
-  def __init__(self, name: 'Identifier', pos_args: 'list[Argument]', kw_args, body: 'Block', line, col):
+  def __init__(self, name: 'Identifier', pos_args: 'list[Argument]', kw_args, vararg, kw_vararg, body: 'Block', line, col):
     super().__init__(name)
     self.line = line
     self.col = col
     self.positional_args = pos_args
     self.keyword_args = kw_args
     self.body = body
+    self.vararg = vararg
+    self.kw_vararg = kw_vararg
 
   def kind(self):
     return constants.FUNCTION
@@ -602,11 +604,22 @@ class AnonymousFunction(GastNode):
 def Starred(value: 'Expression', line, col):
   return UnOp('*', value, line, col)
 
-def Slice(target: 'Expression', lower, upper, step, line, col):
-  return Call(constants.SLICE, [lower, upper, step], line, col)
+class Slice(GastNode):
+  def __init__(self, target, lower, upper, step, line, col):
+    self.target = target
+    self.lower = lower
+    self.upper = upper
+    global count
+    self.id = count
+    count += 1
+    self.line = line
+    self.col = col
+
+  def kind(self):
+    return constants.SLICE
 
 def ExtSlice(target: 'Expression', dims, line, col):
-  return Call(constants.EXTSLICE, dims, line, col)
+  return Call(Identifier(constants.EXTSLICE), [target, *dims], line, col)
 
 class Stream(GastNode):
   # wat do here

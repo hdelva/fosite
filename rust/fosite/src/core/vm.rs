@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 use std::slice::Iter;
 use std::collections::HashMap;
 
-type Callable = Fn(Environment, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult;
+type Callable = Fn(Environment, Vec<Mapping>, Vec<(String, Mapping)>) -> ExecutionResult;
 
 pub struct VirtualMachine {
     scopes: Vec<Scope>,
@@ -66,7 +66,7 @@ impl VirtualMachine {
     }
 
     pub fn define_function<T: 'static>(&mut self, name: String, callable: T) where
-        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult {
+        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, Vec<(String, Mapping)>) -> ExecutionResult {
         let pointer = self.object_of_type(&"function".to_owned());
         self.set_callable(pointer.clone(), callable);
 
@@ -78,7 +78,7 @@ impl VirtualMachine {
     }
 
     pub fn define_method<T: 'static>(&mut self, tpe: String, name: String, callable: T) where
-        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult {
+        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, Vec<(String, Mapping)>) -> ExecutionResult {
         let pointer = self.object_of_type(&"method".to_owned());
         self.set_callable(pointer.clone(), callable);
 
@@ -96,7 +96,7 @@ impl VirtualMachine {
     }
 
     pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
-        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, &HashMap<String, GastNode>) -> ExecutionResult {
+        T : for<'r> Fn(Environment<'r>, Vec<Mapping>, Vec<(String, Mapping)>) -> ExecutionResult {
         self.callables.insert(address, Box::new(callable));
     }
 
@@ -110,7 +110,12 @@ impl VirtualMachine {
         return results;
     }
 
-    pub fn call(&mut self, executors: &Executors, address: &Pointer, args: Vec<Mapping>) -> Option<ExecutionResult> {
+    pub fn call(&mut self, 
+                executors: &Executors, 
+                address: &Pointer, 
+                args: Vec<Mapping>, 
+                kwargs: Vec<(String, Mapping)>) 
+                -> Option<ExecutionResult> {
         let b = self.scopes.len() > 2;
 
         // move the current function scope to the shadows
@@ -137,7 +142,7 @@ impl VirtualMachine {
         if let Some(callable) = self.callables.remove(address) {
             {
                 let env = Environment {vm: self, executors: executors};
-                analysis = Some(callable(env, args, &HashMap::new()));
+                analysis = Some(callable(env, args, kwargs));
             }
             // give the callable back back to the VM
             self.callables.insert(address.clone(), callable);
@@ -299,6 +304,23 @@ impl VirtualMachine {
                 executor.execute(env, target, index)
             }
             None => panic!("VM is not setup to execute indexing"),
+        }
+    }
+
+    pub fn function(&mut self,
+                 executors: &Executors,
+                 name: &String,
+                 args: &[GastNode],
+                 kw_args: &[GastNode],
+                 vararg: &Option<String>,
+                 kw_vararg: &Option<String>,
+                 body: &GastNode) -> ExecutionResult {
+        match executors.function {
+            Some(ref executor) => {
+                let env = Environment::new(self, executors);
+                executor.execute(env, name, args, kw_args, vararg, kw_vararg, body)
+            }
+            None => panic!("VM is not setup to execute function definitions"),
         }
     }
 
@@ -542,6 +564,20 @@ impl VirtualMachine {
         }
     }
 
+    pub fn assign_direct(&mut self,
+                  executors: &Executors,
+                  target: String,
+                  value: Mapping)
+                  -> ExecutionResult {
+        match executors.assign {
+            Some(ref assign) => {
+                let env = Environment::new(self, executors);
+                assign.direct(env, target, value)
+            }
+            None => panic!("VM is not setup to execute assignments"),
+        }
+    }
+
     pub fn break_loop(&mut self, executors: &Executors) -> ExecutionResult {
         match executors.break_loop {
             Some(ref break_loop) => {
@@ -552,13 +588,13 @@ impl VirtualMachine {
         }
     }
 
-    pub fn _call(&mut self, executors: &Executors, target: &GastNode, args: &[GastNode]) -> ExecutionResult {
+    pub fn _call(&mut self, executors: &Executors, target: &GastNode, args: &[GastNode], kwargs: &[GastNode]) -> ExecutionResult {
         match executors.call {
             Some(ref call) => {
                 let env = Environment::new(self, executors);
-                call.execute(env, target, args)
+                call.execute(env, target, args, kwargs)
             }
-            None => panic!("VM is not setup to execute break statements"),
+            None => panic!("VM is not setup to execute function calls"),
         }
     }
 
@@ -703,8 +739,8 @@ impl VirtualMachine {
             &NodeType::ForEach {ref before, ref body} => {
                 self.foreach(executors, before, body)
             }
-            &NodeType::Call {ref target, ref args} => {
-                self._call(executors, target, args)
+            &NodeType::Call {ref target, ref args, ref kwargs} => {
+                self._call(executors, target, args, kwargs)
             }
             &NodeType::Import {ref module, ref parts, ref into} => {
                 self.import(executors, module, parts, into)
@@ -717,6 +753,9 @@ impl VirtualMachine {
             }
             &NodeType::Slice {ref target, ref lower, ref upper} => {
                 self.slice(executors, target, lower, upper)
+            }
+            &NodeType::FunctionDef {ref name, ref body, ref args, ref kw_args, ref vararg, ref kw_vararg} => {
+                self.function(executors, name, args, kw_args, vararg, kw_vararg, body)
             }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };

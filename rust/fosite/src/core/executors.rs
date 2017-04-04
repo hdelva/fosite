@@ -3,6 +3,7 @@ use super::ExecutionResult;
 use super::VirtualMachine;
 use super::KnowledgeBase;
 use super::Pointer;
+use super::Mapping;
 
 pub struct Executors {
     pub binop: Option<Box<BinOpExecutor>>,
@@ -36,6 +37,7 @@ pub struct Executors {
     pub negate: Option<Box<NegateExecutor>>,
     pub unop: Option<Box<UnOpExecutor>>,
     pub slice: Option<Box<SliceExecutor>>,
+    pub function: Option<Box<FunctionDefExecutor>>,
 }
 
 pub trait MethodExecutor {
@@ -60,6 +62,12 @@ pub trait AssignExecutor {
                env: Environment,
                targets: &Vec<GastNode>,
                value: &GastNode)
+               -> ExecutionResult;
+
+    fn direct(&self,
+               env: Environment,
+               target: String,
+               value: Mapping)
                -> ExecutionResult;
 }
 
@@ -211,7 +219,18 @@ pub trait AndThenExecutor {
 }
 
 pub trait CallExecutor {
-    fn execute(&self, env: Environment, target: &GastNode, args: &[GastNode]) -> ExecutionResult;
+    fn execute(&self, env: Environment, target: &GastNode, args: &[GastNode], kwargs: &[GastNode]) -> ExecutionResult;
+}
+
+pub trait FunctionDefExecutor {
+    fn execute(&self, 
+               env: Environment, 
+               name: &String,
+               args: &[GastNode],
+               kw_args: &[GastNode],
+               vararg: &Option<String>,
+               kw_vararg: &Option<String>,
+               body: &GastNode) -> ExecutionResult;
 }
 
 pub struct Environment<'a> {

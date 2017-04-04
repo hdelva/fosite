@@ -2,8 +2,6 @@ use core::*;
 
 use super::check_arg;
 
-use std::collections::HashMap;
-
 pub fn new_string_module() -> Module {
     let mut string = Module::new();
     define_format(&mut string);
@@ -15,7 +13,7 @@ fn define_format(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"method".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -72,7 +70,7 @@ fn define_find(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"method".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
             let total_dependencies = Vec::new();
 

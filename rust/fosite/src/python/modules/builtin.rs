@@ -2,8 +2,6 @@ use core::*;
 
 use super::check_arg;
 
-use std::collections::HashMap;
-
 pub fn new_builtin_module() -> Module {
     let mut builtin = Module::new();
 
@@ -28,7 +26,7 @@ fn define_int_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let ptr = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
             let total_dependencies = Vec::new();
 
@@ -67,7 +65,7 @@ fn define_str_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"method".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
             let total_dependencies = Vec::new();
 
@@ -127,7 +125,7 @@ fn define_float_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let ptr = vm.knowledge().get_type(&"float".to_owned()).unwrap().clone();
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
             let total_dependencies = Vec::new();
 
@@ -166,7 +164,7 @@ fn define_input(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -223,7 +221,7 @@ fn define_print(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             for arg in args.iter() {
@@ -252,7 +250,7 @@ fn define_abs(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -289,7 +287,7 @@ fn define_len(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -325,7 +323,7 @@ fn define_round(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -361,7 +359,7 @@ fn define_ord(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
@@ -397,7 +395,7 @@ fn define_range(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        let inner = | env: Environment, args: Vec<Mapping>, _: &HashMap<String, GastNode> | {
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
             if args.len() > 1 {

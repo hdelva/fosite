@@ -100,7 +100,7 @@ pub enum NodeType {
     Call {
         target: Box<GastNode>,
         args: Vec<GastNode>,
-        // kwargs: HashMap<String, GastNode>,
+        kwargs: Vec<GastNode>,
     },
     Import {
         module: String,
@@ -114,6 +114,18 @@ pub enum NodeType {
         target: Box<GastNode>,
         lower: Box<GastNode>,
         upper: Box<GastNode>,
+    },
+    Argument {
+        name: String,
+        value: Box<GastNode>,
+    },
+    FunctionDef {
+        name: String,
+        args: Vec<GastNode>,
+        kw_args: Vec<GastNode>,
+        vararg: Option<String>,
+        kw_vararg: Option<String>,
+        body: Box<GastNode>,
     }
 }
 
@@ -136,8 +148,9 @@ impl NodeType {
             &NodeType::String {ref value} => {
                 format!("{}", value)
             }
-            &NodeType::Call {ref target, ref args} => {
+            &NodeType::Call {ref target, ref args, ..} => {
                 let pls: Vec<String> = args.iter().map(|x| x.to_string()).collect();
+                // todo add kwargs
                 format!("{}({})", target.to_string(), pls.join(", "))
             }
             _ => format!("Node {:?} doesn't have a string representation", self),
@@ -202,6 +215,8 @@ pub fn build(node: &Json) -> GastNode {
         "import" => build_import(id, node),
         "negate" => build_negate(id, node),
         "slice" => build_slice(id, node),
+        "argument" => build_argument(id, node),
+        "function" => build_function(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -273,6 +288,22 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_argument(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_name = obj.get("name").unwrap();
+    let name = json_name.as_string().unwrap().to_owned();
+
+    let json_value = obj.get("value").unwrap();
+    let value = Box::new(build(json_value));
+
+    return GastNode::new(id,
+                         NodeType::Argument {
+                             name: name,
+                             value: value,
                          });
 }
 
@@ -417,6 +448,53 @@ fn build_if(id: GastID, node: &Json) -> GastNode {
                          });
 }
 
+fn build_function(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let name = obj.get("name").unwrap().as_string().unwrap().to_owned();
+
+    let json_args = obj.get("positional_args").unwrap();
+    let mut args = Vec::new();
+    for node in json_args.as_array().unwrap() {
+        args.push(build(node));
+    }
+
+    let json_kwargs = obj.get("keyword_args").unwrap();
+    let mut kwargs = Vec::new();
+    for node in json_kwargs.as_array().unwrap() {
+        kwargs.push(build(node));
+    }
+
+    let json_vararg = obj.get("vararg").unwrap();
+    let vararg = if json_vararg.is_null() {
+        None
+    } else {
+        Some(json_vararg.as_string().unwrap().to_owned())
+    };
+
+    let json_kw_vararg = obj.get("kw_vararg").unwrap();
+    let kw_vararg = if json_kw_vararg.is_null() {
+        None
+    } else {
+        Some(json_kw_vararg.as_string().unwrap().to_owned())
+    };
+
+    let json_body = obj.get("body").unwrap();
+    let body = Box::new(build(json_body));
+
+    return GastNode::new(id,
+                         NodeType::FunctionDef {
+                             name: name,
+                             body: body,
+                             args: args,
+                             kw_args: kwargs,
+                             vararg: vararg,
+                             kw_vararg: kw_vararg,
+                         });
+}
+
+
+
 fn build_while(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
 
@@ -534,14 +612,21 @@ fn build_call(id: GastID, node: &Json) -> GastNode {
     let target_json = obj.get("name").unwrap();
     let target = build(target_json);
 
-    let args = obj.get("positional_args").unwrap().as_array().unwrap();
-    let mut content = Vec::new();
+    let json_args = obj.get("positional_args").unwrap().as_array().unwrap();
+    let mut args = Vec::new();
 
-    for element in args {
-        content.push(build(element));
+    for element in json_args {
+        args.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::Call { target: Box::new(target), args: content });
+    let json_kwargs = obj.get("keyword_args").unwrap().as_array().unwrap();
+    let mut kwargs = Vec::new();
+
+    for element in json_kwargs {
+        kwargs.push(build(element));
+    }
+
+    return GastNode::new(id, NodeType::Call { target: Box::new(target), args: args, kwargs: kwargs });
 }
 
 fn build_set(id: GastID, node: &Json) -> GastNode {
