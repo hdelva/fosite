@@ -5,7 +5,8 @@ while 'cond1':
       break
     else:
   	  continue
+  x
 
   x = 42
 
-x
+x + 'str'

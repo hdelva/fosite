@@ -9,9 +9,6 @@ lazy_static! {
     static ref BODY: Mutex<Vec<GastNode>> = Mutex::new(Vec::new());
 }
 
-    
-
-
 pub struct PythonFunction {
 
 }
@@ -52,30 +49,37 @@ impl FunctionDefExecutor for PythonFunction {
             }
         }
 
-        let index;
-        unsafe {
-            index = ARGS.lock().unwrap().len();
+        let index = ARGS.lock().unwrap().len();
 
-            ARGS.lock().unwrap().push(rpos_evaluated);
-            KW_ARGS.lock().unwrap().push(rkw_evaluated);
-            VARARG.lock().unwrap().push(vararg.clone());
-            KW_VARARG.lock().unwrap().push(kw_vararg.clone());
-            BODY.lock().unwrap().push(body.clone());
-        }
+        ARGS.lock().unwrap().push(rpos_evaluated);
+        KW_ARGS.lock().unwrap().push(rkw_evaluated);
+        VARARG.lock().unwrap().push(vararg.clone());
+        KW_VARARG.lock().unwrap().push(kw_vararg.clone());
+        BODY.lock().unwrap().push(body.clone());
         
 
         let inner = move | env: Environment, args: Vec<Mapping>, kw_args: Vec<(String, Mapping)> | {
             let Environment { vm, executors } = env;
 
-            let mut body_result;
-            unsafe {
-                assign_positional(vm, executors,
-                         &ARGS.lock().unwrap()[index], &KW_ARGS.lock().unwrap()[index], 
-                         &args, &kw_args,
-                         &VARARG.lock().unwrap()[index], &KW_VARARG.lock().unwrap()[index]);
+            let new_node = vm.current_path().iter().last().unwrap().clone(); // should be the function call node
 
-                body_result = vm.execute(executors, &BODY.lock().unwrap()[index]);
+            let mut aug_args = Vec::new();
+            let mut aug_kwargs = Vec::new();
+
+            for &(ref n, ref a) in ARGS.lock().unwrap()[index].iter() {
+                aug_args.push( (n.clone(), a.clone().augment(new_node.clone())) );
             }
+
+            for &(ref n, ref a) in KW_ARGS.lock().unwrap()[index].iter() {
+                aug_kwargs.push( (n.clone(), a.clone().augment(new_node.clone())) );
+            }
+
+            assign_positional(vm, executors,
+                        &aug_args, &aug_kwargs, 
+                        &args, &kw_args,
+                        &VARARG.lock().unwrap()[index], &KW_VARARG.lock().unwrap()[index]);
+
+            let body_result = vm.execute(executors, &BODY.lock().unwrap()[index]);
 
             
             let execution_result = ExecutionResult {
@@ -91,12 +95,14 @@ impl FunctionDefExecutor for PythonFunction {
         let pointer = vm.object_of_type(&"function".to_owned());
 
         vm.set_callable(pointer.clone(), inner);
-        vm.assign_direct(executors, name.clone(), Mapping::simple(Path::empty(), pointer));
+        let mut aresult = vm.assign_direct(executors, name.clone(), Mapping::simple(Path::empty(), pointer));
+        changes.append(&mut aresult.changes);
+        dependencies.append(&mut aresult.dependencies);
 
         return ExecutionResult {
             flow: FlowControl::Continue,
-            changes: vec!(),
-            dependencies: vec!(),
+            changes: changes,
+            dependencies: dependencies,
             result: Mapping::new(),
         }
     }
@@ -115,10 +121,13 @@ fn assign_positional(vm: &mut VirtualMachine,
     let mut dependencies = vec!();
     let mut changes = vec!();
 
+    // todo, use the default value before moving to varargs
     if rpos.len() > 0 && gpos.len() > 0 {
-        let &(ref name, ref default) = &rpos[0];
+        let &(ref name, _) = &rpos[0];
         let mapping = gpos[0].clone();
-        vm.assign_direct(executors, name.clone(), mapping);
+        let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
+        dependencies.append(&mut aresult.dependencies);
+        changes.append(&mut aresult.changes);
         let mut intermediate = assign_positional(vm, executors, &rpos[1..], rkw, &gpos[1..], gkw, vararg, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
@@ -148,7 +157,33 @@ fn assign_vararg(vm: &mut VirtualMachine,
     let mut dependencies = vec!();
     let mut changes = vec!();
 
-    if vararg.is_some() {
+    if let &Some(ref name) = vararg {
+        let type_name = "list".to_owned();
+        let obj_ptr = vm.object_of_type(&type_name);        
+
+        let mut chunks = Vec::new();
+        for arg in gpos.iter() {
+            let mut chunk = CollectionChunk::empty();
+
+            for (path, address) in arg.iter(){
+                let kind = vm.get_object(address).get_extension().first().unwrap();
+                let repr = Representant::new(address.clone(), kind.clone(), Some(1), Some(1));
+                chunk.add_representant(path.clone(), repr);    
+            }
+            
+            chunks.push(chunk);
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&obj_ptr);
+            obj.define_elements(chunks, Path::empty());
+        }
+
+        let mapping = Mapping::simple(vm.current_path().clone(), obj_ptr);
+        let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
+        dependencies.append(&mut aresult.dependencies);
+        changes.append(&mut aresult.changes);
+
         //todo assign rest of gpos
         let mut intermediate = assign_kw_positional(vm, executors, rkw, &[], gkw, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
@@ -179,9 +214,12 @@ fn assign_kw_positional(vm: &mut VirtualMachine,
     let mut changes = vec!();
 
     if rkw.len() > 0 && gpos.len() > 0 {
-        let &(ref name, ref default) = &rkw[0];
+        let &(ref name, _) = &rkw[0];
         let mapping = gpos[0].clone();
-        vm.assign_direct(executors, name.clone(), mapping);
+        let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
+        dependencies.append(&mut aresult.dependencies);
+        changes.append(&mut aresult.changes);
+
         let mut intermediate = assign_kw_positional(vm, executors, &rkw[1..], &gpos[1..], gkw, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
@@ -223,7 +261,10 @@ fn assign_kw(vm: &mut VirtualMachine,
             }
         }
 
-        vm.assign_direct(executors, name.clone(), mapping);
+        let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
+        dependencies.append(&mut aresult.dependencies);
+        changes.append(&mut aresult.changes);
+
         let mut intermediate = assign_kw(vm, executors, &rkw[1..], &next, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
@@ -250,9 +291,62 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
     let mut dependencies = vec!();
     let mut changes = vec!();
 
-    if kw_vararg.is_some() {
-        //todo assign rest of gkw
-        
+    if let &Some(ref target) = kw_vararg {
+        let str_type = "str".to_owned();
+        let str_ptr = vm.object_of_type(&str_type);
+
+        let dict_type = "dict".to_owned();
+        let dict_ptr = vm.object_of_type(&dict_type);
+
+        let set_type = "set".to_owned();
+        let keys_ptr = vm.object_of_type(&set_type);
+        let values_ptr = vm.object_of_type(&set_type);
+
+        let mut key_chunks = Vec::new();
+        let mut value_chunks = Vec::new();
+
+        for arg in gkw.iter() {
+            let &(_, ref mapping) = arg;
+            // define the keys
+            let mut chunk = CollectionChunk::empty();
+            let kind = vm.get_object(&str_ptr).get_extension().first().unwrap();
+            let repr = Representant::new(str_ptr, kind.clone(), Some(1), Some(1));
+            chunk.add_representant(Path::empty(), repr);  
+            key_chunks.push(chunk); 
+
+            let mut chunk = CollectionChunk::empty();
+            for (path, address) in mapping.iter(){
+                let kind = vm.get_object(address).get_extension().first().unwrap();
+                let repr = Representant::new(address.clone(), kind.clone(), Some(1), Some(1));
+                chunk.add_representant(path.clone(), repr);    
+            }
+
+            value_chunks.push(chunk);
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&keys_ptr);
+            obj.define_elements(key_chunks, Path::empty());
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&values_ptr);
+            obj.define_elements(value_chunks, Path::empty());
+        }
+
+        {
+            let mut obj = vm.get_object_mut(&dict_ptr);
+            let keys_mapping = Mapping::simple(Path::empty(), keys_ptr.clone());
+            let values_mapping = Mapping::simple(Path::empty(), values_ptr.clone());
+
+            obj.assign_attribute("___keys".to_owned(), Path::empty(), keys_mapping);
+            obj.assign_attribute("___values".to_owned(), Path::empty(), values_mapping);
+        }
+
+        let mapping = Mapping::simple(vm.current_path().clone(), dict_ptr);
+        let mut aresult = vm.assign_direct(executors, target.clone(), mapping); 
+        dependencies.append(&mut aresult.dependencies);
+        changes.append(&mut aresult.changes);
     }
 
     return ExecutionResult {

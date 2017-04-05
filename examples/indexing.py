@@ -5,7 +5,7 @@ else:
 
 stuff = [1, x, 3, 4]
 
-x = stuff[4]
-y = stuff[3]
+y = stuff[1]
+z = stuff[2]
 
-x + y
+y + z

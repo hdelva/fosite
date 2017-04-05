@@ -3,7 +3,9 @@ if 'cond':
 else:
 	x = 2
 
-stuff = [1, x] + [3, 4]
+stuff = [1, x] + [3, '4']
 a, *b, c = stuff 
 d, e = b
 d + e
+
+b + c

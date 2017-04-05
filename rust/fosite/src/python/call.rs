@@ -51,6 +51,23 @@ impl CallExecutor for PythonCall {
         let mut body_dependencies = Vec::new();
 
         for (index, (path, address)) in target_result.result.into_iter().enumerate() {
+            let new_node = PathNode::Frame(
+                    vm.current_node().clone(), 
+                    Some(target.to_string()), 
+                    index as i16, 
+                    len as i16);
+
+            let mut aug_args = Vec::new();
+            let mut aug_kwargs = Vec::new();
+
+            for a in args.iter() {
+                aug_args.push(a.clone().augment(new_node.clone()));
+            }
+
+            for &(ref n, ref a) in kwargs.iter() {
+                aug_kwargs.push( (n.clone(), a.clone().augment(new_node.clone())) );
+            }
+
             // collect all the paths
             // will be used to zip with the call results later
             paths.push(path);
@@ -68,7 +85,8 @@ impl CallExecutor for PythonCall {
 
             vm.push_path(current_path);
 
-            if let Some(mut body_result) = vm.call(executors, &address, args.clone(), kwargs.clone()) {
+            // todo filter the body changes
+            if let Some(mut body_result) = vm.call(executors, &address, aug_args, aug_kwargs) {
                 body_changes.append(&mut body_result.changes);
                 body_dependencies.append(&mut body_result.dependencies);
             }

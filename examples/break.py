@@ -1,6 +1,9 @@
 while 'cond':
   if 'other cond':
-    x = 8
+    x = 'string'
     break
   x = 42
   y = x + 9
+  
+y + 4
+x + 9
