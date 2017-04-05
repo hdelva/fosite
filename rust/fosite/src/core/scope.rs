@@ -385,7 +385,7 @@ impl Scope {
         }
     }
 
-    pub fn discard_function(&mut self) -> OptionalMapping {
+    pub fn discard_function(mut self) -> OptionalMapping {
         if let Some(frame) = self.frames.pop() {
             return frame.get_result();
         }

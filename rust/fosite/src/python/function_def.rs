@@ -292,7 +292,7 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
     let mut changes = vec!();
 
     if let &Some(ref target) = kw_vararg {
-        let str_type = "str".to_owned();
+        let str_type = "string".to_owned();
         let str_ptr = vm.object_of_type(&str_type);
 
         let dict_type = "dict".to_owned();

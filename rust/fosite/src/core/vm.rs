@@ -116,6 +116,7 @@ impl VirtualMachine {
                 args: Vec<Mapping>, 
                 kwargs: Vec<(String, Mapping)>) 
                 -> Option<ExecutionResult> {
+
         let b = self.scopes.len() > 2;
 
         // move the current function scope to the shadows
@@ -869,7 +870,7 @@ impl VirtualMachine {
             } 
         }
 
-        return self.scopes.last_mut().unwrap().discard_function();
+        return self.scopes.pop().unwrap().discard_function();
     }
 
     pub fn object_of_type(&mut self, type_name: &String) -> Pointer {
