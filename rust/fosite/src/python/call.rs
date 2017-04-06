@@ -86,9 +86,18 @@ impl CallExecutor for PythonCall {
             vm.push_path(current_path);
 
             // todo filter the body changes
-            if let Some(mut body_result) = vm.call(executors, &address, aug_args, aug_kwargs) {
-                body_changes.append(&mut body_result.changes);
-                body_dependencies.append(&mut body_result.dependencies);
+            if let Some(body_result) = vm.call(executors, &address, aug_args, aug_kwargs) {
+                for change in body_result.changes.into_iter() {
+                    if let &AnalysisItem::Object(_) = &change {
+                        body_changes.push(change);
+                    }
+                }
+                
+                for dependency in body_result.dependencies.into_iter() {
+                    if let &AnalysisItem::Object(_) = &dependency {
+                        body_changes.push(dependency);
+                    }
+                }
             }
 
             let _ = vm.pop_path();
@@ -96,7 +105,10 @@ impl CallExecutor for PythonCall {
             vm.next_branch(&body_changes);
         }
 
+        vm.merge_function(&body_changes);
+
         // combine all the analysis results
+        // only transfer object changes
         total_changes.append(&mut body_changes);
         total_dependencies.append(&mut body_dependencies);
 

@@ -152,17 +152,8 @@ impl VirtualMachine {
         }
 
         // remove the function scope
-        let function_result;
-        if let &Some(ref analysis) = &analysis {
-            // take ownership of the return value of the call
-            // stored in the `___result` identifier
-            function_result = self.merge_function(&analysis.changes);
-        } else {
-            // pretty unlikely case
-            // function did nothing at all
-            let c = Vec::new();
-            function_result = self.merge_function(&c);
-        }
+        // take ownership of the ___result variable within
+        let function_result = self.scopes.pop().unwrap().discard_function();
 
         // remove the enclosing scope
         let closure = self.scopes.pop().unwrap();
@@ -872,7 +863,9 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_function(&mut self, changes: &Vec<AnalysisItem>) -> OptionalMapping {
+    pub fn merge_function(&mut self, changes: &Vec<AnalysisItem>) {
+        let mut identifier_changed = false;
+        
         let set: HashSet<_> = changes.iter().collect(); // dedup
         let changes: Vec<_> = set.into_iter().collect();
 
@@ -880,10 +873,16 @@ impl VirtualMachine {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_function();
-            } 
+            } else if let &AnalysisItem::Identifier ( _ ) = change {
+                identifier_changed = true;
+            }
         }
 
-        return self.scopes.pop().unwrap().discard_function();
+        if identifier_changed {
+            self.scopes.pop().unwrap().discard_function();
+        }
+
+        //return self.scopes.pop().unwrap().discard_function();
     }
 
     pub fn object_of_type(&mut self, type_name: &String) -> Pointer {
