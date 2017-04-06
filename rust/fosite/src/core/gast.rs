@@ -126,6 +126,9 @@ pub enum NodeType {
         vararg: Option<String>,
         kw_vararg: Option<String>,
         body: Box<GastNode>,
+    },
+    Return {
+        value: Box<GastNode>,
     }
 }
 
@@ -217,6 +220,7 @@ pub fn build(node: &Json) -> GastNode {
         "slice" => build_slice(id, node),
         "argument" => build_argument(id, node),
         "function" => build_function(id, node),
+        "return" => build_return(id, node),
         _ => panic!("unsupported JSON node: {:?}", node),
     };
 
@@ -288,6 +292,18 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
                              right: right,
                              op: op,
                              associative: ass,
+                         });
+}
+
+fn build_return(id: GastID, node: &Json) -> GastNode {
+    let obj = node.as_object().unwrap();
+
+    let json_value = obj.get("value").unwrap();
+    let value = Box::new(build(json_value));
+
+    return GastNode::new(id,
+                         NodeType::Return {
+                             value: value,
                          });
 }
 

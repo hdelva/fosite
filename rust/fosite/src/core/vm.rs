@@ -669,6 +669,16 @@ impl VirtualMachine {
         }
     }
 
+    pub fn ret(&mut self, executors: &Executors, value: &GastNode) -> ExecutionResult {
+        match executors.ret {
+            Some(ref ret) => {
+                let env = Environment::new(self, executors);
+                ret.execute(env, value)
+            }
+            None => panic!("VM is not setup to return function results"),
+        }
+    }
+
     pub fn execute(&mut self, executors: &Executors, node: &GastNode) -> ExecutionResult {
         let ref id = node.id;
         let ref kind = node.kind;
@@ -757,6 +767,9 @@ impl VirtualMachine {
             }
             &NodeType::FunctionDef {ref name, ref body, ref args, ref kw_args, ref vararg, ref kw_vararg} => {
                 self.function(executors, name, args, kw_args, vararg, kw_vararg, body)
+            }
+            &NodeType::Return {ref value} => {
+                self.ret(executors, value)
             }
             _ => panic!("Unsupported Operation\n{:?}", kind),
         };

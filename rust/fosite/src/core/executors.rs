@@ -38,6 +38,7 @@ pub struct Executors {
     pub unop: Option<Box<UnOpExecutor>>,
     pub slice: Option<Box<SliceExecutor>>,
     pub function: Option<Box<FunctionDefExecutor>>,
+    pub ret: Option<Box<ReturnExecutor>>,
 }
 
 pub trait MethodExecutor {
@@ -216,6 +217,10 @@ pub trait MapExecutor {
 
 pub trait AndThenExecutor {
     fn execute(&self, env: Environment, first: &GastNode, second: &GastNode) -> ExecutionResult;
+}
+
+pub trait ReturnExecutor {
+    fn execute(&self, env: Environment, value: &GastNode) -> ExecutionResult;
 }
 
 pub trait CallExecutor {

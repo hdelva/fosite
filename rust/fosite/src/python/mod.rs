@@ -19,6 +19,7 @@ mod negate;
 mod unop;
 mod slice;
 mod function_def;
+mod ret;
 
 pub use self::block::*;
 pub use self::binop::*;
@@ -42,5 +43,6 @@ pub use self::negate::*;
 pub use self::unop::*;
 pub use self::slice::*;
 pub use self::function_def::*;
+pub use self::ret::*;
 
 pub mod modules;
