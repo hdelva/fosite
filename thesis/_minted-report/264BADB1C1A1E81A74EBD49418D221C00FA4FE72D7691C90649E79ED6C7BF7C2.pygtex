@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{42}
+\PYG{k}{if} \PYG{n}{cond}\PYG{p}{:}
+  \PYG{n}{y} \PYG{o}{=} \PYG{l+s+s1}{\PYGZsq{}string\PYGZsq{}}
+  \PYG{n}{x} \PYG{o}{+} \PYG{n}{y}
+\end{Verbatim}

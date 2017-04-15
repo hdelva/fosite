@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{foo}\PYG{p}{():}
+    \PYG{k}{for} \PYG{o}{...}\PYG{p}{:}
+        \PYG{k}{for} \PYG{o}{...}\PYG{p}{:}
+            \PYG{k}{if} \PYG{o}{...}\PYG{p}{:}
+                \PYG{k}{return} \PYG{o}{...}
+            \PYG{k}{elif} \PYG{o}{...}\PYG{p}{:}
+                \PYG{k}{return} \PYG{o}{...}
+\end{Verbatim}

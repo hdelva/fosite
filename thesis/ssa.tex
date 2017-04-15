@@ -1,0 +1,69 @@
+% Observer/Estimator
+% Author: Dominik Haumann
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8x]{inputenc} % utf8 encoding
+
+\usepackage{amsmath} % nice math symbols
+\usepackage{bm} % bold math
+\usepackage{color} % change text color        
+
+\usepackage{tikz}
+
+\usetikzlibrary{matrix} % for block alignment
+\usetikzlibrary{arrows} % for arrow heads
+\usetikzlibrary{calc} % for manimulation of coordinates
+
+% TikZ styles for drawing
+\tikzstyle{block} = [draw,rectangle,thick,minimum height=2em,minimum width=2em]
+\tikzstyle{sum} = [draw,circle,inner sep=0mm,minimum size=2mm]
+\tikzstyle{connector} = [->,thick]
+\tikzstyle{line} = [thick]
+\tikzstyle{branch} = [circle,inner sep=0pt,minimum size=1mm,fill=black,draw=black]
+\tikzstyle{guide} = []
+\tikzstyle{snakeline} = [connector, decorate, decoration={pre length=0.2cm,
+                         post length=0.2cm, snake, amplitude=.4mm,
+                         segment length=2mm},thick, magenta, ->]
+
+\renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}} % bold vectors
+\def \myneq {\skew{-2}\not =} % \neq alone skews the dash
+
+\usepackage{minted}
+\usepackage{mathtools}
+\usetikzlibrary{positioning, calc}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{graphicx}
+
+\usepackage{geometry}
+\geometry{%
+letterpaper, % a4paper
+left=   40 mm,
+right=  40 mm,
+top=    15 mm,
+bottom= 20 mm,
+}
+
+
+
+\begin{document}
+
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+    	\resizebox{\linewidth}{!}{\input{figures/ssa1.tikz}}
+	    \caption{A gull}
+	    \label{fig:gull}
+	\end{subfigure}
+    \begin{subfigure}[b]{0.49\textwidth}
+    	\resizebox{\linewidth}{!}{\input{figures/ssa2.tikz}}
+        \caption{A tiger}
+        \label{fig:tiger}
+    \end{subfigure}
+\end{figure}
+
+  
+  
+  
+
+\end{document}

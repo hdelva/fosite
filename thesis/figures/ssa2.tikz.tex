@@ -1,0 +1,61 @@
+\begin{tikzpicture}
+\small
+  \node[block] (base) {$\begin{matrix*}
+		? & i_0 &<& 29 &\\
+	  \end{matrix*}$
+   }; 
+  
+  \node[block, below left = 1cm and 0cm of base] (neg1) {
+  	$\begin{matrix*}
+  		&j_1 &\gets& 1 &\\
+  		&k_1 &\gets& 1 &
+  	\end{matrix*}$
+  }; 
+  
+  \node[block, below right = 1cm and 0cm of base] (pos1) {
+	$\begin{matrix*}
+		&j_2 &\gets& 2& \\
+		&k_2 &\gets& 2&
+	\end{matrix*}$
+  }; \&
+
+  \node[block, below = of {$(pos1)!0.5!(neg1)$}] (merge1) 		  {
+  	$\begin{matrix*}
+  		&j_3 &\gets& \phi(j_1, j_2)& \\
+  		&k_3 &\gets& \phi(k_1, k_2)& \\
+  		? & i_0 &<& 42 &\\
+  	\end{matrix*}$
+  }; \&
+
+
+  \node[block, below left = 1cm and 0cm of merge1] (neg2) {
+  	$\begin{matrix*}
+  		&l_1 &\gets& i_3 + j_3 &\\
+  	\end{matrix*}$
+   
+  }; 
+  
+  \node[block, below right = 1cm and 0cm of merge1] (pos2) {
+	$\begin{matrix*}
+		&l_2 &\gets& i_3 - j_3 \\
+	\end{matrix*}$
+	}; 
+  
+
+  \node[block, below = of {$(pos2)!0.5!(neg2)$}] (merge2) 		  {
+  	$\begin{matrix*}
+		&l_3 &\gets& \phi(l_1, l_2)& \\
+  	\end{matrix*}$
+  };
+
+% now link the nodes
+
+\draw [connector] (base) --  (pos1);
+\draw [dash dot, connector] (base) --  (neg1);
+\draw [dash dot, connector] (pos1) -- (merge1);
+\draw [dash dot, connector] (neg1) -- (merge1);
+\draw [connector] (merge1) -- (pos2);
+\draw [dash dot, connector] (merge1) -- (neg2);
+\draw [dash dot, connector] (pos2) -- (merge2);
+\draw [dash dot, connector] (neg2) -- (merge2);
+\end{tikzpicture}

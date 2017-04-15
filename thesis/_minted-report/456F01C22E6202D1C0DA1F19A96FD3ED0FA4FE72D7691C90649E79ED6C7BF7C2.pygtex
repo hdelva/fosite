@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n+nb}{input}\PYG{p}{())}
+\PYG{n}{y} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n+nb}{input}\PYG{p}{())}
+\PYG{k}{print}\PYG{p}{(}\PYG{n}{x} \PYG{o}{\PYGZhy{}} \PYG{n}{y}\PYG{p}{)}
+
+\PYG{n}{x} \PYG{o}{=} \PYG{p}{[]}
+\PYG{n}{x}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{)}
+\PYG{k}{print}\PYG{p}{(}\PYG{n}{x}\PYG{p}{)}
+\end{Verbatim}

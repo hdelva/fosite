@@ -1,0 +1,7 @@
+x = 42
+y = 'string'
+
+if cond:
+  x = '42'
+
+x + y

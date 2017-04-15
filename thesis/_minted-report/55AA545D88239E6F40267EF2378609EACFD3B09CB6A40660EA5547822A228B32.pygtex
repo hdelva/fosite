@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{if} \PYG{p}{(}\PYG{n}{arg2} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)}
+  \PYG{n}{ereport}\PYG{p}{(}\PYG{n}{ERROR}\PYG{p}{,}
+    \PYG{n}{errcode}\PYG{p}{(}\PYG{n}{ERRCODE\PYGZus{}DIVISION\PYGZus{}BY\PYGZus{}ZERO}\PYG{p}{),}
+    \PYG{n}{errmsg}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}division by zero\PYGZdq{}}\PYG{p}{));}
+
+\PYG{c+cm}{/* No overflow is possible */}
+\PYG{n}{PG\PYGZus{}RETURN\PYGZus{}INT32}\PYG{p}{((}\PYG{n}{int32}\PYG{p}{)} \PYG{n}{arg1} \PYG{o}{/} \PYG{n}{arg2}\PYG{p}{);}
+\end{Verbatim}

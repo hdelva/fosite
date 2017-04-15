@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+error: [CollectionIncompatibleType] Argument \PYGZsq{}i \PYGZhy{} 1\PYGZsq{} should not be
+passed to this method; its type int is not compatible with its
+collection\PYGZsq{}s type argument Short
+      s.remove(i \PYGZhy{} 1);
+              \PYGZca{}
+\end{Verbatim}

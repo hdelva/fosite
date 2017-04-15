@@ -1,0 +1,12 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{if} \PYG{p}{(}\PYG{n}{arg2} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+  \PYG{n}{ereport}\PYG{p}{(}\PYG{n}{ERROR}\PYG{p}{,}
+      \PYG{p}{(}\PYG{n}{errcode}\PYG{p}{(}\PYG{n}{ERRCODE\PYGZus{}DIVISION\PYGZus{}BY\PYGZus{}ZERO}\PYG{p}{),}
+       \PYG{n}{errmsg}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}division by zero\PYGZdq{}}\PYG{p}{)));}
+
+  \PYG{c+cm}{/* ensure compiler realizes we mustn\PYGZsq{}t reach the division}
+\PYG{c+cm}{  (gcc bug) */}
+  \PYG{n}{PG\PYGZus{}RETURN\PYGZus{}NULL}\PYG{p}{();}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

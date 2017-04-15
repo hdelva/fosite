@@ -1,0 +1,11 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{change}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{d} \PYG{o}{=} \PYG{n+nb+bp}{None}\PYG{p}{):}
+  \PYG{n}{list1} \PYG{o}{=} \PYG{l+s+s1}{\PYGZsq{}\PYGZsq{}}
+  \PYG{n}{list2} \PYG{o}{=} \PYG{p}{[]}
+  \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{x}\PYG{p}{)):}
+    \PYG{k}{while} \PYG{n}{x}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]} \PYG{o}{!=} \PYG{l+s+s1}{\PYGZsq{} \PYGZsq{}}\PYG{p}{:}
+      \PYG{n}{list2} \PYG{o}{+=} \PYG{n}{x}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]}
+    \PYG{n}{list1} \PYG{o}{+=} \PYG{n}{translate}\PYG{p}{(}\PYG{n}{list2}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{n}{d}\PYG{p}{)}
+    \PYG{n}{list2} \PYG{o}{=} \PYG{p}{[]}
+  \PYG{k}{return} \PYG{n}{list1}
+\end{Verbatim}

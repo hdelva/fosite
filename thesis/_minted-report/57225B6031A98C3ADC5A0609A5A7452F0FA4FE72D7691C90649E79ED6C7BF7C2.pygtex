@@ -1,0 +1,12 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{reset}\PYG{p}{(}\PYG{n}{arg}\PYG{p}{):}
+  \PYG{n}{arg}\PYG{o}{.}\PYG{n}{attr} \PYG{o}{=} \PYG{n+nb+bp}{None}
+
+\PYG{n}{x} \PYG{o}{=} \PYG{n}{A}\PYG{p}{()}
+\PYG{n}{x}\PYG{o}{.}\PYG{n}{attr} \PYG{o}{=} \PYG{l+m+mi}{4}
+\PYG{n}{y} \PYG{o}{=} \PYG{n}{x}
+
+\PYG{n}{reset}\PYG{p}{(}\PYG{n}{y}\PYG{p}{)}
+
+\PYG{n}{x}\PYG{o}{.}\PYG{n}{attr} \PYG{o}{+=} \PYG{l+m+mi}{1}
+\end{Verbatim}

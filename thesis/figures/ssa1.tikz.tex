@@ -1,0 +1,61 @@
+\begin{tikzpicture}
+	\small
+	  \node[block] (base) {$\begin{matrix*}
+			? & i &<& 29 &\\
+		  \end{matrix*}$
+	   }; 
+	  
+	  \node[block, below left = 1cm and 0cm of base] (neg1) {
+	  	$\begin{matrix*}
+	  		&j &\gets& 1 &\\
+	  		&k &\gets& 1 &
+	  	\end{matrix*}$
+	  }; 
+	  
+	  \node[block, below right = 1cm and 0cm of base] (pos1) {
+		$\begin{matrix*}
+			&j &\gets& 2& \\
+			&k &\gets& 2&
+		\end{matrix*}$
+	  }; \&
+
+	  \node[block, below = of {$(pos1)!0.5!(neg1)$}] (merge1) 		  			  {
+	  $\begin{matrix*}
+	  ? & i &<& 42 &\\
+	  \end{matrix*}$
+	  }; \&
+
+
+	  \node[block, below left = 1cm and 0cm of merge1] (neg2) {
+	  $\begin{matrix*}
+	  &l &\gets& i + j &\\
+	  \end{matrix*}$
+	   
+	  }; 
+	  
+	  \node[block, below right = 1cm and 0cm of merge1] (pos2) {
+		$\begin{matrix*}
+			&l &\gets& i - j \\
+		\end{matrix*}$
+		}; 
+	  
+
+	  \node[block, below = of {$(pos2)!0.5!(neg2)$}] (merge2) 		  			  {
+	  $\begin{matrix*}
+
+	  \end{matrix*}$
+	  };
+
+	% now link the nodes
+
+	\draw [connector] (base) --  (pos1);
+	\draw [dash dot, connector] (base) --  (neg1);
+	\draw [dash dot, connector] (pos1) -- (merge1);
+	\draw [dash dot, connector] (neg1) -- (merge1);
+	\draw [connector] (merge1) -- (pos2);
+	\draw [dash dot, connector] (merge1) -- (neg2);
+	\draw [dash dot, connector] (pos2) -- (merge2);
+	\draw [dash dot, connector] (neg2) -- (merge2);
+
+
+  \end{tikzpicture}

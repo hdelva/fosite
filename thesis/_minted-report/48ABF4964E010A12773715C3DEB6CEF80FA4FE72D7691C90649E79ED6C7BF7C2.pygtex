@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{x} \PYG{o}{=} \PYG{p}{[]}
+\PYG{o}{...}
+\PYG{k}{while} \PYG{n+nb}{tuple}\PYG{p}{([}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{*} \PYG{n}{i}\PYG{p}{)} \PYG{o+ow}{not} \PYG{o+ow}{in} \PYG{n}{x}\PYG{p}{:}
+    \PYG{o}{...}
+    \PYG{n}{x} \PYG{o}{+=} \PYG{n+nb}{tuple}\PYG{p}{([}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{*} \PYG{n}{i}\PYG{p}{)}
+\end{Verbatim}
