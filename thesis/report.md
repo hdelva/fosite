@@ -609,16 +609,149 @@ Although deciding whether or not any given program will never stop is impossible
 
 ## Implementation
 
-### Core Objects 
+Fosite is an abstract interpreter. It uses abstract pointers, which can be used to fetch abstract objects from an abstract memory. The objects themselves have no value whatsoever, but they do have a notion of types, attributes, and elements. There is a notion of namespaces where names get mapped to objects, and a notion of ordered heterogeneous collections. In essence, the interpreter tries to get as close at it can to actual interpreter without having actual values. This not as obvious as it sounds. For example, it's tempting to cut corners when implementing _Method Resolution Order_ (MRO), variable capturing in closure definitions, or the explicit `self` argument in Python. Simple approximations of these behaviors would suffice for well written code -- but targeting such code makes no sense for a static analyzer. We have to be able to analyze _really_ bad code as well. 
 
-  * No values at the time, so limited symbolic execution 
-  * Collections do get modeled, but is very hard 
+### Objects 
 
-#### Pointers and Objects 
+Everything is an object in Python, even classes which become class objects upon definition. An object of a class has a reference to its class object. Among other things, this reference gets used during name resolution. Every class can also extend multiple other classes, called base classes, in a similar way. This can easily be modeled in an abstract interpreter using a list of pointers.
+
+The type of an object is harder to model however. In most object-oriented languages, an object's class is its type. Since Python has multiple inheritance, and classes are objects as well, there's more to it than that. 
+
+\begin{code}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=pycon,
+  minted style=autumn,
+  minted options={},
+  colback=bg }
+>>> x = 42
+>>> t1 = type(x)
+>>> t1
+<class 'int'>
+>>> t2 = type(t1)
+>>> t2
+<class 'type'>
+>>> t3 = type(t2)
+>>> t3
+<class 'type'>
+\end{tcblisting}
+\caption{Types in Python} \label{smp:types}
+\end{code}
+
+Code sample \ref{smp:types} illustrates the oddity in this. The `type` function returns a class object, so that `type(42)` returns the class objects of name `int`. Using the same function to get the class object's type returns a class object of name `type`. Requesting that object's type reveals something strange -- `type` is its own type. This seemingly cyclic dependency gets implemented in CPython using a type flag, if that flag is set it'll return the type class object when needed. In other words, the `type` object doesn't have a reference to itself, it'll get its own reference at runtime when needed. 
+
+In other words, the type of a value is the same as its class object. A class's basetypes have nothing to do with its type -- they always have type `type`. These semantics are quite straight forward to model in an abstract interpreter: the list of base class references are still there, but there's also a type flag. When that flag is set, the `type` function shouldn't use the base classes but fetch the pointer to the `type` class object.
+ 
+Besides types and base classes, the Fosite interpreter also keeps track of attributes and elements. Attributes can reuse the namespace logic that's implemented for scoping. Elements are a lot harder to model and will be covered by a later section.
 
 #### Paths and Mappings
 
-Ordered by node ID, very important
+In order to report the cause of an error accurately, we need to know the source of every value. A path should correspond to a sequence of instructions so that the user gets an idea of the execution path that lead to a problem. Every entry in the path gets called a path node. Examples of path nodes include which branch of a conditional was followed, assignments, and function calls. 
+
+Every AST node has a unique identifier with a total ordering we can use. A first attempt at defining the path node would be to just reuse the AST identifiers. This works fine until user-defined functions come into the picture. A function call will come after the function definition, and its identifier will be larger than any of the function definition's nodes. 
+This would place the function body execution before the function call itself. 
+On top of that, this system does not support executing the same node more than once. 
+A better solution is to define a path node to be an ordered collection of AST nodes -- the nodes that are currently being executed. 
+Some nodes need some extra information, a branch node needs to contain which branch was actually taken. 
+Each branch is incrementally numbered, and also contains the total number of branches for practical reasons (see method calls and namespace frames).
+The actual branch numbers are of no concern, their main purpose is telling possible branches apart. 
+Definition \ref{def:path_node} makes this more formal, and definitions \ref{def:path_order}, \ref{def:contain}, \ref{def:complement}, \ref{def:mergeable}, and algorithm \ref{alg:complement} introduce useful properties of paths.
+
+A mapping is simply a pair of the form `(Path, Pointer)`. Because they usually appear in multiples, they can be implemented as a list of `(Path, Pointer)` values instead. In this case, every path in a mapping must be distinct; there are no paths that are contained by another path in the same mapping. 
+
+\begin{definition} \label{def:path_node}
+A path node is of the form $((n_1, n_2, ... , n_i), b, t)$, where the elements $n_i$ are an ordered sequence of AST node identifiers, $b$ is the number of the branch that was taken, and $t$ is the total of branches that were possible at that node.
+\end{definition}
+
+\begin{definition} \label{def:path_order}
+Let $p$ and $q$ be two paths with forms respectively $(n_p, b_p, t_p)$ and $(n_q, b_q, b_t)$, $p \prec q \iff n_p \prec_{lex} n_q \vee (n_p = n_q \wedge b_p \prec b_q )$. 
+\end{definition}
+
+\begin{definition} \label{def:contain}
+A path $A$ is \textit{contained} in another path $B$ if every node of path $A$ occurs in path $B$ as well.
+\end{definition}
+
+\begin{definition} \label{def:complement}
+The complementary nodes of a single path node $(n_p, b_p, t_p)$ are defined as $\{\, (n_p, i, t_p) \mid 0 \leq i < t \wedge i \neq b_p \,\}$. If $t_p = 1$, an assignment node for example, there are no complementary nodes.
+\end{definition}
+
+\begin{definition} \label{def:mergeable}
+A path $A$ is \textit{mergeable} with another path $B$ if a $A$ does not contain a complement of one of $B$'s nodes. \end{definition}
+
+\begin{algorithm}
+    \caption{Complementary Paths}\label{alg:complement}
+    \begin{algorithmic}[1]
+        \Function{complement} {path}
+          \State $\texttt{result} \gets [\,]$
+          \State $\texttt{current} \gets [\,]$
+          \ForAll{nodes in path}
+            \If{ $\texttt{node.is\_branch()}$ }
+              \ForAll{complements of node}
+                \State $\texttt{temp} = \texttt{current.clone()}$
+                \State $\texttt{temp.add\_node(complement)}$
+                \State $\texttt{result} \gets \texttt{result} \cup \texttt{temp}$
+              \EndFor
+            \EndIf
+            \State $\texttt{current.add\_node(complement)}$
+          \EndFor
+          \Return result
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+### Boolean Expressions
+
+A boolean expression can be arbitrarily hard to evaluate. When used in a conditional statement, we can't always decide whether or not a given branch gets taken. The best we can do in these cases is conclude that the branch _might_ get taken. Evaluating any boolean expression can thus result in `True` or `False`, as well as `Maybe`. In some cases, a `Maybe` isn't satisfactory. 
+
+\begin{code}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=python,
+  minted style=autumn,
+  minted options={xleftmargin=-8pt, linenos},
+  colback=bg}
+
+if current is not None:
+  print('given {}-{}'.format(current.year, current.month))
+else:
+  current = datetime.now()
+
+\end{tcblisting}
+\caption{Conditions} \label{smp:conds}
+\end{code}
+
+Code sample \ref{smp:conds} shows that in some cases, we really need an accurate answer. This is a pattern that commonly occurs when dealing with optional arguments or when writing library functions. The negative branch should only get executed when `current` was not None, so that an actual argument doesn't get overwritten. On the other hand, it _must_ be executed if `current` was None, so that further evaluation doesn't result in a false type error. 
+
+The `is` operator compares the addresses of two objects and returns `True` if and only if they're equal. We can mimic this behavior -- and answer with certainty and under which conditions the two operands' point to the same location. The resulting mapping will use the merged paths of the operands to point to the `True` object. The `==` operator should be similar. Technically it depends on the implementation of the `__eq__` method, but let's assume that it has a decent implementation. In that case it should at least return `True` if both operands point to the same object -- as with `is`. A similar reasoning can be applied to the `!=`, `<=`, and `>=` operators. 
+
+We can also handle the `and`, `or`, and not operators in a similar way. If both operands already point to `True` we can merge the paths and return a mapping that points to `True` as well. The other two operators are analogous.
+
+We combine the paths of both operands to get a new mapping. This means means that we must only consider path pairs that are mergeable, if not those operand pairs cannot actually exist at runtime. Failure to meet this requirement will lead to false positives very quickly.
+
+### Conditionals
+
+When executing an execution branch, we should have information about why that specific branch is being executed. If that information includes for example that we are sure that `x` is not `None`, we should disregard any mapping that says the opposite. And even better, we can exclude any mapping that would occur under the same contradictory conditions -- even if those mappings don't have an explicit connection to `x`. For example in the following trivial example:
+
+```python
+if cond1:
+  y = None
+  z = None
+  
+if y is not None:
+  print(z.attribute)
+```
+
+In the positive branch of the first condition, there's a point where both `y` and `z` become `None`. After evaluating the second branching condition, we can be absolutely sure that the positive branch of the second branch will not be taken if the positive branch of the taken has been taken. In effect, this means that the mapping for `z` where it receives the value `None`in the first branch is of no use while evaluating `z.attribute`. 
+
+The exclusion of certain mappings is what we'll conveniently call _path exclusion_. We can give this term a more formal representation as well.
+
+Assume that resolving an identifier $x$ resulted in a set of mappings $M$. Every mapping $m \in M$ is of the form $(p, a)$, where $a$ is the address to which $x$ can point, and $p$ is the execution path that's required to get this mapping from $x$ to $a$. 
+
+Call $R$ the set of restrictions; the set of every execution pth that is of no concern while evaluating. If there exists a path $r$ in $R$  for a given mapping $(p, a)$, for which it holds that $p$ is contained within $r$, we can exclude the mapping from the current evaluation. 
 
 #### Scope
 
@@ -719,61 +852,7 @@ This can be achieved by simply resolving the identifiers for both possible branc
     \end{algorithmic}
 \end{algorithm}
 
-### Conditionals
 
-**Observation**
-
-Every execution branch is either taken, or it isn't. Figuring out which is the case is well-known to be uncomputable, for the simple reason that the branch condition can be arbitrarily hard to evaluate. This implies that in some cases, we can't decide whether or not a given branch gets taken. The best we can do in these conditions is conclude that the branch _might_ get taken. In the following section, we'll denote this possibility with `Maybe`, in line with Python's `True` and `False`.
-
-**Observation**
-
-In some cases, we do need a definitive answer. Consider the following examples
-
-```python
-if current is None:
-  current = datetime.now()
-```
-
-```python
-if current is not None:
-  print('{}-{}'.format(current.year, 
-                       current.month))
-```
-
-The above examples gives a pretty good indication that in some cases, we really need an exact example. This is particularly important for any sort of input validation. The first example is a common pattern for filling in optional arguments, while the second one is just good practice in general. Other examples include checking the length of a certain collections and type-checks. 
-
-**Boolean Expressions with Certainty**
-
-There aren't a lot of boolean expressions which we can evaluate with certainty. Luckily enough, the ones that we can do are mostly the ones of interest. The `is` operator for example should compare the addresses of two objects and return `True` if and only if they're equal. So internally, we can mimic this behavior -- and answer with certainty and under which conditions, the objects have the same address in our own analysis. The other possibilities are harder to do, and the best we can realistically return is `Maybe`.
-
-The `==` operator is a special case. If the `__eq__` method was implemented correctly, this should at the very least return `True` if the two objects being compared are the same -- as with `is`. The analyzer in its current state does not properly support analysis of operator overloading, so it will assume that `__eq__` does indeed have a sane implementation. The analysis of the `==` operator in this case becomes the same as the analysis of the `is` operator. Likewise for the `<=` and  `>=` operators.
-
-The `and` and `or` operators are quite obvious. `and` will return `True` if both sides are true with certainty, `False` if either side is false with certainty, and `Maybe` in any other case. The `or` operator is analogous.
-
-**Definition: containment**
-
-A path $A$ is contained in another path $B$ if every node of path $A$ occurs in the same way as it does in path $B$
- 
-### Path exclusion
-
-When executing an execution branch, we should have information about why that specific branch is being executed. If that information includes for example that we are sure that `x` is not `None`, we should disregard any mapping that says the opposite. And even better, we can exclude any mapping that would occur under the same contradictory conditions -- even if those mappings don't have an explicit connection to `x`. For example in the following trivial example:
-
-```python
-if cond1:
-  y = None
-  z = None
-  
-if y is not None:
-  print(z.attribute)
-```
-
-In the positive branch of the first condition, there's a point where both `y` and `z` become `None`. After evaluating the second branching condition, we can be absolutely sure that the positive branch of the second branch will not be taken if the positive branch of the taken has been taken. In effect, this means that the mapping for `z` where it receives the value `None`in the first branch is of no use while evaluating `z.attribute`. 
-
-The exclusion of certain mappings is what we'll conveniently call _path exclusion_. We can give this term a more formal representation as well.
-
-Assume that resolving an identifier $x$ resulted in a set of mappings $M$. Every mapping $m \in M$ is of the form $(p, a)$, where $a$ is the address to which $x$ can point, and $p$ is the execution path that's required to get this mapping from $x$ to $a$. 
-
-Call $R$ the set of restrictions; the set of every execution pth that is of no concern while evaluating. If there exists a path $r$ in $R$  for a given mapping $(p, a)$, for which it holds that $p$ is contained within $r$, we can exclude the mapping from the current evaluation. 
 
 # Results
 
