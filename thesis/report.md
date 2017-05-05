@@ -539,7 +539,7 @@ The GAST only provides a common syntactical framework to work on, the interprete
 
 ## Power of Interpretation
 
-While linters recognize error prone patterns, interpreters can recognize error prone logic as well as some outright errors. An additional benefit of an interpreter-based approach is that it approaches feedback the same way a person would: starting at the beginning, step by step. This section gives a few interesting examples of what an interpreter can do that linters (or at least PyLint) can't. '
+While linters recognize error prone patterns, interpreters can recognize error prone logic as well as some outright errors. An additional benefit of an interpreter-based approach is that it approaches feedback the same way a person would: starting at the beginning, step by step. This section gives a few interesting examples of what an interpreter can do that linters (or at least PyLint) can't. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -607,11 +607,13 @@ def change(x, d = None):
 
 Although deciding whether or not any given program will never stop is impossible, it is possible in some trivial cases. Those trivial cases also happen to be quite common. Code sample \ref{smp:nostop} is an excerpt from a submission. The student intended to tokenize the string `x`, building the token in `list2`. Every token should then get translated and the translated token gets stored in `list1`. There are a number of mistakes but the most important one is arguably the endless `while` loop. The student wanted index `i` to be a starting position of the token, with the `while` loop building the token from that point. That's of course not what the code does, the same character will get added over and over since none of the values in the loop condition ever change. Data-flow analysis remembers when and where variables get their values, so it can be used to recognize that the variables are still the same. This approach will also flag any `while True` loop as error prone, which is arguably a good thing. 
 
-## Implementation
+# Implementation
 
-Fosite is an abstract interpreter. It uses abstract pointers, which can be used to fetch abstract objects from an abstract memory. The objects themselves have no value whatsoever, but they do have a notion of types, attributes, and elements. There is a notion of namespaces where names get mapped to objects, and a notion of ordered heterogeneous collections. In essence, the interpreter tries to get as close at it can to actual interpreter without having actual values. This not as obvious as it sounds. For example, it's tempting to cut corners when implementing _Method Resolution Order_ (MRO), variable capturing in closure definitions, or the explicit `self` argument in Python. Simple approximations of these behaviors would suffice for well written code -- but targeting such code makes no sense for a static analyzer. We have to be able to analyze _really_ bad code as well. 
+Fosite is an abstract interpreter. It uses abstract pointers, which can be used to fetch abstract objects from an abstract memory. The objects themselves have no value whatsoever, but they do have a notion of types, attributes, and elements. There is a notion of namespaces where names get mapped to objects, and a notion of ordered heterogeneous collections. In essence, the interpreter tries to get as close at it can to actual interpreter without having actual values. This not as obvious as it sounds. For example, it's tempting to cut corners when implementing the _Method Resolution Order_ (MRO), variable capturing in closure definitions, or the explicit `self` argument in Python. Simple approximations of these behaviors would suffice for well written code -- but targeting such code makes no sense for a static analyzer. We have to be able to analyze _really_ bad code as well. 
 
-### Objects 
+The goal of the interpreter is to perform a data-flow analysis. Every evaluated node returns a list of changes and dependencies. The error prone patterns that the interpreter finds are welcome side-effect.
+
+## Objects 
 
 Everything is an object in Python, even classes which become class objects upon definition. An object of a class has a reference to its class object. Among other things, this reference gets used during name resolution. Every class can also extend multiple other classes, called base classes, in a similar way. This can easily be modeled in an abstract interpreter using a list of pointers.
 
@@ -646,7 +648,7 @@ In other words, the type of a value is the same as its class object. A class's b
  
 Besides types and base classes, the Fosite interpreter also keeps track of attributes and elements. Attributes can reuse the namespace logic that's implemented for scoping. Elements are a lot harder to model and will be covered by a later section.
 
-#### Paths and Mappings
+## Paths and Mappings
 
 In order to report the cause of an error accurately, we need to know the source of every value. A path should correspond to a sequence of instructions so that the user gets an idea of the execution path that lead to a problem. Every entry in the path gets called a path node. Examples of path nodes include which branch of a conditional was followed, assignments, and function calls. 
 
@@ -701,7 +703,7 @@ A path $A$ is \textit{mergeable} with another path $B$ if a $A$ does not contain
     \end{algorithmic}
 \end{algorithm}
 
-### Boolean Expressions
+## Boolean Expressions
 
 A boolean expression can be arbitrarily hard to evaluate. When used in a conditional statement, we can't always decide whether or not a given branch gets taken. The best we can do in these cases is conclude that the branch _might_ get taken. Evaluating any boolean expression can thus result in `True` or `False`, as well as `Maybe`. In some cases, a `Maybe` isn't satisfactory. 
 
@@ -728,81 +730,87 @@ Code sample \ref{smp:conds} shows that in some cases, we really need an accurate
 
 The `is` operator compares the addresses of two objects and returns `True` if and only if they're equal. We can mimic this behavior -- and answer with certainty and under which conditions the two operands' point to the same location. The resulting mapping will use the merged paths of the operands to point to the `True` object. The `==` operator should be similar. Technically it depends on the implementation of the `__eq__` method, but let's assume that it has a decent implementation. In that case it should at least return `True` if both operands point to the same object -- as with `is`. A similar reasoning can be applied to the `!=`, `<=`, and `>=` operators. 
 
-We can also handle the `and`, `or`, and not operators in a similar way. If both operands already point to `True` we can merge the paths and return a mapping that points to `True` as well. The other two operators are analogous.
+We can also handle the `and`, `or`, and `not` operators in a similar way. If both operands already point to `True` we can merge the paths and return a mapping that points to `True` as well. The other two operators are analogous.
 
 We combine the paths of both operands to get a new mapping. This means means that we must only consider path pairs that are mergeable, if not those operand pairs cannot actually exist at runtime. Failure to meet this requirement will lead to false positives very quickly.
 
-### Conditionals
+## Conditionals
 
-When executing an execution branch, we should have information about why that specific branch is being executed. If that information includes for example that we are sure that `x` is not `None`, we should disregard any mapping that says the opposite. And even better, we can exclude any mapping that would occur under the same contradictory conditions -- even if those mappings don't have an explicit connection to `x`. For example in the following trivial example:
+When executing an execution branch, we can have information about why that specific branch is being executed. If that information includes for example that we are sure that `x` is not `None`, we should disregard any mapping that says otherwise. Even better, we can exclude any mapping that would occur under the same contradictory conditions -- even if those mappings don't have an explicit connection to `x`. 
 
-```python
-if cond1:
+\begin{code}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=python,
+  minted style=autumn,
+  minted options={xleftmargin=-8pt, linenos},
+  colback=bg}
+if cond1: # Condition 1
   y = None
   z = None
   
-if y is not None:
+if y is not None: # Condition 2
   print(z.attribute)
-```
 
-In the positive branch of the first condition, there's a point where both `y` and `z` become `None`. After evaluating the second branching condition, we can be absolutely sure that the positive branch of the second branch will not be taken if the positive branch of the taken has been taken. In effect, this means that the mapping for `z` where it receives the value `None`in the first branch is of no use while evaluating `z.attribute`. 
-
-The exclusion of certain mappings is what we'll conveniently call _path exclusion_. We can give this term a more formal representation as well.
-
-Assume that resolving an identifier $x$ resulted in a set of mappings $M$. Every mapping $m \in M$ is of the form $(p, a)$, where $a$ is the address to which $x$ can point, and $p$ is the execution path that's required to get this mapping from $x$ to $a$. 
-
-Call $R$ the set of restrictions; the set of every execution pth that is of no concern while evaluating. If there exists a path $r$ in $R$  for a given mapping $(p, a)$, for which it holds that $p$ is contained within $r$, we can exclude the mapping from the current evaluation. 
-
-#### Scope
-
-Find example of why this is a non-trivial component.
-
-* Introduce Frames
-  * Every frame corresponds to a branching node in the execution path 
-  * A frame contains its own set of mappings, of all changes that happened in this execution path 
-
-* Changing an identifier starts at the root
-  * Iterate over the nodes in the change's path 
-  * If the scope doesn't have enough frames, push new frames corresponding to the current node in the iteration
-  * Only have to check the number of frames, not the actual branches the frame corresponds to 
-    * Assuming that the scope's contents are consistent with the current execution state two things can happen during assignment
-      * The last change to the scope was done in the same execution path. In this case, there are enough frames as it is.
-      * The scope's execution path is a strict subset of the current execution path. In this case, we only have to append the missing frames. Ordering of the AST nodes ensures that we know exactly where the subset ends.
-    * This system depends on the correct merging of frames, see later
-
-* Resolving an identifier starts at the right, the most recent change in this scope 
-  * Absolutely no need to introduce branches corresponding to the current execution path 
-  * Resolving an identifier does not include the information of the frame's path node -- or its parents' path nodes.
-
-Code sample \ref{smp:resolution} illustrates why name resolution is done this way.
-
-\begin{code}
-  \begin{tcblisting}{listing only, 
-  arc=0pt,
-  outer arc=0pt, 
-  boxrule=0.2pt,
-  minted language=python,
-  minted style=autumn,
-  minted options={},
-  colback=bg }
-x = 42
-if cond:
-  y = 'string'
-  x + y
 \end{tcblisting}
-\caption{Name Resolution}\label{smp:resolution}
-
+\caption{Conditions} \label{smp:exclude}
 \end{code}
 
-This example will always fail if line 4 is reached, because in that case `x` will always have type `int`, while `y` will always have type `string`. So naturally, we want to report it in the same way.
+In code sample \ref{smp:exclude}, there's an implicit relation between condition 1 and condition 2. Going back to the previous section, the result of the test of condition 2 will contain a mapping $(p, x)$, where $p$ contains a node indicating that the positive branch of condition 1 was taken, and where $x$ is a pointer value to `False`. This means that any mapping containing $p$ during the execution of the positive branch of condition 2 cannot occur during actual execution. We will call concept \textit{path exclusion}, and paths such as $p$ are called _restricted paths_. Observation \ref{obs:exclude} summarizes this more formally. 
 
-* Merging frames is a necessary step to ensure consistency the the interpreter's execution state. 
-  * Two ways of merging
-    * Actually merging the last two frames into the parent frame (used for function scoping)
-    * Discarding the last two frames (used for block scoping)
-    * Latter is easy, former requires some special attention
+\begin{observation}
+\label{obs:exclude}
+Assume that resolving an identifier $x$ results in a set of mappings $M$. Every mapping $m \in M$ is of the form $(p, a)$, where $a$ is a pointer value, and $p$ is the execution path that mapped $x$ to $a$. 
 
-As illustrated in code sample \ref{smp:merge}, merging requires some special attention.
+Let $R$ be the set of restricted paths. Given a mapping $(p_m, a) \in M$, if there exists a path $p_r$ in $R$ for which holds that $p_m$ contains $p_r$ (definition \ref{def:contain}), we can exclude the mapping from the current evaluation. 
+\end{observation}
+
+## Namespace
+
+Namespaces are the most essential component of Fosite. We set out to give the most descriptive and helpful messages we can, by describing the conditions in which something occurs. Paths are a first step towards describing these conditions, but namespaces are where they're stored. There are a few layers of abstraction required to make this manageable, this section will introduce them incrementally.
+
+### OptionalMapping
+
+Mappings have already been introduced, but they contain a pointer value which is not enough to indicate an uninitialized variable. A different structure is used to this end, where the pointer value is optional. An `OptionalMapping` with a missing pointer value indicates an uninitialized variable and also describes why the variable is uninitialized.
+
+### Branch
+
+The `Branch` struct is the first layer of the namespaces and is where names are added, and its internal structure is of the form `HashMap<String, OptionalMapping>`. Every branching point during execution can induce several new branches in a namespace which have to be separated during execution. For example, the negative and the positive branch of a conditional statement should not influence each other. 
+
+### StatisChamber
+
+If we encounter a `break` statement while evaluating a loop body, the evaluation of the current execution path terminates. The changes made until that point still have to be saved though, as they'll become visible again after the loop has been evaluated. Function calls require the same to handle different return points. A `StatisChamber` contains a `HashMap<Path, Branch>`. The key is needed because the control flow can be broken at multiple points, and we have to keep them all separate.
+
+### SubFrame
+
+For every branching point, we'll use a `Branch` and two `StatisChamber`s -- one for loops, one for function calls. These get stored in a `SubFrame` struct.
+
+### Frame
+
+This is the first namespace component that contains some actual logic. Every branching point leads to the creation of a new `Frame`. This structure contains a _cause_, the path node where the branching happened. It also contains a list containing subframes and its length depends on the number of possible branches at the cause node. The cause node has the form $(n, b, t)$ where $t$ is the number of possible branches at that node, so the number of subframes course equal to $t$. There is only one subframe active at any point during execution and its index is stored. Algorithm \ref{alg:setframe} describes how a mapping gets set into a frame, the `insert` method of a `StatisChamber` will simply insert into each of its branches. 
+
+\begin{algorithm}
+    \caption{Set Mapping}\label{alg:setframe}
+    \begin{algorithmic}[1]
+        \Function{set\_mapping} {name, mapping}
+          \If{ $\texttt{self.contains(name)}$ }
+            \State $\texttt{old\_mapping} \gets \texttt{self.resolve(name)}$
+          \Else
+            \State $\texttt{old\_mapping} \gets \texttt{OptionalMapping}::new(\texttt{Path}::empty(), None)$
+          \EndIf
+        
+          \State $\texttt{self.current\_branch.loop\_statis.insert(name, old\_mapping)}$
+          \State $\texttt{self.current\_branch.function\_statis.insert(name, old\_mapping)}$
+          \State $\texttt{self.current\_branch.branch.insert(name, mapping)}$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+Code sample \ref{smp:statis} illustrates how these are used. The `break` statement will freeze the contents of its current place and place it the loop `StatisChamber` of the current subframe. The current branch is empty however -- no changes were made since line 3. At the end of the execution of line 3, the contents of the current frame get lifted to the previous one, this will be explained in the next section. Before assigning to `y` on line 4, `y` gets resolved first, there is no mapping for `y` yet so a new mapping indicating an unitialized value gets created instead. This result is then stored into each currently active statis chamber. Resolving `y` on line 6 simply return the result of the assignment on line 5 -- the statis chamber isn't used here.
+
+The results of the loop static chamber get inserted into the regular active branch after executing the loop body on lines 2 - 6.  Trying to resolve `y` on line 8 will result in an error: `y` is still uniniatilized if the condition on line 3 was true. The statis chamber in this case was responsible for storing an unitialized value, as this is different from an non-existing mapping.
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -811,8 +819,52 @@ As illustrated in code sample \ref{smp:merge}, merging requires some special att
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
-  colback=bg }x = 42
+  minted options={xleftmargin=-8pt, linenos},
+  colback=bg}
+while True:
+    z = x.foo()
+    if x.test():
+        break
+    y = z.bar()
+    print(y)
+
+print('final:', y)
+\end{tcblisting}
+\caption{Statis Example} \label{smp:statis}
+\end{code}
+
+### Namespace
+
+A namespace's data is simply a list of frames, one for each branch point that's being executed. Looking up an identifier is quite simple: look for the most recent frame that contains a mapping for that name. Name resolution is so simple because the other operations do all the heavy lifting. There are three other operations:
+
+  * \textit{Grow}: Uses a path to create new frames until there's a frame for each node in the path
+  * \textit{Insert}: Grows the namespace when needed, and then inserts a mapping into the last frame. 
+  * \textit{Merge}: Merges the last frame's content in the next to last frame.
+
+For the sake of data sparsity, growing is done upon insertion -- and not upon the actual branching. Bearing in mind that every object has a namespace as well, we don't want to grow each of their namespaces every time -- its namespaces probably won't even change as most objects are immutable literals. 
+
+#### Grow
+
+If the current namespace has $n$ frames, and the given path has $m$ nodes, we must add $m-n$ frames -- corresponding to the last $m-n$ path nodes. The correctness of this approach relies on a bit of inductive reasoning. 
+
+The active execution path will always be at least as long as the number of frames of a namespace. All the namespaces that have changed have the same number of frames. If a change has been made in the current branch, growing has added frames until there are as many frames as there are nodes in the execution path. If a change was made in some branch that's already been executed, and is thus no longer part of the execution path, merge operations will have reduced the number of frames until the length is equal to the length of execution path. The namespaces that have not changed have strictly less frames, corresponding to the length of the execution path of their last change.
+
+The cause nodes of the frames form a prefix of the active execution path. This more of a feature of the language than of the interpreter. Since Python does not have a `goto` statement, there's a fixed structure to the branching points.
+
+#### Merge
+
+The merge operation combines the results of the last frame, removes it, and puts the merged result into the last frame. An argument determines the destination of every subframe's content -- either into the regular branch or into a statis chamber. The method is specific to function scoping, but block scoping can be done in a similar way.
+
+\begin{code}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=python,
+  minted style=autumn,
+  minted options={xleftmargin=-8pt, linenos},
+  colback=bg }
+x = 42
 y = 'string'
 
 if cond:
@@ -823,36 +875,338 @@ x + y
 \caption{Merging}\label{smp:merge}
 \end{code}
 
-If the negative branch of the condition at line 4 is not taken, the above code will fail at line 7. In that case, `x` still has the value it received at line 1, but is that all that should be reported? `x` only has that value if the negative was taken. So if we want to accurately describe why it has that value, that information should be there as well.
-
-This can be achieved by simply resolving the identifiers for both possible branches, and adding the frame's path node to every result; as described in algorithm \ref{alg:merge}.
+The name resolution stops at the most recent frame that contains that name. Code sample  \ref{smp:merge} illustrates that this isn't just an easy solution -- it's also a useful one. If the negative branch of the condition at line 4 is taken, execution will fail at line 7. Variable `x` still has the value it received at line 1, but only reporting this paints an incomplete picture. It only has that value if the negative branch was taken. So if we want to accurately describe why it has that value, that information should be there as well. To this end, merging will resolve relevant identifiers and add a node about the branch to every mapping's path. 
 
 \begin{algorithm}
     \caption{Merge}\label{alg:merge}
     \begin{algorithmic}[1]
         \Function{merge} {}
-          \State $\texttt{negative} \gets \texttt{frames.peek()}$
-          \State $\texttt{positive} \gets \texttt{frames.peek()}$
-          \State $\texttt{parent} \gets \texttt{frames.peek()}$
-          \State $\texttt{identifiers} \gets \texttt{positive.identifiers} \cup \texttt{negative.identifiers}$
-          \State $\texttt{mappings} \gets []$
-          \ForAll{identifiers}
-            \State $\texttt{nmap} \gets \texttt{resolve(identifier)}$
-            \State $\texttt{nmap.augment(negative.node)}$
-            \State $\texttt{mappings += nmap}$
+          \State $\texttt{names} \gets [\,]$
+
+          \ForAll{ subframes \textbf{in} frames.last()}
+            \State $\texttt{names} \gets \texttt{names} \cup \texttt{subframe.names}$
           \EndFor
-          \State $\texttt{switch\_ranches()}$
-          \ForAll{identifiers}
-            \State $\texttt{pmap} \gets \texttt{resolve(identifier)}$
-            \State $\texttt{pmap.augment(positive.node)}$
-            \State $\texttt{mappings += pmap}$
+
+          \State $\texttt{branch\_content} \gets \texttt{Branch}::new()$
+
+          \State $\texttt{loop\_statis} \gets \texttt{StatisChamber}::new()$
+
+          \State $\texttt{function\_statis} \gets \texttt{StatisChamber}::new()$
+
+          \State $\texttt{cause} \gets \texttt{frames.last().cause}$
+
+          \ForAll{ (i, subframes) \textbf{in} frames.pop().enumerate()}
+            \State $\texttt{new\_node} \gets \texttt{PathNode}::new(\texttt{cause, i})$
+            \State $\texttt{subframe.augment\_statis\_chambers(new\_node)}$
+            \State $\texttt{loop\_statis.insert\_all(subframe.loop\_statis)}$
+            \State $\texttt{function\_statis.insert\_all(subframe.function\_statis)}$
+            \ForAll{name}
+              \State $\texttt{mapping} \gets \texttt{subframe.resolve(name)}$
+              \State $\texttt{mapping.augment(new\_node)}$
+
+              \If { \texttt{break\_loop(subframe)}}
+                  \State $\texttt{loop\_statis.add(mapping)}$
+              \Else 
+                \If { \texttt{return\_function(subframe)}}
+                    \State $\texttt{function\_statis.add(mapping)}$
+                \Else 
+                    \State $\texttt{branch\_content.add(mapping)}$
+                \EndIf
+              \EndIf
+            \EndFor
           \EndFor
-          \State $\texttt{parent.add\_mappings(mappings)}$
+
+          \State $\texttt{frames.last().insert\_all(branch\_content)}$
+          \State $\texttt{frames.last().insert\_all\_loop\_statis(loop\_statis)}$
+          \State $\texttt{frames.last().insert\_all\_function\_statis(function\_statis)}$
         \EndFunction
     \end{algorithmic}
 \end{algorithm}
 
+There are a few things of note here. The first step is collecting the names of all identifiers that have changed in this branch. A new path node is created for every subframe that will disappear, based on the frame's path node, and the number of the subframe. The number is necessary because the cause node's branch number is uninitialized until this point. This node is then used to _augment_ all the paths in the statis chambers. Remember that the statis chambers were of the form `HashMap<Path, Branch>`, where the `Path` was supposed to keep the different sources of broken control flow apart. The `augment` method will add a new node to every key path -- future additional key paths won't contain this node, which is how they keep the different points of broken control flow apart. 
 
+Code sample \ref{smp:merge} showed us some behavior we want during name resolution. We can achieve this by incorporating name resolution in the merge operation. Every identifier that has been changed in any branch will get resolved in every branch, augmented, and stored in the next to last frame. This will ensure that all the relevant mappings for any given identifier can always be found in a single frame. More importantly, the `augment` method will update path mappings to reflect when an identifier didn't change in some particular branch.
+
+This is just the behavior for merging a frame because of a conditional statement. Function calls and loops will also introduce a new namespace frame. Merging a loop won't place things into the loop statis chamber, merging a function won't place anything in any statis chamber. Instead merging those should put the contents of one or both statis chambers into the regular branch. A statis chamber is of the form `HashMap<Path, Branch>` -- every mapping of every branch gets updated with the key path before being added to the regular branch. 
+
+## Name Resolution
+
+Namespaces by themselves aren't enough to implement all the name resolution behavior, name resolution can use several different namespaces. It's possible that an identifier is only sometimes defined in a namespace, for the other cases resolution will have to continue to some other namespace. The unresolved paths will be carried over into the resolution in the next namespace. All returned mappings will have its paths merged with the unresolved paths to reflect the fact that name resolution continued in the next namespace. This is probably unwanted behavior as well -- it's quite hard to use a variable that only exists sometimes -- so it's something our interpreter should warn about as part of its analysis. Algorithm \ref{alg:chain} shows the logic behind the implementations, the `next_namespace` function will depend on the kind of name being resolved.
+
+\begin{algorithm}
+    \caption{Resolve}\label{alg:chain}
+    \begin{algorithmic}[1]
+        \Function{resolve} {name}
+          \State $\texttt{result} \gets \texttt{Mapping}::new()$
+
+          \State $\texttt{unresolved} \gets [\, \texttt{Path}::empty()\,]$
+
+          \While{ unresolved.len() > 0 }
+              \State $\texttt{new\_unresolved} \gets [\,]$
+
+              \State $\texttt{namespace} \gets \texttt{next\_namespace}$
+              \State $\texttt{mapping} \gets \texttt{namespace.resolve(name)}$
+
+              \ForAll{$(p, x)$ \textbf{in} mapping}
+                \ForAll{unresolved\_path \textbf{in} unresolved}
+                    \State $\texttt{new\_path} \gets \texttt{p.merge(unresolved\_path)}$
+
+                    \If {\texttt{x.is\_none()}}
+                      \State $\texttt{new\_unresolved} \gets \texttt{new\_unresolved} \cup \texttt{new\_path}$
+                    \Else 
+                      \State $\texttt{result.add(new\_path, x)}$
+                    \EndIf
+                \EndFor
+              \EndFor
+
+              \State $\texttt{unresolved} \gets \texttt{new\_unresolved}$
+
+          \EndWhile
+
+          \State \Return \texttt{result}
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+### Identifiers
+
+Variables are stored in up to four different namespaces:
+
+  * The local scope, this is the function scope and every function call will create a new one. All variables made during a function call will live here, and stop existing when the function call is done.
+  * The enclosing scope, which is most commonly used to capture variables in lambda definitions. Variables that occur in a function definition and that are already in scope during the definition will get "saved" to the enclosing scope of the function. 
+  * The global scope, where most class and function definitions will end up going, and where students first write their first programs in. 
+  * The builtin scope, which is not to be confused with the standard libraries, contains essential Python features such as the `int` type and the `sorted` function. 
+
+At any point during execution there will be either two or four active scopes, depending on whether or not a function is being executed. Every function call will create a new empty local scope, but reuse the existing enclosing scope asociated with its definition. 
+
+### Attributes
+
+An object's attributes don't neccesarily exist in its own namespace. A lot of them, especially its methods, will exist in the namespace of its class object, or maybe even in one of its base classes. Python uses its own _Method Resolution Order_ (MRO) to define the order of the base classes in case of multiple inheritance. The first base class in the definition will get used first, where MRO can be applied again, ... This means that the second base class of the definition will only get used if the first base class did not contain an attribute of that name, and neither did any of its extended base classes. 
+
+### Methods
+
+Functions are just callable objects in Python, and a method seems to be a function that's part of an object's namespace. There is one obvious difference however, the explicit self of a method definition isn't part of the method call. This is because Python hides an implicit creation of a `method` object, which isn't just a callable object. In fact, it encapsulates a callable object -- the callable attribute. It also contains a reference to object it's being called on however. The method object itself is also callable, and calling it will call the embedded function with the embedded parent object prepended to the arguments. 
+
+## Collections
+
+Collections are a hard component to implement, especially for dynamic programming languages. When an element of a collection is used in an operation, we have to know which element that was to interpret the result. Static programming languages can just return a value of the defined element type, but dynamic programming languages typically have heterogeneous collections. Features like multiple return values rely in this feature. These are actually tuples, which can be indexed or unpacked just like any other collection. Remembering length and the order of the elements of this tuple is paramount to avoiding false positives. 
+
+The solution is similar to namespaces, but with some additional abstractions to reflect the additional uncertainty. We don't have to store every element explicitly. If a list contains only objects of type `A`, it doesn't really matter which objects those are. Any time an element of the collection gets used, it will be in terms of an abstract, general, instance of `A`. Non-empty collection literals such as multiple return values are exceptions, in this case every element does get stored explicitly. This general instance is called the representant. The most important things to know of a representant are its type, and how many elements of the collection it represents. Chaining representants together can describe both ordered and unordered collections. Unordered collections do have an order after all, just not a reliable which programmers should rely on. 
+
+### Components
+
+  * The core components of a collection are the representants, which are basically an alias for an object pointer. 
+  * Chunks represent contiguous regions within a collection. Their size is defined as a range whose bounds may be empty. Iteratively adding an element to a collection will create a chunk with no upper bound for example, unless we knew with certainty how many iterations took place. Chunks also contain mappings to its possible representants. If `x` is either an `int` or a `list` for example, adding it to a collection will add a chunk with two representant mappings. 
+  * A sequence of chunks forms a chain. A notion of length is added here as well, which isn't just the sum of the ranges of its chunks, insertion will invalidate the relationship between the chunk length and the chunk lengths. Most of the collection logic is implemented here, such as indexing and slicing.
+  * The next layer are branches, which are similar to the ones that are part of namespaces. A branch in the context of a namespace get initialized as an empty `HashMap<String, Mapping>`, and only stores changes. This sparse structure is possible because with namespaces you know exactly which elements have been changed -- they have a unique name. Collections don't have this luxury. Unless we absolutely know which element was changed, we have to assume the entire structure has been changed. This is why a collection's `Branch` contains a list of `(Path, Chain)` tuples, where every `Chain` is an entire "collection" in its own right.
+  * A collection also has frames, which are similar to the ones in namespaces as well. The main difference is that collections currently don't have a notion of statis chambers. These can be added to improve accuracy in some cases, but didn't seem very important yet. A `Frame` contains a list of branches, the path node that caused the branching, and the index of the active branch. 
+  * Collections are stacks of frames, just like namespaces. They also have a grow and a merge operation, but the implementations are slightly different. Growing still creates a new frame for every branch point, but it will copy the current branch's content into every branch of the new frame. Merging is currently done naively. The last frame gets popped, the paths of its content get augmented with the frame's cause node and then replace the contents of the new active branch. A different approach could try to merge branches to the chunk level so avoid unnecessary duplication, which is a considerable challenge to implement. This might be necessary for large and complex files, but the current solution seems to be suffice for now.
+
+### Operations
+
+There are a few different ways a new element can get added to a collection. The most fundamental way is simply by definition, as a list of mappings. In this case, a single chunk gets added for each mapping -- every given element is its own representant in this case for optimal accuracy, and every chunk has a known size of exactly 1. Inserting an element is the most complex operation. Any chunk that has only a single representant of the same type as the new element can have its upper bound incremented. All other chunks have it minimum size decremented -- to reflect that one of its elements may have been replaced. A new chunk of size $[\,0, 1\,]$ gets wedged in between chunks that haven't had their upper bounds incremented. The branch itself does not have its length incremented. The most common way to add something to a `list` in Python is through the `append` method however, which is a much easier case. We can repeat the previous process, but only applied to the last chunk. We can either increment the upper bound of the existing chunk, or add a new chunk of size exactly 1. 
+
+\begin{algorithm}
+    \caption{Linearize Collection}\label{alg:lin}
+    \begin{algorithmic}[1]
+      \Function{linearize} {n, chunks}
+        \If {chunks.is\_empty()}
+            \State \Return $[\,]$
+        \EndIf
+        \State $\texttt{chunk} \gets \texttt{chunks[0]}$
+        \State $\texttt{result} \gets [\,]$
+        \State
+        \State \textbf{outer:} 
+        \For {\texttt{(path, repr)} \textbf{in} \texttt{chunk}}
+
+          \State $\texttt{acc} \gets [\,]$
+
+          \For{\texttt{\_} \textbf{in} \texttt{0\,..\,chunk.min}}
+            \State $\texttt{acc.append(Mapping(path, repr))}$
+
+            \If {\texttt{acc.len() >= n}}
+              \State $\texttt{result.append(acc)}$
+              \State \textbf{continue outer}
+            \EndIf
+          \EndFor
+
+          \State
+
+          \State $\texttt{intermediate} \gets \texttt{linearize(n - acc.len(), chunks[1..])}$
+
+          \For {\texttt{sequence} \textbf{in} \texttt{intermediate}}
+            \State $\texttt{result.append(acc ++ intermediate)}$
+          \EndFor 
+
+          \State
+
+          \For{\texttt{\_} \textbf{in} \texttt{chunk.min\,..\,chunk.max}}
+            \State $\texttt{acc.append($\texttt{Mapping}::new$(path, repr))}$
+
+            \If {\texttt{acc.len() >= n}}
+              \State $\texttt{result.append(acc)}$
+              \State \textbf{continue outer}
+            \EndIf
+
+            \State
+
+            \State $\texttt{intermediate} \gets \texttt{linearize(n - acc.len(), chunks[1..])}$
+
+            \For {\texttt{sequence} \textbf{in} \texttt{intermediate}}
+              \State $\texttt{result.append(acc ++ intermediate)}$
+            \EndFor 
+          \EndFor
+
+
+        \EndFor
+
+        \State \Return \texttt{result}
+        
+      \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+There are a few different ways to retrieve an element from a collection. If done through a dynamically calculated index, a mapping for every representant is returned. We can do better for static indices however. The collections contents get linearized first -- replacing the chain of chunks with a list of mappings, this process is described in algorithm \ref{alg:lin}. This process reveals which possible elements there can be at that position. This is a powerful feature for several reasons. The first (or last) element of a collection can be given some special meaning, even if it's generally a bad idea, in which case retrieving the correct element is a good thing. More importanely, students often don't realize Python has multiple return values, and instead return a tuple which they then index explicitely. A static analyzer might want to recommend using multiple return values instead, but it will only be able to do so if its analysis didn't stumble over the indices. The linearized representation can also be used to create slices of collections, which is a very _pythonic_ operation so being able to interpret it accurately is important. 
+
+All indexing operations may return duplicates, because the merge operation isn't very thorough at this point. This can be alleviated by only returning a single mapping for every unique representant. The different ways an element may have been added to a collection are irrelevant, all that matters is that it has been added, and showing a single execution path should be enough to get the point across. 
+
+## Function Definitions
+
+A function definition creates a callable object and assigns the result to the given variable name. The object contains a closure, which in turn contains the function body as a block of AST nodes and the required argument definitions. Upon calling the closure the defined arguments and the given mappings get mapped to each other, as shown in the next section. Once the arguments are in place it executes the function body. Return values get treated as assignments to an `___result` identifier, so the existing namespace logic can be reused. 
+
+Python's own functions and modules are harder to implement. Depending on the interpreter used they may not even be in Python, but in C for example. Although the Fosite interpreter is designed to accomodate multiple languages, it's made with dynamic languages in mind -- C is quite far out of scope. A solution is to implement function behavior in closures, which then get injected into the interpreter as callable objects. Unlike the user defined functions these internal functions don't contain a function body AST, but manipulate the interpreter state directly. 
+This is a laborsome endeavor, but it does have a few upsides. Builtin functions such as `sorted` contain hundreds of lines of code -- and none of them are relevant to our analysis. Including implementation details in the paths can only confuse users, as these usually have no knowledge of the language internals. Giving a summarized, hard coded, result is both more efficient and more useful. 
+Modules are implemented as closures that can inject callable objects into the interpreter at runtime. This means that with some time and dedication, third party libraries can be easily added in the same way. 
+
+## Function Calls
+
+A few things have to be evaluated before a function call, the call target has to be evaluated first, then the arguments get evaluated from left to right. Evaluating the target will return a mapping which can contain a variable amount of pointers. Well written code can make extensive use of function objects to reduce code duplication for example. Target evaluation can result in several different function objects, and we have to consider every possible case. These all have to be evaluated independently, which is why a frame can have a variable amount of subframes -- and why path nodes contain information about how many branches there are. 
+
+\begin{algorithm}
+    \caption{Assign Arguments}\label{alg:arg}
+    \begin{algorithmic}[1]
+        \Function{assign\_pos} {gpos, gkw, arg, kwonly, vararg, kwarg}
+          \If {\texttt{gpos.len() > 0 \&\& arg.len() > 0}}
+            \State $\texttt{assign(arg[0].name, gpos[0])}$
+            \State $\texttt{assign\_pos(gpos[1..], gkw, arg[1..], kwonly, vararg, kwarg)}$
+          \Else
+            \State $\texttt{assign\_vararg(gpos, gkw, arg, kwonly, vararg, kwarg)}$
+          \EndIf
+        \EndFunction
+
+        \Function{assign\_vararg} {gpos, gkw, arg, kwonly, vararg, kwarg}
+          \If {\texttt{vararg.is\_some()}}
+            \State $\texttt{arg\_list} \gets \texttt{abstract\_list(gpos)}$
+            \State $\texttt{assign(vararg.name, arg\_list)}$
+          \EndIf
+          \State $\texttt{assign\_kw(gkw, arg ++ kwonly, kwarg)}$
+        \EndFunction
+
+        \Function{assign\_kw} {gkw, arg, kwarg}
+          \If {\texttt{gkw.len() > 0 \&\& arg.len() > 0}}
+            \State $\texttt{name} \gets (\texttt{arg.names} \cap \texttt{gkw.names})\texttt{.pick\_one()}$
+            \State $\texttt{assign(name, gkw[name])}$
+            \State $\texttt{assign\_kw(gkw $\setminus$ name, arg $\setminus$ name, kwarg)}$
+          \Else
+            \State $\texttt{assign\_kwarg(gkw, arg, kwarg)}$
+          \EndIf
+        \EndFunction
+
+        \Function{assign\_kwarg} {gkw, arg, kwarg}
+          \If {\texttt{kwarg.is\_some() }}
+            \State $\texttt{arg\_dict} \gets \texttt{abstract\_dict(gkw)}$
+            \State $\texttt{assign(kwarg.name, arg\_dict)}$
+          \EndIf
+
+          \State $\texttt{assign\_arg\_default(gkw, arg, kwarg)}$
+        \EndFunction
+
+        \Function{assign\_arg\_default} {arg}
+          \If {\texttt{arg.len() > 0 \&\& arg[0].has\_default()}}
+            \State $\texttt{assign(arg[0].name, arg[0].default)}$
+            \State $\texttt{assign\_arg\_default(arg[1..])}$
+          \EndIf
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+The call arguments get stored in two collections of mappings: a list for the positional arguments, and a map for the keyword arguments. All these arguments get augmented with a path node of the current function call. These then get mapped to arguments in the definition. Python has four  kinds of arguments in a function definition: `args`, `kwonlyargs`, `vararg`, and `kwarg`. Both the `args` and `kwonlyargs` can be given default values, and all arguments after the `varargs` will be placed in `kwonlyargs`. The underlying semantics are less trivial than one might expect, the principle is illustrated in algorithm \ref{alg:arg}. The algorithm assumes every argument in only provided once -- the Python runtime already gives a detailed error when this isn't the case. 
+
+
+\begin{algorithm}
+    \caption{Function Calls}\label{alg:call}
+    \begin{algorithmic}[1]
+        \Function{call} {target, args, kwargs}
+          \State $\texttt{b} \gets \texttt{scopes.len() > 2}$
+
+          \If {\texttt{b}}
+            \State $\texttt{shadow\_scopes.push(scopes.pop())}$
+
+            \State $\texttt{shadow\_scopes.push(scopes.pop())}$
+          \EndIf
+
+          \State
+
+          \State $\texttt{enclosing} \gets \texttt{get\_closure(target)}$
+
+          \State $\texttt{scopes.push(enclosing)}$
+
+          \State $\texttt{scopes.push(Scope}::new())$
+
+          \State
+
+          \State $\texttt{fun} \gets \texttt{get\_callable(target)}$
+
+          \State $\texttt{fun(args, kwargs)}$
+
+          \State
+
+          \State $\texttt{result} \gets \texttt{scopes.pop().extract\_result()}$
+
+          \State $\texttt{scopes.pop()}$
+
+          \If {\texttt{b}}
+            \State $\texttt{scopes.push(shadow\_scopes.pop())}$
+
+            \State $\texttt{scopes.push(shadow\_scopes.pop())}$
+          \EndIf
+
+          \State \Return \texttt{result}
+
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+The calling mechanism is best explained in pseudocode as well, as in algorithm \ref{alg:call}. Lines 2 to 5 move existing enclosing and local scopes to a different stack. This makes name resolution easier, there are always at most four active scopes. Lines 7-9 retrieve the the existing enclosing scope, a local scope is created, and both get placed on the stack of active scopes. Lines 11 and 12 contain the function call. A callable object in the interpreter gets retrieved, and executed using the provided arguments. The callable will do the argument assignments as in algorithm \ref{alg:arg} before executing whatever function logic it contains. Line 14 pops the local scope, and retrieves the entry that holds the return value. Lines 15-18 restore the scopes to the state before the function call. 
+Algorithm \ref{alg:call} does not contain some necessary bookkeeping operations. The local scope gets discarded after handling each call target, but the namespaces of the changed objects have to be merged after handling all call targets, and the resulting mapping needs to have its paths augmented with the path to get to the target.
+
+Interpreting recursive functions requires a way to _tie the knot_ -- so that analysis doesn't get stuck in an endless loop. The interpreter maintains a call stack, and only permits the same function to be called a set amount of times. A branch that would perform a recursive call that exceeds the recursion depth is simply terminated, so that only the branches that result in a base case get executed at this depth. A call at a higher recursion depth will then use this value in its analysis of the entire function body. This method's accuracy is sufficient for most use cases, even for low recursion depth limits @interpret. 
+
+## Warnings and Errors
+
+The interpreter itself can do some useful static analysis itself. If it encounters it cannot handle, the actual runtimes probably won't be able to either. In this case the interpreter will emit an error, but with more information about which execution paths lead to that error.
+
+It might also encounter error prone patterns during execution. If execution does fail, the warnings's information will add to the errors's explanation to paint an even more accurate picture. Even if execution doesn't fail, some of the warnings might indicate a deeper logical flaw. 
+
+### Errors
+
+Python doesn't always validate the input to the builtin functions. The `sum` function will just error with `TypeError: unsupported operand type(s) for +` if the argument wasn't an iterable containing things that can be summed together. We can be more helpful in our errors by describing which elements can't be added together and how they got there, perhaps even hinting towards implement `__add__` and `__radd__`. Similar errors can be emitted when trying to incorrectly apply an operator objects, such as adding an `int` and a `str` or trying to insert an element into a `str`. 
+
+Uninitialized variables are some of the most common bugs in many programming languages. Badly written code can make these hard to track down. The way our interpreter is structured gives us all the needed information to provide helpful errors. 
+
+Every branch of a collection knows how large it can be. Indexing using a static value can be checked to make sure there are at least enough elements in the collection. This can be quite useful as students often try to get the first or last element out of a empty list.
+
+### Warnings
+
+A variable can point to objects of different types. With the exception of the numeric types, this makes the variable very unwieldly to use. This can be checked after merging a namespace by simply looking at the contents, and looking up their types. 
+
+Heterogeneous collections are hard to deal with; unless there's a fixed structure to the collection, operations on its elements have to support all of the possible types. A collection keeps track of its elements's types. Adding something new to a collection will compare the types before and after adding, and will emit a warning if something's changed. 
+
+Changing a collection while iterating over its contents is generally a bad idea. Python will not throw an error when this happens, which can lead to weird behavior such as skipping elements, endless loops, and collections sucking up all available memory. This can be checked by introducing _watches_ to the interpreter state, which will take a snapshot of all the mappings used to evaluate the loop generator. The watch will also save all changes to the values it's watching. These changes can then be used to emit warnings at the end of evaluating the loop. 
+
+A while loop whose condition does change after an iteration is prone to endless loops. This is the case if all the variables in the condition still point to the same object, and all those objects haven't been changed either. Finding the paths in which this is the case isn't easy as our analysis only returns changes -- the opposite of what we want. The invariants can be found by taking all the complementary paths of all the changes, and retaining only those that are mergeable with all changes. 
+
+A function call that did not end with an explicit return statement will return a `Ǹone` value. This can lead to confusing errors when a user forgot to return in just one of its branches. Since return values are treated as regular identifiers, we can use the existing logic provided by the namespaces to see which `OptionalMapping`s are still uninitialized at the of a function call. 
 
 # Results
 
