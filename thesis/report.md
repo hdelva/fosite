@@ -3,22 +3,23 @@
 
 # Introduction
 
-The university of Ghent has developed the Dodona platform which students can use to submit solutions to and receive immediate feedback. This feedback is in large part done through unit testing. This lets the students know whether or not their solution is correct but doesn't really help them forward if it's not. To remedy this, there is a visual debugger included which students can use to step through their program. This comes with a couple of caveats unfortunately, for example it's unable to process file IO. More importantly, it can only let the user scroll through execution states. If an error occurred after a couple of thousand executed statements, this becomes a very tedious process.
+The university of Ghent has developed the Dodona platform which students can use to submit solutions and receive immediate feedback. This feedback is in large part done through unit testing which lets the students know whether or not their solution is correct, but it doesn't really help them forward if it's not. To remedy this, there is a visual debugger available which students can use to step through their program. Unfortunately it is limited in what it can do, file IO functionality isn't available for example. More importantly, it can only let the user scroll through execution states. If an error occurred after a couple of thousand executed statements, this becomes a very tedious process.
 
-That's just the nature of debugging. Fortunately, there are ways to avoid this pain altogether. Some programming languages have a strict compiler to catch obvious mistakes. There are linter tools such as JSLint and Pylint which emit warnings on error prone patterns. The Dodona platform uses these tools as well, and relays the warnings to the students. 
+There are ways to avoid the pain of debugging altogether. There are linter tools such as JSLint and Pylint which emit warnings on error prone patterns. The Dodona platform uses these tools as well, and relays the warnings to the students. 
 
-The Pylint tool for Python has noticeably helped students avoid mistakes. Which in turn allowed them to focus more on the actual assignment and less on learning how to program. The goal of this thesis is to build on top of that, giving the students even more and even better feedback. An extensive data-flow analysis can untangle even the worst spaghetti code, which makes it a prime starting point for further analysis and feedback. 
+The Pylint tool for Python has noticeably helped students avoid mistakes. Which in turn allowed them to focus more on the actual assignment and less on learning how to program. The goal of this dissertation is to build on top of that, giving the students even more and even better feedback. An extensive data-flow analysis can untangle even the worst spaghetti code, which makes it a prime starting point for further analysis and feedback. 
 
-# Literature 
+# Related Work
+
 ## Static Analysis
 
-NASA's source code of the Apollo 11 Guidance Computer was recently digitized and put on Github. All of it was written in an Assembly language and the result worked just fine. The C programming language was made for the Unix operating system so it could run on various CPU architectures. In essence it's a pretty light abstraction over Assembly, it doesn't take much pressure off of the programmers. Unix did just fine as well. One could argue that programmers don't need tools to aid them -- they seem to know what they're doing. 
+NASA's source code of the Apollo 11 Guidance Computer was recently digitized and put on Github. All of it was written in an Assembly language and the result worked just fine. The C programming language was developed for the Unix operating system so the latter could run on various CPU architectures @cdev. In essence it's a pretty thin abstraction over Assembly, in the sense that it doesn't take much pressure off of the programmers. Unix worked just fine, just like NASA's guidance controller. One could argue that programmers don't need tools to aid them -- they seem to know what they're doing. 
 
-As the field of research grew, and with it the projects, it started becoming apparent that programmers can't always rely on themselves. Even veteran developers occasionally discover a major vulnerability in their code -- like the Heartbleed vulnerability in OpenSSL. Everyone makes mistakes but not all mistakes go unnoticed for years in critical code. A first line of defense against these costly mistakes is a proof of correctness. NASA's code was reliable because they had formal proofs that the most critical parts were correct [@nasa1; @nasa2; @nasa3]. Doing this is not only a massive amount of work, a proof can still be wrong. An implementation oversight can easily carry over into a proof oversight, so extra pair of eyes is needed to check all proofs as well. 
+As the field of computing grew, and with it the projects, it started becoming apparent that programmers can't always rely on themselves. Even veteran developers occasionally discover a major vulnerability in their code -- like the Heartbleed vulnerability in OpenSSL. Everyone makes mistakes of course, but critical code should avoid them at all costs. A first line of defense against these costly mistakes is a proof of correctness. NASA's code was reliable because they had formal proofs that the most critical parts were correct [@nasa1; @nasa2; @nasa3]. Doing this is a massive amount of work, and a proof can still be wrong. More importantly, most verification frameworks are applied to designs and not implementations @visser.
 
-Functional programming languages are closely related to this method of provable correctness, while also automating some of checks. Notable examples of such languages are Haskell and ML. Both have a strong theoretical foundation and provide the programmer with a strong type system to make code easier to reason about. This stands in stark contrast with languages like C. While Haskell was made to facilitate writing correct code @haskell, C was made to be _close to the metal_ and efficient @cdev. The C compiler doesn't help the programmer nearly as much as the Haskell compiler. Correctness is obviously paramount to any computer program, so C's priorities don't always align with a programmer's. 
+Functional programming languages are closely related to provable correctness, while also automating some of checks. Notable examples of such languages are Haskell and ML. Both have a strong theoretical foundation and provide the programmer with a strong type system to make code easier to reason about. This stands in stark contrast with languages like C. While Haskell was made to facilitate writing correct code @haskell, C was made to be close to the metal and efficient @cdev. The C compiler doesn't help the programmer nearly as much as the Haskell compiler. Developing correct and functional programs is obviously paramount to any programmer, so C's priorities don't always align with the developer's. 
 
-That's where static analysers come into play. They analyze a program, either in its source code form or its compiled form, and try to find as many possible mistakes as possible. These mistakes are often very subtle and rare,  but encountering one can ruin a person's week. Code sample \ref{smp:shortset} comes from Google's Error Prone Github page and is a great example of how subtle serious bugs can be.
+That's where static analyzers come into play. They analyze a program, either in its source code form or its compiled form, and try to find as many possible mistakes as possible. These mistakes are often very subtle and rare, but even a single one can ruin someone's week. Code sample \ref{smp:shortset} comes from Google's Error Prone Github page and is a great example of how subtle serious bugs can be. The code seems to be just fine at first glance, the analysis in sample \ref{smp:shortset_f} reveals a subtle flaw.
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -27,7 +28,7 @@ That's where static analysers come into play. They analyze a program, either in 
   boxrule=0.2pt,
   minted language=java,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 public class ShortSet {
   public static void main (String[] args) {
@@ -43,8 +44,6 @@ public class ShortSet {
 \caption{Short Set}\label{smp:shortset}
 \end{code}
 
-This code seems to be just fine at first glance, but sample \ref{smp:shortset_f} contains the analysis.
-
 \begin{code}
   \begin{tcblisting}{listing only, 
   arc=0pt,
@@ -52,7 +51,7 @@ This code seems to be just fine at first glance, but sample \ref{smp:shortset_f}
   boxrule=0.2pt,
   minted language=HTML,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 error: [CollectionIncompatibleType] Argument 'i - 1' should not be 
 passed to this method; its type int is not compatible with its 
@@ -63,28 +62,25 @@ collection's type argument Short
 \caption{Analysis of code sample \ref{smp:shortset}} \label{smp:shortset_f}
 \end{code}
 
-Subtracting an `int` from a `short` resulted in an `int`. In this case it won't cause an actual bug yet because both types use the same hashing function. The JVM originally didn't support generics, and their implementation is still a bit rough. The `remove` method of a `List` instance doesn't do any type checks, its argument can be any `Object` instance. This can result in calls that never actually remove anything. If that call happens to only occur in a corner case in the $1000^{\text{th}}$ iteration of a loop, this can lead to some very confusing bugs. 
+Subtracting an `int` from a `short` results in an `int`. In this case it won't cause an actual bug yet because both types use the same hashing function, but this isn't something a developer should rely on. The JVM originally didn't support generics, and their implementation is still a bit rough. The `remove` method of a `List` instance accepts any `Object` instance. This can result in calls that never actually remove anything. If that call happens to only occur in a corner case in the $1000^{\text{th}}$ iteration of a loop, this can lead to some very confusing bugs. 
 
-### Powerful Languages
+### Popular Languages
 
-Every commonly used programming language is Turing complete, so in theory they should all be equal. This is a misconception that's been called the Turing tar-pit @tarpit. Everything is possible in a Turing tar-pit, but nothing of interest is easy. Programming languages where things of interest are perceived to be easy can be considered powerful. These languages are often the ones with lenient compilers or runtime environments such as C, Python, Javascript, ... In other words, languages that don't get in the way of the programmer too often. 
+Every practical programming language is Turing complete, so in theory they should all be equal. This is a misconception that's been called the Turing tar-pit @tarpit. Everything is possible in a Turing tar-pit, but nothing of interest is easy. Programming languages where things of interest are perceived to be easy can be considered powerful. These languages are often the ones with lenient compilers or runtime environments such as C, Python, Javascript, ... In other words, languages that don't get in the way of the programmer too often. These are also by far the most popular languages.
 
 As illustrated in the previous section this may not always be a good idea as humans tend to glance over subtle details. This makes the need for additional tools very important for any project that aims to achieve high reliability. The alternative is long and painful debugging sessions. At some point these languages no longer make it easy to do things of interest in. 
 
 #### C
 
+The C programming language has been one of the most popular programming languages for a couple of decades now. Depending on who you ask, the best thing about C is either its efficiency or its simplicity. The latter is what gives developers the power they desire. This comes at a cost however; with great power comes great responsibility.
 
-The C programming language has been one of the most popular programming languages for a couple of decades now. Depending on who you ask, the best thing about C is either its efficiency or its simplicity, and both come at a price. Its simplicity is what gives developers the power they desire. This comes at a cost however; with great power comes great responsibility.
-
-Let's focus on the other main attraction of C, the efficiency. This comes at a cost as well and it's a one many people forget about. C's _raison d'être_ isn't making developers feel good about themselves, it's generating efficient code. It was created to be a thin abstraction over various assembly languages that were limiting software development at the time @cdev. Since not all CPU architectures handle a division by zero the way, the C specification doesn't specify what to do. 
+Let's focus on the other main attraction of C, the efficiency. This comes at a cost as well and it's a one many people forget about. C's _raison d'être_ isn't making developers feel good about themselves, it's generating efficient code. It was created to be a thin abstraction over various assembly languages that were limiting software development at the time @cdev. This has left some holes in the C specification; not all CPU architectures handle a division by zero for example, so the C specification doesn't specify what to do in this case. 
 
 ##### Undefined Behavior
 
-There are a lot of things the language specification doesn't specify a behavior for, which leads to undefined behavior. Some are well-known, such as using freed memory. Others catch people by surprise, dividing by zero in C for example is undefined behavior. The GNU libc website still claims that `1/0` yields `inf` @gnu, even though the C99 clearly contradicts them @C99. The C99 standard did introduce the `INF` macro, but it doesn't specify which operations should result in one. Division by zero is still as undefined as it has always been. 
+There are a lot of things the specification doesn't specify a behavior for, which leads to undefined behavior. Some are well-known, such as using freed memory. Others catch people by surprise, dividing by zero in C for example is undefined behavior. The GNU libc website still claims that `1/0` yields `inf` @gnu, even though the C99 clearly contradicts them @C99. The C99 standard introduced the `INF` macro, but it doesn't specify which operations should result in one. Division by zero is still as undefined as it has always been. 
 
 Entire papers have been written on the subject of undefined behavior [@lattner; @wang; @guide]. One striking thing is how recent a lot of these papers are. Even though the language is over 40 years old, this is still an active field of research. Compilers are getting more advanced and with it the optimizations they perform. 
- 
-Code sample \ref{smp:undef} was part of PostgreSQL @wang.
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -93,7 +89,7 @@ Code sample \ref{smp:undef} was part of PostgreSQL @wang.
   boxrule=0.2pt,
   minted language=C,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 if (arg2 == 0)
   ereport(ERROR, 
@@ -106,11 +102,9 @@ PG_RETURN_INT32((int32) arg1 / arg2);
 \caption{Undefined Behavior}\label{smp:undef}
 \end{code}
 
-The `ereport` function never returns, it does some logging before calling `exit`. In the mind of the developer this prevents the division by zero on the next line. Looking at the code on Github, the function this sample came from indicates that calling it will return a `Datum` struct. The body of the null check does not return anything, so the compiler concludes that the rest of the function will also be executed and division by `arg2` will always get occur. 
+Code sample \ref{smp:undef} was part of PostgreSQL @wang. The call to `ereport` on line 2 never returns, it does some logging before calling `exit`. In the mind of the developer this prevents the division by zero on line 7. Looking at the code on Github, the function this sample came from indicates that calling it will return a `Datum` struct. According to the language specification, this function _must_ return a value each time it's called. The body of the null check does not return anything, so the compiler concludes that the rest of the function will also be executed and division by `arg2` will always get occur. 
 
-Division by zero is undefined in C, so the compiler concludes that `arg2` won't ever be zero -- it wouldn't get used in a division otherwise. As a result, the null check gets flagged as dead code, and is removed entirely. 
-
-Code sample \ref{smp:undef_f} contains the fixed code. By adding an explicit return (in the form a macro), the compiler leaves the null check intact.
+Division by zero is also undefined in C, so the compiler concludes that `arg2` won't ever be zero -- it wouldn't get used in a division otherwise. As a result, the null check gets flagged as dead code, and is removed entirely. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -119,7 +113,7 @@ Code sample \ref{smp:undef_f} contains the fixed code. By adding an explicit ret
   boxrule=0.2pt,
   minted language=C,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 if (arg2 == 0)
 {
@@ -135,15 +129,17 @@ if (arg2 == 0)
 \caption{Fixed Undefined Behavior}\label{smp:undef_f}
 \end{code}
 
-Notice how the comment blames a "gcc bug". This illustrates how even experienced developers seem to misunderstand their language of choice. 
+Code sample \ref{smp:undef_f} contains the fixed code. By adding an explicit return (in the form a macro), the compiler leaves the null check intact. Notice how the comment blames a "gcc bug". This illustrates how even experienced developers seem to misunderstand their language of choice. 
+
+\clearpage
 
 ##### Tools
 
 Not a single other programming language comes close to having as many external tools as C (and by extension C++). Many developers heavily depend on these tools in their usual workflow. One of the most established ones are the ones in Valgrind.
 
-Valgrind is a suite of dynamic analysis tools, the most famous of which is Memcheck. Memory related bugs are some of the hardest to track down because most of them are because of undefined behavior. For example, using a memory location after freeing might not always crash the program. There's an informal term for bugs like these: _heisenbugs_. Something might go wrong but when you try to isolate the cause everything seems to be just fine. Especially since Address Space Layout Randomization (ASLR) tends to be disabled during debugging but not during normal execution. 
+Valgrind is a suite of dynamic analysis tools, the most famous of which is Memcheck. Memory related bugs are some of the hardest to track down because because they're ultimately undefined behavior. For example, using a memory location after freeing might not always crash the program. There's an informal term for bugs like these: _heisenbugs_. Something might go wrong but when you try to isolate the cause everything seems to be just fine. Especially since Address Space Layout Randomization (ASLR) tends to be disabled during debugging but not during normal execution. 
 
-This is where Memcheck comes into play. It analyses the program during execution and keeps track of what happens to the memory. This way it can notice memory related bugs such as use-after-free and report them back to the developer. Unfortunately it's not a perfect solution. There can be false positives as well as false negatives, and it is quite incompatible with some libraries such as OpenMPI @mpi. 
+This is where Memcheck comes into play. It analyses the program during regular execution and keeps track of what happens to the memory. This way it can notice memory related bugs such as use-after-free and report them back to the developer. Unfortunately it's not a perfect solution. There can be false positives as well as false negatives, and it is quite incompatible with some libraries such as OpenMPI @mpi. 
 
 A lot of companies rely on analysis tools to manage their large C projects, and when there's demand in a market, the supply will follow. There's an impressive amount of commercial analysis tools available. Coverity is one of the most established ones. 
 
@@ -153,49 +149,50 @@ Even with a plethora of tools available, C remains an untamed beast. Some tools 
 
 #### Dynamic Languages
 
-Moving on to the topic of this thesis, dynamic languages. According to Guido Van Rossum, he made Python because he wanted to make a descendant of ABC that would appeal to Unix/C hackers @lutz. After reading the previous section some spidey senses should start tingling. 
+According to Guido Van Rossum, he made Python because he wanted to make a descendant of ABC that would appeal to Unix/C hackers @lutz. After reading the previous section some spidey senses should start tingling, as C is a remarkably hard language to analyse.
+Javascript's situation isn't great either. There are no namespaces, no modularization system, no classes, no interfaces, no encapsulation, and so on. Eric Lippert, who was on the ECMA committee during the early days has a Stackoverflow post where he discusses why Javascript is so ill-fit for static analysis and programming in the large @lippert. Even though Stackoverflow is a dubious source for any academic work, the author's experience should make up for it. 
 
-Javascript's situation isn't great either. There are no namespaces, no modularization system, no classes, no interfaces, no encapsulation, ... Eric Lippert, who was on the ECMA committee during the early days has a Stackoverflow post where he discusses why Javascript is so ill-fit for static analysis and programming in the large @lippert. Even though Stackoverflow is a dubious source for any academic work, the author's experience should make up for it. 
+Both are popular languages, so one might expect there to be a good amount of analysis tools for these languages as well. There seem to be two classes of analysis tools available for these languages right now: linters and type checkers. The linters are very popular, but as a later section will discuss they focus on error prone patterns instead of errors, and they prioritize efficiency over in-depth analysis. The type checkers are less popular, mostly due to circumstances. 
 
-Both languages are known as productive languages. Developers don't spend a lot of time writing boiler plate code or declaring types, they can get right to the good part. The dynamic nature of the languages even makes it easy to write generic functions, which makes code reuse easier and should make the code easier to maintain. 
+A type analysis tool for Javascript was developed in 2009, in part because the authors felt a need for deeper analysis than what JSLint could offer @jsure. They utilize an abstract interpreter to perform a flow- and context-sensitive analysis. Typescript was released a few years later, which fills a similar function as JSure, but with the researching power of Microsoft behind it. 
+Python has a similar tool called MyPy which takes a fundamentally different approach @mypy. Python 3.5 introduced type hints for analysis tools such as MyPy to use. Although promising, the tool is plagued with a few limitations. For starters, it only supports Python versions since 3.5 and the most commonly used Python version is still 2.x. On top of that, most existing Python 3 code does not even use type hints at this point, so stand nothing to gain from MyPy. 
 
-As the following anecdotal examples illustrate, this isn't always the case. Most people who have used dynamic languages should be able to confirm that they can misbehave in the spectacular ways. The examples are supposed to be relatable and bring back memories of frustrating debugging sessions.
+What the two classes of analysis tools for dynamic languages have in common is that they're not as in-depth as the ones of static languages. Tools like Coverity for C and Error Prone or FindBugs for Java go as far as detecting racing conditions, while the tools for Javascript and Python are still experimenting with type analysis. This isn't because dynamic languages aren't important, it's used to power some of the biggest websites [@netflix; @facebook], it's just a hard thing to do. The following anecdotal examples illustrate why and are supposed to be relatable.
 
 ##### Classes
 
-Lots of developers are familiar with class hierarchies and like using them. There is one glaring difference between how static languages and dynamic languages handle classes however. In most static languages, the class definition declares which methods and attributes are defined for objects of that class. This isn't the case with dynamic languages, adding a method to an object is as simple as assigning to a callable object to an attribute. 
+Lots of developers are familiar with class hierarchies and like using them, but there is one glaring difference between how static languages and dynamic languages handle classes. In most static languages, the class definition declares which methods and attributes are defined for objects of that class. This isn't the case with dynamic languages, adding a method to an object is as simple as adding a callable object to the class's namespace. 
+This is bad news for a static analysers that try to do type inferencing on dynamic languages. Consider the following bug that occurred while working on the Dodona platform.
 
-This is bad news for a static analysers that try to do type inferencing on dynamic languages. Consider the following problem that occurred while working on the Dodona platform.
+The Ruby builtin `String` class provides a `split` method that does the same thing as in most other languages: its argument is some separator which it uses to cut the `String` object into an array of smaller `String` objects. While writing a function that takes a few strings as arguments, the strings had to be split on whitespace. Calling the `split` method on one of the strings returns the same object instead. Using `puts` on that object just shows the same exact String we wanted to split, with all the whitespace still there, weird. The documentation says that it should work. Testing the method in a REPL environment confirms that the `split` method should indeed split the `String`. A few confused hours later, it turns out the object wasn't a `String` but an `Array` of `String` objects. The Ruby documentation doesn't mention that `Array` defines a `split` method. Googling "ruby array split" refers to the Ruby on Rails documentation. A library silently declared a method on a builtin type, and `puts` prints every element of an `Array` on a separate line, so it just prints a single `String`. 
 
-The Ruby builtin `String` class provides a `split` that does the same thing as in most other languages: its argument is some separator which it uses to cut the `String` object into an array of smaller `String` objects. Calling the `split` method on some object returns the same object. Using `puts` on the object just shows the same exact String, weird. The documentation says that it should work. Testing the method in a REPL environment confirms that the `split` method should split the `String`. A few confused hours later, it turns out the object wasn't a `String` but an `Array`. The Ruby documentation doesn't mention that `Array` defines a `split` method. Googling "ruby array split" refers to the Ruby on Rails documentation. A library silently declared a method on a builtin type, and `puts` prints every element of an `Array` on a separate line, so it just prints a single `String`. 
+This approach to classes has some serious implications. Not only does it confuse newcomers, it confuses static analyzers as well. As these languages typically don't have type declarations, a logical alternative would be type inference. But consider the following case, `split` is being called on something that's either an `Array` or a `String` at the current stage of  inferencing. A regular Ruby analysis tool might conclude that the object must be a `String`. Analyzing Ruby on Rails code would either require the tool to analyze the entire framework's code first to learn that it adds a `split` method to `Array`, or it might even require a custom analyzer for Rails altogether.
 
-This sort of reckless approach to classes has some serious implications. Not only does it confuse newcomers, it confuses static analyzers as well. Due to the lack of type declarations, a logical alternative would be type inference. But consider the following case, `split` is being called on something that's either an `Array` or a `String` at the current stage of  inferencing. A regular Ruby analysis tool might conclude that the object must be a `String`. Analyzing Ruby on Rails code would either require the tool to analyze the entire framework's code first to learn that it adds a `split` method to `Array`, or it might even require a custom analyzer for Rails altogether.
-
-This is why static analysis of dynamic languages is typically done using an extensive data-flow analysis @madsen. You don't have to infer the type of an object if you know where it came from.
+This is why static analysis of dynamic languages usually starts with an abstract interpreter [@madsen; @jsure; @interpret]. You don't have to infer the type of an object if you know where it came from.
 
 ##### Refactoring
 
-Python's lack of structure makes it hard to work incrementally. At some point during implementation of the interpreter, line and column information had to be added to the AST structure. Python's `ast` module contains everything one could need to work on Python's AST, including `lineno` and `col_offset` for seemingly all classes. With the exception of a few classes, such as `generator`. Implementing generators didn't come until much later, long after the analyser started relying on the existence of `lineno` and `col_offset` for every node. 
+Python's lack of structure makes it hard to work incrementally. At some point during implementation of the interpreter developed for this dissertation, line and column information had to be added to the AST structure. Python's `ast` module contains everything one could need to work on Python's AST, including `lineno` and `col_offset` for seemingly all classes. With the exception of a few classes, such as `generator`. Implementing generators didn't come until much later, long after the analyser started relying on the existence of `lineno` and `col_offset` for every node. 
 
 Refactoring dynamic languages is a challenge. What if we want to change the name of a method called `add` to `insert`. Can we replace all occurrences of `.add` to `.insert`? That might change other classes as well. As discussed in the previous section, type inferencing is non-trivial. Even IDEs that are renowned for their ability to refactor code, such as the JetBrains IDEs, rely on manual feedback to filter out the false positives. Reporting false positives is not always an option however. That's what causes people to question your tool @coverity. 
 
-### NaN
+#### `NaN`
 
-As an aside, the existence of NaN should be considered error prone as well. Some languages like Python and Java do a good job at preventing `NaN` from entering your program through raising exceptions, but once they do find their way in you're left at the mercy of the IEEE 754 standard. The most recent version of the standard is IEEE 754-2008 and was heavily influenced by the ISO C99 standard, which introduced `NaN` and $\inf$ to the C standard.
+There are problems that plague both static and dynamic languages as well, such as the existence of `NaN`. Some languages like Python and Java do a good job at preventing `NaN` from entering your program through raising exceptions, but once they do find their way in you're left at the mercy of the IEEE 754 standard. The most recent version of the standard is IEEE 754-2008 and was heavily influenced by the ISO C99 standard, which introduced `NaN` and `INF` to the C language.
 
-Since this standard, if one of the function's argument is `NaN` but the other arguments already determine the function's value, the result is no longer `NaN`. For example, this means that `pow(1, NaN)` is equal to `1`. Mathematically this is at least a bit dubious, $1^{0/0}$ shouldn't be defined if $0/0$ isn't either. The C99 standard introduced various other oddities @C99. $\texttt{pow(-1, }\pm \inf\texttt{)}$ is `1` because all large positive floating-point values are even integers. And having a `NaN` in the imaginary part of a complex number does not matter when the value is being cast to a real number, it's apparently possible for a value to be only slightly undefined. 
+Since this standard, if one of the function's argument is `NaN` but the other arguments already determine the function's value, the result is no longer `NaN`. For example, this means that `pow(1, NaN)` is equal to `1`. Mathematically this is at least a bit dubious, $1^{0/0}$ shouldn't be defined if $0/0$ isn't either. The C99 standard introduced various other oddities @C99: $\texttt{pow(-1, }\pm \infty\texttt{)}$ is `1` because all large positive floating-point values are even integers, and having a `NaN` in the imaginary part of a complex number does not matter when the value is being cast to a real number -- it's apparently possible for a value to be only slightly undefined. 
 
-It has become normal for `NaN` values to somehow disappear as if nothing was wrong, leading to some very confusing bugs. Jonathan Peck ran into the consequences while implementing his own thesis (personal correspondence). The Theano framework has a function to compute the gradient of some expression. A `NaN` found its way into the input of this function but the result somehow didn't contain a single `NaN`, it became seemingly random noise instead. When implementing something algorithm intensive, any person's first instinct would be that the algorithm is wrong. 
+It has become normal for `NaN` values to somehow disappear as if nothing was wrong, leading to some very confusing bugs. A fellow student ran into the consequences while implementing his own dissertation (personal correspondence). The Theano framework has a function to compute the gradient of some expression. A `NaN` found its way into the input of this function but the result somehow didn't contain a single `NaN`, it became seemingly random noise instead. When implementing something algorithm intensive, any person's first instinct would be that the algorithm is wrong. 
 
 Static analysis should be able to help alleviate this problem. If the floating-point value that's being used came from a `sqrt` function, there should be an `isNaN` check first. Alternatively, the Rust programming language tries not to hide the fact that floating-pointing values can be `NaN`. Without providing your own implementation of the `Ord` trait for the `f64` type, it's impossible to order a vector of `f64` values because comparing two `f64` values might be meaningless. It does however provide an implementation of the `PartialOrd` trait, which returns an `Option<Ordering>`, which makes it clear that the result can be `None`.
  
 ### Safe Languages
 
-Now that it's firmly established that some languages gladly let their users shoot themselves in the foot, let's look at languages that protect their users. Most of these languages are functional languages but there are notable exceptions such as Ada. 
+Some languages try to protect its users from themselves. Most of these languages are functional languages but there are notable exceptions such as Ada. 
 
 #### Haskell
 
-Having strong ties to the lambda calculus @haskell, Haskell is the archetype of a safe language. Being a pure functional language, all state in a Haskell program is implicit and by extension there are no side-effects. One of core concepts of the language is that Haskell code should be easy to reason about. That's why this language deserves a section in a thesis about static analysis and data-flow analysis; Haskell's design makes these things pleasantly simple. 
+Having strong ties to the lambda calculus @haskell, Haskell is the archetype of a safe language. Like in most functional languages, all state in a Haskell program is implicit and by extension there are no side-effects. One of the core concepts of the language is that Haskell code should be easy to reason about. That's why this language deserves a section in a dissertation about static analysis and data-flow analysis; Haskell's design makes these things pleasantly simple. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -204,7 +201,7 @@ Having strong ties to the lambda calculus @haskell, Haskell is the archetype of 
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 def reset(arg):
   arg.attr = None
@@ -220,23 +217,21 @@ x.attr += 1
 \caption{Aliasing}\label{smp:aliasing}
 \end{code}
 
-Consider the Python code in Code sample \ref{smp:aliasing}. Knowing that `x` and `y` are the same is integral to realizing that `x.attr += 1` will result in a type error, as `x.attr` is None since the call to `reset`. Haskell has no side-effects -- function calls like `reset(y)` wouldn't be able to change anything. Additionally, it has no explicit state and thus no assignments and no aliasing to begin with. This trait can be mimicked in other languages using the Static Single Assignment (SSA) form where every variable is immutable. A later section will discuss this form and how it relates to code analysis.
+Consider the Python code in Code sample \ref{smp:aliasing}. Knowing that `x` and `y` are the same is integral to realizing that `x.attr += 1` will result in a type error, as `x.attr` is None since the call to `reset`. Haskell has no side-effects -- function calls such as `reset(y)` on line 8 wouldn't be able to change anything. Additionally, it has no explicit state and thus no assignments and no aliasing to begin with. This trait can be mimicked in other languages using the Static Single Assignment (SSA) form where every variable is only defined once. Section \ref{ssa} will discuss this form and how it relates to code analysis.
 
 #### Rust
 
 A newer language that favors safety over accessibility is Rust. While it does have explicit state, Rust also makes the aliasing problem trivially easy for static analysers. With some exceptions like the reference counting types, every piece of memory has a single owner in Rust -- which means that by default there's a single way to access any piece of data. This prevents aliasing problems like the one in sample \ref{smp:aliasing} because after executing `y = x`, `x` is no longer a valid identifier -- its data has been moved to `y`. On top of that, Rust has explicit mutability. This concept came from C/C++ where it's good practice to label all immutable things with `const`, except that Rust does it the other way around. This means that unless `y` was declared to be mutable, the assignment to `y.attr` wouldn't compile either. 
 
-In languages like Java which heavily advocate encapsulation it's not uncommon to write something like a `List<Element> getElements()` method, so that other modules can see which data is present. Returning the original list would mean anybody can change its contents. That's why it's considered good practice to return a deep copy of the list instead. Deep copies carry a significant overhead with them, so developers end up choosing between a safe architecture or an efficient implementation. Rust lets data be borrowed, so that other modules can see its contents. The result is a reference which is very similar to a pointer in C, with the exception that borrowed references carry a lot more type information with them. For starters, it's possible to borrow something mutably or immutably. If there is a single mutable borrow to an object, there can't be any other borrows at the same time. This is a mechanism that's supposed to avoid unexpected side-effects. Another thing that's part of a borrow's type is its lifetime. If object A wants to borrow something from object B, B has to exist at least as long as A. This mechanism directly prevents all sorts of memory related bugs that occur in C.
+In languages like Java which heavily advocate encapsulation it's not uncommon to write something like a `List<Element> getElements()` method, so that other modules can see which data is present. Returning the original list would mean anybody can change its contents. That's why it's considered good practice to return a deep copy of the list instead. Deep copies carry a significant overhead with them, so developers end up choosing between a safe architecture or an efficient implementation. Rust lets data be borrowed, so that other modules can see its contents. The result is a borrowed reference which is very similar to a pointer in C, with the exception that borrowed references carry a lot more type information with them. For starters, it's possible to borrow something mutably or immutably. If there is a single mutable borrow to an object, there can't be any other borrows at the same time. This is a mechanism that's supposed to avoid unexpected side-effects. Another thing that's part of a borrow's type is its lifetime. If object A wants to borrow something from object B, B has to exist at least as long as A. This mechanism directly prevents all sorts of memory related bugs that occur in C.
 
 Rust is an interesting example of the relationship between languages (more specifically the compilers) and static analysers. The Rust compiler enforces a lot of things that the C compiler doesn't but that the C community has written their own tools for. One might wonder why C is even still around if Rust seems to be a more complete package. Part of the answer is that Rust is a very restrictive language which leads to frustrated developers. Keeping in mind Coverity's paper @coverity, it's a lot easier to ignore a analyser than it is to fix a compile error. 
 
-In fact, this has received the informal label of being an _XY problem_. If a person knows how to do something using method X, he's less likely to learn method Y -- even if method Y is clearly the better choice. Rust has received a lot of criticism from renowned developers for ridiculous reasons, such as being unable to have two mutable references to the same object. That's how they'd do it in C, so it must be the right way. This problem is relevant in this thesis for two reasons. For starters, static analysis tools run into the same mentality issues @coverity. More importantly, it shows that it's important to never pick up bad habits in the first place. The field of application of this thesis is ultimately helping students learn how to program, before they even have any bad habits. 
+In fact, this can seen as an instance of the loosely defined concept of a _XY problem_. If a person knows how to do something using method X, he's less likely to learn method Y -- even if method Y is clearly the better choice. Rust has received a lot of criticism from renowned developers for ridiculous reasons, such as being unable to have two mutable references to the same object. That's how they'd do it in C, so it must be the right way, even though `Alias XOR mutability` is a common design principle. This problem is relevant in this dissertation for two reasons. Static analysis tools run into the same mentality issues @coverity, and it shows that it's important to never pick up bad habits in the first place. The field of application of this dissertation is ultimately helping students learn how to program, before they even have any bad habits. 
 
-### Middle Ground
+### Tools
 
-It's unrealistic to expect that all programs be rewritten in safe languages. That doesn't mean that we should abandon all hope of having reliable programs though. This is why analysis tools have emerged; to fill the void. 
-
-There is a class of static analysers that's particularly interesting, the linters. What sets them apart from other tools is that they report error prone patterns rather than actual errors. Preventing bugs is better than fixing them. One of the most renowned linting tools is JSLint, its Github page contains the following wisdom @jslint:
+Linters are a class of static analysers that are particularly interesting. They're made to report error prone patterns during development to prevent actual errors, which is what sets them apart from other analysis tools. In order to do this they have to be very efficient, so that feedback can be given while the code is being written. Other analysis tools such as Coverity are usually only run nightly, or once per commit alongside unit testing @coverity. This also means that the analysis they're able to do is usually quite shallow, and purely syntactic. That doesn't make them any less useless however, they just generally bad patterns such as shadowing builtin function or writing long functions. One of the most renowned linting tools is JSLint, its Github page contains the following wisdom which describes the underlying philosophy quite well @jslint:
 
 \say{The place to express yourself in programming is in the quality of your ideas and
 the efficiency of their execution. The role of style in programming is the same
@@ -248,11 +243,12 @@ creatively.}
 
 Few developers should find anything anything wrong in that reasoning. The main point of contention is which rules to follow. Crockford is a proponent of using certain language features sparsely @goodparts. In his book titled Javascript: The Good Parts he describes which features of Javascript he deems good (or great and even beautiful) and which parts should be avoided. The bad parts are everything that lead to error prone code in his experience, the usual example is the `switch` statement. He has given a presentation at Yahoo where he gives more examples of why JSLint discourages the patterns that it does @crockford. 
 
-## Inspirations
+All analysis tools serve a common purpose but are ultimately still very diverse. Static and dynamic analysis tools do things very differently and even within static analysis tools there's a lot of variation. Linters work mostly syntactical, focusing on speed and immediate feedback. Other tools like Coverity do a much deeper analysis and usually run nightly @coverity. Another major difference among static analysers is soundness. Sound analysis tools are based on formal logic and more generally more comprehensive, but slower and more prone to false positives @soundness. Analysis of dynamic languages relies heavily on abstract interpeters [@interpret; @jsure; @madsen], and the closely related domain of symbolic execution which is discussed in section \ref{symbolic-execution} is applied to all languages for automated unit testing. 
 
-Analysis tools all serve a common purpose but are ultimately still very diverse. Static and dynamic analysis tools do things very differently and even within static analysis tools there's a lot of variation. Linters work mostly syntactical, focusing on speed and immediate feedback. Other tools like Coverity do a much deeper analysis and usually run nightly. Another major difference among static analysers is soundness. Generally speaking, sound analysis tools are based on formal logic, slower, more comprehensive but more prone to false positives. Unsound methods seem to coming out on top as most practical languages are unsound themselves @unsound. Others simply say that it doesn't matter how you do it, as long as the results are good @coverity.
+Which all these different approaches to the same problem, one might wonder which is the best.  Unsound methods seem to coming out on top as most practical languages are unsound themselves @unsound. Others simply say that it doesn't matter how you do it, as long as the results are good @coverity. Every approach has its own pros and cons, and users can always use multiple ones to get the best possible coverage. 
 
-### Code Smells
+## Code Smells
+
 \begin{code}
 \centering
   \begin{tcblisting}{listing only, 
@@ -261,7 +257,7 @@ Analysis tools all serve a common purpose but are ultimately still very diverse.
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 x += 1
 y += 1
@@ -278,7 +274,7 @@ w = z - 1
 \caption{Duplication}\label{smp:duplication}
 \end{code}
 
-More important than how to do the analysis is perhaps what to look for. Code smells are a taxonomy of indicators that something may not be right in the code. The term was coined by Kent Beck in a book on refactoring @refactor. In that book code smells are indicators that some refactoring might be necessary. Aimed at software architects, they're informal descriptions of things that may induce technical debt. They're not actual bugs yet but error prone patterns, the sort of things Linters aim to detect. One of the code smells ins _cyclomatic complexity_, i.e. having too many branches or loops. This is something Pylint also recognizes. What Pylint lacks however is the refactoring aspect of the code smell. Code smells were meant to be refactored manually by professional software architects, but in an educational setting you have to take into account that the students may not be able to refactor it themselves. 
+More important than how to do the analysis is perhaps what to look for. Code smells are a taxonomy of indicators that something may not be quite right in the code, and the term was coined in a book on refactoring @refactor. In that book code smells are indicators that some refactoring might be necessary. They're aimed at software architects, and are informal descriptions of things that may induce technical debt. They're not actual bugs yet but error prone patterns, the sort of things linters aim to detect. One of the code smells is _cyclomatic complexity_, i.e. having too many branches or loops. This is something linters also detect, but those lack the refactoring aspect of the code smell. 
 
 \begin{code}
 \centering
@@ -288,7 +284,7 @@ More important than how to do the analysis is perhaps what to look for. Code sme
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 def foo(x):
     x += 1
@@ -302,9 +298,7 @@ w = foo(z)
 \caption{Refactored version of sample \ref{smp:duplication}}\label{smp:duplication_f}
 \end{code}
 
-There are also code smells that linters currently do not pick up because they'd require deep analysis. The most notable of which would be the _Code Duplication_ smell. JetBrains has developed some of the best refactoring IDEs such as IntelliJ and PyCharm, but started off by developing code refactoring tools such as IntelliJ Renamer for Java and Resharper for C#. Made for commercial code bases, these tools are ultimately advanced heuristics that still miss obvious duplication. PyCharm 2016 was unable to find the duplication in code sample \ref{smp:duplication}. Even it should probably be refactored to something like code sample \ref{smp:duplication_f}.
-
-
+Code smells were meant to be refactored manually by professional software architects, so they may not always be useful in an academic setting as the user might not be able to fix it themselves. There are also code smells that linters currently do not pick up because they'd require deep analysis. The most notable of which would be the _Code Duplication_ smell. JetBrains has developed some of the best refactoring IDEs such as IntelliJ and PyCharm, but started off by developing code refactoring tools such as IntelliJ Renamer for Java and Resharper for C`#`. These are made for large commercial code bases,  and are ultimately advanced heuristics that still miss obvious duplication. PyCharm 2016 was unable to find the duplication in code sample \ref{smp:duplication}. Even it should probably be refactored to something like code sample \ref{smp:duplication_f}.
 
 \begin{code}
 \centering
@@ -314,7 +308,7 @@ There are also code smells that linters currently do not pick up because they'd 
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 x += 1
 x = sqrt(x)
@@ -331,7 +325,7 @@ w = z - 1
 \caption{Alternative order of sample \ref{smp:duplication}}\label{smp:duplication_2}
 \end{code}
 
-JetBrain's tools are closed source so it's unclear whether or not \ref{smp:duplication} was deemed too simple to refactor. Assuming they work in a similar fashion as competing tools however, it's the order of statements that causes it to fail. Tools like Simian, Sonar, PMD, and Dup Loc all work on a token stream in the same order as it appears in the file. Code sample \ref{smp:duplication_2} illustrates how sample \ref{smp:duplication} could be reordered so that tools can detect the duplication just fine. 
+JetBrain's tools are closed source so it's unclear whether or not \ref{smp:duplication} was deemed too simple to refactor. Assuming they work in a similar fashion as competing tools however, it's the order of statements that causes it to fail. Tools like PMD, Duploc, and CCFinder all work on a token stream in the same order as it appears in the file [@pmd; @duploc; @ccfinder]. Code sample \ref{smp:duplication_2} illustrates how sample \ref{smp:duplication} could be reordered so that tools can detect the duplication just fine. Compiler technology is a much more active field of research than duplication detection, and the problem of reordering instructions occurs there as well. One of their solutions is discussed in section \ref{ssa} which discusses the Static Single Assignment (SSA) form. 
 
 \begin{code}
 \centering
@@ -341,7 +335,7 @@ JetBrain's tools are closed source so it's unclear whether or not \ref{smp:dupli
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 x = []
 
@@ -367,7 +361,7 @@ When analyzing student code, this can be a serious limitation. Consider code sam
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 x = []
 
@@ -378,7 +372,7 @@ for _ in range(4):
 \caption{Refactored version of sample \ref{smp:duplication_3}} \label{smp:duplication_3_f}
 \end{code}
 
-Compilers face the same problem; their refactorings are optimizations. We'll revisit this problem in a later section about the Static Single Assignment (SSA) form. 
+\ 
 
 There are some other code smells besides code duplication that could be interesting for new programmers. The following list contains some that at first glance look like the most promising.
 
@@ -388,15 +382,15 @@ There are some other code smells besides code duplication that could be interest
   * _Excessive use of literals_: Also known as magic numbers, these should probably become descriptive constants.
   * _Cyclomatic complexity_: Too many branches, also informally referred to as _spaghetti code_. Linters do a fair job at pointing them out but offer little help in fixing them.
 
-### Compilers
+## Compilers
 
-Static analysers aren't the only tools that aim to make code better -- compilers do so as well. Refactoring from a software architect's point of view is aimed at making the code easier to read and maintain. Optimizations are aimed at making code more efficient. These two things sometimes do completely opposite things, unfolding the loop in \ref{smp:duplication_3_f} results in sample \ref{smp:duplication_3} for example. Both operations transform code in a conservative manner though, i.e. without changing the semantics (of valid code). Optimization is a very active area of research, with companies like Google and Apple working on the LLVM, Oracle on the JVM, Red Hat on the GCC, ... More importantly, even the most esoteric features in compilers have proven their worth as they're part of a real product, which gives confidence that a static analysis that uses the same principles will work as well.
+Static analysers aren't the only tools that aim to make code better -- compilers do so as well. Refactoring from a software architect's point of view is aimed at making the code easier to read and maintain. Optimizations are aimed at making code more efficient. These two things sometimes do completely opposite things, unfolding the loop in sample \ref{smp:duplication_3_f} results in the code in sample \ref{smp:duplication_3} for example. Both operations transform code in a conservative manner though, i.e. without changing the semantics (of valid code). Optimization is a very active area of research, with companies like Google and Apple working on the LLVM, Oracle on the JVM, Red Hat on the GCC, \ldots \ More importantly, even the most esoteric features in compilers have proven their worth as they're part of a real product, which gives confidence that an analyzer that uses the same principles will work as well.
 
-#### SSA
+### SSA
 
-Static Single Assignment (SSA) form is a program representation that's well suited to a large number of compiler optimization such as constant propagation @constant, global value numbering @equality, and code equivalance detection @equivalent. The term was first used in a paper by IBM @equality in the 80s but had little practical success initially. It wasn't until several optimizations were found [@increment; @dominance] that it started becoming popular. Since then it's found its way into most popular compilers. LLVM has used it for its virtual instruction set since its inception in 2002 @lattner, it's what powered Java 6's JIT @hotspot, and it's what's behind recent GCC optimizations [@memoryssa; @treessa].
+Static Single Assignment (SSA) form is a program representation that's well suited to a large number of compiler optimization such as constant propagation @constant, global value numbering @equality, and code equivalance detection @equivalent. It was introduced in a paper by IBM @equality in the 80s but had little practical success initially. It wasn't until several optimizations were found [@increment; @dominance] that it started becoming popular. Since then it's found its way into most popular compilers. LLVM has used it in its virtual instruction set since its inception in 2002 @lattner, it's what powered Java 6's JIT @hotspot, and it's what's behind recent GCC optimizations [@memoryssa; @treessa].
 
-The idea is very simple, every variable can only be assigned to once. This can be done by adding incremental numbers to each variable. For example, `x = x + 1` becomes $\texttt{x}_1 \texttt{ = x}_0 \texttt{ + 1}$. This is a trivial transformation for straight-line code but becomes a bit harder when dealing with branches. Figure \ref{fig:ssa} illustrates how to handle such code. Every branch introduces new variables as before and a _phi-node_ gets inserted at the of the branch. This node mimics a function call which can return either of its two arguments. This doesn't correspond to an actual function call, it's just a token that gets inserted to help with the analysis. 
+The idea is very simple, every variable can only be assigned to once. This can be done by adding incremental numbers to each variable. For example, `x = x + 1` becomes $\texttt{x}_1 \texttt{ = x}_0 \texttt{ + 1}$. This is a trivial transformation for straight-line code but becomes a bit harder when dealing with branches. Figure \ref{fig:ssa} illustrates how to this is solved. Every branch introduces still new variables, and a _phi-node_ gets inserted at the of the branch. This node mimics a function call which can return either of its two arguments. This doesn't correspond to an actual function call, it's just a token that gets inserted to help with the analysis. 
 
 \begin{figure}
     \centering
@@ -414,27 +408,29 @@ The idea is very simple, every variable can only be assigned to once. This can b
     \label{fig:ssa}
 \end{figure}
 
-##### Memory SSA
+#### Memory SSA
 
-The SSA form has a lot of benefits, as cited in the beginning of this section, but is limited to scalar values and is not well suited for structures and arrays. One of the solutions to this problem is Memory SSA as implemented by GCC @memoryssa. This is a transformation that runs on a sufficiently low-level representation of the source code. It has to be low-level so that there's a notion of `LOAD` and `STORE` instructions. 
+The SSA form has a lot of benefits, as cited in the beginning of this section, but is limited to scalar values and is not well suited for structures and arrays. One of the solutions to this problem is Memory SSA as implemented by GCC @memoryssa. This is a transformation that runs on a sufficiently low-level representation of the source code, where there's a notion of `LOAD` and `STORE` instructions. 
 
 Because the actual memory locations are not known during compilation some abstractions are needed. GCC uses compiler symbols which they called tags to represent regions of memory along with two virtual operators `VDEF` and `VUSE`. For every `LOAD` a `VUSE` of some tag(s) gets inserted, and likewise for `STORE` and `VDEF`. 
 
+\ 
+
 There are three types of tags:
 
-  * _Symbol Memory Tag_ (SMT): These are the result of a flow-insensitive alias analysis and is almost purely type-based. For example, all dereferences of an `int*` receive the same tag.
-  * _Name Memory Tag_ (NMT): These are the result of a points-to analysis applied after the program is in SSA form and inherits its flow-sensitive properties @memoryssa. In other words, multiple SSA forms get used. 
+  * _Symbol Memory Tag_ (SMT): These are the result of a flow-insensitive alias analysis and is almost purely type-based. For example, all dereferences of an `int*` receive the same tag to reflect the fact that they might point to the same memory location.
+  * _Name Memory Tag_ (NMT): These are the result of a points-to analysis applied after the program is in a SSA form and inherits its flow-sensitive properties @memoryssa. In other words, the GCC uses multiple different SSA forms.
   * _Structure Field Tags_ (SFT): These are symbolic names for the elements of structures and arrays. 
 
-Tags get used in a similar way as variables in the regular SSA algorithm. Assigning to a tag is like assigning to all symbols that have received that tag. In the original implementation, _call clobbering_, i.e. a function call overwrites some memory of an argument, such as in code sample \ref{smp:aliasing} is handled the same way as global variables @memoryssa. Quoting the authors: \say{All call clobbered objects are grouped in a single set}. The current implementation has rewritten all call-clobber related code to use an _aliasing-oracle_ @oracle.
+Tags get used in a similar way as variables in the regular SSA algorithm. Assigning to a tag is like assigning to all symbols that have received that tag. In the original implementation, _call clobbering_, i.e. a function call that alters the state of one of its arguments such as in code sample \ref{smp:aliasing}, is handled the same way as global variables @memoryssa. All  arguments that are known to get clobbered sometimes are put into a single set, calling a functions that would clobber one of them is assumed to clobber all of them. This pessimistic approach has been replaced in recent implementations, all related code has been rewritten to use an _aliasing-oracle_ @oracle.
 
-LLVM's usage of Memory SSA is not quite as documented. Their documentation refers to GGC's paper [@memoryssa; @memoryssallvm] and mention that \say{Like GCC’s, LLVM’s MemorySSA is intraprocedural.}. As mentioned in the previous section, this isn't entirely true for GCC anymore. It doesn't seem to be true for LLVM either, a recent publication describes _Static Value-flow_ analysis which produces an interprocedural SSA form @svf. It has been part of LLVM since 2016 and like GCC's implementation it uses the results of an external points-to analysis.
+LLVM's usage of Memory SSA is not quite as documented. Their documentation refers to GGC's paper [@memoryssa; @memoryssallvm] and mentions that \say{Like GCC’s, LLVM’s MemorySSA is intraprocedural.}. As mentioned in the previous section, this isn't entirely true for GCC anymore. It doesn't seem to be true for LLVM either, a recent publication describes _Static Value-flow_ analysis which produces an interprocedural SSA form @svf. It has been part of LLVM since 2016 and like GCC's implementation it uses the results of an external points-to analysis.
 
-### Symbolic Execution
+## Symbolic Execution
 
-Rather than using concrete values, symbolic execution uses symbolic values. Those values represent possible values through a set of constraints. This technique is commonly used to find interesting corner cases for unit testing [@symb1; @symb2; @symb3] and the original SSA paper used similar principles as well to make their analysis more precise @equality.
+Rather than using concrete values, symbolic execution uses symbolic values. Those values represent possible values through a set of constraints. This technique is commonly used to find interesting corner cases for unit testing [@symb1; @symb2; @symb3] and the original SSA paper used similar principles to make their analysis more precise @equality.
 
-At each branch point a _path constraint_ gets introduced, which is a symbolic expression that must be true for the current branch to be taken. If there are no values that satisfy all the constraints, the branch gets flagged as dead code. In the case of a static analysis tool this will most likely result in a warning, a compiler will just remove the dead branch. For example, consider code sample \ref{smp:symb}. `y > 0` becomes a constraint during the execution of the positive branch, as well as `x > -1`. The former constraint is pretty simple to add, the latter requires some serious bookkeeping. Symbolic execution is closely related to data-flow analysis.
+At each branch point a _path constraint_ gets introduced, which is a symbolic expression that must be true for the current branch to be taken. If there are no values that satisfy all the constraints, the branch gets flagged as dead code. In the case of a static analysis tool this will most likely result in a warning, while a compiler would just remove the dead branch. For example, consider code sample \ref{smp:symb}. `y > 0` becomes a constraint during the execution of the positive branch, as well as `x > -1`. The former constraint is pretty simple to add, the latter requires some serious bookkeeping. Which implies a close relation between symbolic execution and data-flow analysis.
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -443,7 +439,7 @@ At each branch point a _path constraint_ gets introduced, which is a symbolic ex
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 x = int(input())
 y = x + 1
@@ -456,9 +452,11 @@ else:
 \caption{Symbolic Execution} \label{smp:symb}
 \end{code}
 
-Symbolic execution is a very powerful tool but comes with a few limitations. One is the _state explosion problem_, the number of paths can increase _very_ fast. The Java Pathfinder manages this problem using state matching and backtracking @symb2. State matching will check if a similar state has already been processed, if it has it will backtrack to the next state that still has unexplored choices. 
+Symbolic execution is a very powerful tool but comes with a few limitations. One is the _state explosion problem_, the number of paths can increase very fast. The Java Pathfinder manages this problem using state matching and backtracking @symb2. State matching will check if a similar state has already been processed, if it has it will backtrack to the next state that still has unexplored choices. 
 
-Another limitation is that symbolic executors typically work on scalar values. Things get a lot harder when dealing with structures and collections. Consider code sample \ref{smp:symb2} for example which defines a function `foo` that prints `homogeneous` if and only if its argument is a collection and all elements in that collection are of the same type. Not only does the positive branch introduce a constraint on the length of `x`, all elements have to be of the same unspecified type as well. The most advanced symbolic executor for Python seems to be PyExZ3 but even that one doesn't handle heterogeneous collections. The relation between uniqueness and the length of a set is also non-trivial, even though it's a very _pythonic_ pattern. 
+An advanced symbolic executor for Python is PyExZ3 [@symbex; @symbex2], which is built on top Microsoft Research's Z3 theorem prover. Z3 is a remarkably good fit to reason about programming languages and even supports strings and other sequences @z3. There are even extensions that add support for regular expressions and other advanced constraints @z3str. As another team at Microsoft Research has pointed out however, sound methods such as symbolic execution tend to run into problem when applied to unsound languages @unsound. Z3 relies heavily on type information, which is not present in Python code. Lists and dictionaries are still open challenges @symbex, as Z3 requires an element type upon declaring a sequence @z3. 
+
+Symbolic executors typically focus on scalar values, collections tend to be really harder to analyze. Consider code sample \ref{smp:symb2} for example which defines a function `foo` that prints `homogeneous` if and only if its argument is a collection and all elements in that collection are of the same type. The positive branch introduces a constraint on the length of `x`, Z3 can already handle this quite well. The relation between uniqueness and the length of a set is considerably harder though, and it's a very _pythonic_ pattern. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -467,7 +465,7 @@ Another limitation is that symbolic executors typically work on scalar values. T
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 def foo(x):
   if len(set(map(type, x))) == 1:
@@ -480,34 +478,33 @@ def foo(x):
 
 # Fosite
 
-Named after the Frisian god Fosite and foresight, Fosite is the name of the abstract interpreter developed for this thesis. A relatively unknown god, Fosite is the god of reconciliation, justice, and mediation. These are also qualities that a static analyser should aim to have to gain a user's trust @coverity.
+A play on words based on foresight and the Frisian god Foseti, Fosite is the name of the abstract interpreter developed for this dissertation. A relatively unknown god, Fosite is the god of reconciliation, justice, and mediation. These are precisely the qualities that a static analyser should have to gain a user's trust @coverity.
 
 ## Area of Application
 
-Unlike most existing tools, Fosite's focus is analysing small student submissions. This has both advantages and disadvantages. The biggest advantage is that we're free to explore precise but inefficient methods. Not entirely free however, since feedback should be fast ($< 1s$) because a lot of students will send a lot of submissions at the same time. Imagine being a stressed out student, working on your final exam and every submission takes a minute to run because submissions come in faster than they get processed. It would also be nice if the tool has little runtime dependencies, since by the Dodona design it'll have to run in Docker containers. These two requirements make the Rust programming language a good fit, since it generates fast native code without the unexpected problems C and C++ might induce.
+Unlike most existing tools, Fosite's focus is analysing small student submissions. This comes with both advantages and disadvantages. The biggest advantage is that we're free to explore precise but inefficient methods. Not entirely free however, feedback should still be fast. Imagine being a stressed out student, working on your final exam and every submission takes a minute to run because submissions come in faster than they get processed. 
 
-Perhaps the most requirement of all, any warnings have to be as detailed as possible. More details should make the errors more convincing and will be met with less resistance from the user @coverity. This is important when dealing with new programmers; simply pointing out bad style is not enough if that person does not know how to fix it themselves. Fosite uses a data-flow analysis to pinpoint the source of problems and uses that information to inform the user. 
+The most important requirement of all is that all warnings have to be as helpful as possible. Providing the right details should make the errors more convincing and will be met with less resistance from the user @coverity. This is important when dealing with new programmers; simply pointing out bad style is not enough if the user does not know how to fix it. Fosite uses a data-flow analysis to pinpoint the source of problems and uses that information to inform the user. 
 
 The analysis should work as close as possible to the submitted code and at the very least maintain a one-to-one relationship to it. This is important because the end goal is automated refactoring, which becomes hard when the input becomes mangled beyond recognition. 
 
 ## Approach
 
-As a first step towards automated refactoring, Fosite is an abstract interpreter with the intention of doing a data-flow analysis. This by itself isn't entirely new; PyPy uses a similar principle to power their optimizations @pypy. PyPy's solution is intraprocedural though which isn't ideal. Others have successfully used abstract interpreters to perform a may-alias analysis on Python with the goal of optimization @interpret. Fosite is based on their conclusions and results but is ultimately made for a different cause, i.e. detailed static analysis. 
+The initial goal was developing a tool that recognizes error prone patterns in a more thorough way than linters, based on techniques used in compilers. The SSA form is a good starting point for many optimizations, and should also be useful for automated refactoring as well. The PyPy interpreter for Python constructs this form using an abstract interpreter @pypy, although their solution is intraprocedural. Others have successfully used abstract interpreters to perform a may-alias analysis on Python with the goal of optimization @interpret. Fosite is based on their conclusions and results but is ultimately made for a different cause, i.e. detailed static analysis and automated refactoring. 
 
-The result isn't exactly an SSA form. The Memory SSA approach by the GCC and LLVM isn't an option since that relies on a low-level representation. That's a luxury we don't have, we need to stay close to the original source code. Regular SSA is of course an option since PyPy does it @pypy, but is limited to intraprocedural analysis. 
+The result isn't exactly an SSA form. The Memory SSA approach by the GCC and LLVM is a bad fit since it relies on a low-level representation, which is a luxury we don't have as we need to stay close to the original source code. Regular SSA is of course an option since PyPy does it @pypy, but is less precise than we'd like. 
 
-Fosite generates _use-def_ information instead. 
+Fosite emits more general _use-def_ information instead. 
 A _use_ refers to any data dependency, such as resolving a variable name or retrieving an element from a collection. 
-A _def_ is the inverse such as assigning something to a variable name or inserting an element into a collection. 
+A _def_ is the opposite such as assigning something to a variable name or inserting an element into a collection. 
 Within Fosite, a _use_ and a _def_ are respectively called a dependency and a change. 
 As with SSA, incremental numbering can be applied to subsequent changes.
 The main difference with regular SSA is that this requires a separate data structure. 
-This allows a single expression or statement to have multiple changes. 
-For example, a conditional statement's dependencies and changes are the sum of its branches'. 
-A conditional statement is exactly that -- a statement, and it can be useful during refactoring to treat it as a single atomic thing. 
-Another useful consequence of this is that a function call can induce multiple changes, for each of its call clobbered arguments.
+This allows a single expression or statement to cause multiple changes. 
+A conditional statement is exactly that -- a statement, and it can be useful during refactoring to treat it as a single atomic thing. Its dependencies and changes are the sum of its branches's. In other words, the external data structure allows for a more hierarchical analysis. Another useful consequence is that a function call can cause multiple changes, for each of its call clobbered arguments.
 
-To achieve the same level of precision as Memory SSA, Fosite uses two kinds of changes and dependencies. For starters, there's the usual identifier dependency, which is useful for to model reachability of data. Consider code sample \ref{smp:dep} in which `x` gets defined twice. In between assignments the first value of `x` gets used to call in a call to `print`. This gets modeled using an identifier dependency. Another sort of dependency is the object dependency, which is useful to model an internal state dependency. The second assignment to `x` assigns a list to it, which gets printed as well. Before printing however an element gets appended to it. Appending an element to a list doesn't change anything about the identifier and thus can't be modeled in the same way. In other words, the final call to `print` has a dependency to both the `x` identifier and to whichever object `x` points to at the same time -- and both dependencies serve their own purpose. 
+To achieve the same level of precision as Memory SSA, Fosite uses two kinds of changes and dependencies. For starters, there's the usual identifier dependency, which is used to model reachability of data. Consider code sample \ref{smp:dep} in which `x` gets defined twice. In between assignments the first value of `x` gets used to call in a call to `print`. The `print` must come before the second assignment to `x`, as the intended data is no longer reachable after the assignment. 
+Another sort of dependency is the object dependency, which is used to model a state dependency. The second assignment to `x` assigns a list to it, which gets printed as well. Before printing however an element gets appended to it. Appending an element to a list doesn't change anything about the identifier and thus can't be modeled in the same way. In other words, the final call to `print` has a dependency to both the `x` identifier and to whichever object `x` points to at the same time -- and both dependencies serve their own purpose. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -745,7 +742,7 @@ When executing an execution branch, we can have information about why that speci
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={xleftmargin=-8pt, linenos},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg}
 if cond1: # Condition 1
   y = None

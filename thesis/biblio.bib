@@ -46,11 +46,22 @@
   note = {Accessed: 2017-02-13}
 }
 
-@misc{cdev,
-  title = { The Development of the C Language },
-  howpublished = {\url{https://www.bell-labs.com/usr/dmr/www/chist.html}},
-  note = {Accessed: 2017-02-13}
-}
+@inproceedings{cdev,
+ author = {Ritchie, Dennis M.},
+ title = {The Development of the C Language},
+ booktitle = {The Second ACM SIGPLAN Conference on History of Programming Languages},
+ series = {HOPL-II},
+ year = {1993},
+ isbn = {0-89791-570-4},
+ location = {Cambridge, Massachusetts, USA},
+ pages = {201--208},
+ numpages = {8},
+ url = {http://doi.acm.org/10.1145/154766.155580},
+ doi = {10.1145/154766.155580},
+ acmid = {155580},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+} 
 
 @misc{lattner,
   title = { What Every C Programmer Should Know About Undefined Behavior },
@@ -462,4 +473,149 @@ isbn = {},
  publisher = {ACM},
  address = {New York, NY, USA},
  keywords = {alias analysis, dynamic languages, optimization, type analysis},
+} 
+
+@article{visser,
+ author = {Visser, Willem and Havelund, Klaus and Brat, Guillaume and Park, Seungjoon and Lerda, Flavio},
+ title = {Model Checking Programs},
+ journal = {Automated Software Engg.},
+ issue_date = {April 2003},
+ volume = {10},
+ number = {2},
+ month = apr,
+ year = {2003},
+ issn = {0928-8910},
+ pages = {203--232},
+ numpages = {30},
+ url = {http://dx.doi.org/10.1023/A:1022920129859},
+ doi = {10.1023/A:1022920129859},
+ acmid = {641186},
+ publisher = {Kluwer Academic Publishers},
+ address = {Hingham, MA, USA},
+ keywords = {Java, abstraction, model checking, runtime analysis, static analysis, symmetry},
+} 
+
+@inproceedings{jsure,
+ author = {Jensen, Simon Holm and M{\o}ller, Anders and Thiemann, Peter},
+ title = {Type Analysis for JavaScript},
+ booktitle = {Proceedings of the 16th International Symposium on Static Analysis},
+ series = {SAS '09},
+ year = {2009},
+ isbn = {978-3-642-03236-3},
+ location = {Los Angeles, CA},
+ pages = {238--255},
+ numpages = {18},
+ url = {http://dx.doi.org/10.1007/978-3-642-03237-0_17},
+ doi = {10.1007/978-3-642-03237-0_17},
+ acmid = {1615460},
+ publisher = {Springer-Verlag},
+ address = {Berlin, Heidelberg},
+} 
+
+@article{mypy,
+ author = {Jukka},
+ title = {Mypy Documentation},
+} 
+
+@article{netflix,
+ author = {Brendan Gregg},
+ title = {Node.js in Flames},
+} 
+
+@article{facebook,
+ author = {Julien Verlaguet, Alok Menghrajani},
+ title = {Hack: a new programming language for HHVM},
+} 
+
+@article{soundness,
+ author = {Yichen Xie, Mayur Naik, Brian Hackett, Alex Aiken},
+ title = {Soundness and its Role in Bug Detection Systems},
+} 
+
+@book{pmd,
+  title={PMD Applied: An Easy-to-use Guide for Developers},
+  author={Copeland, T.},
+  isbn={9780976221418},
+  lccn={2005907843},
+  series={An easy-to-use guide for developers},
+  url={https://books.google.be/books?id=Pj\_8AAAACAAJ},
+  year={2005},
+  publisher={Centennial Books}
+}
+
+@article{duploc,
+ author = {Matthias Rieger, Stéphane Ducasse
+Software Composition Group, University of Berne},
+ title = {Visual Detection of Duplicated Code},
+} 
+
+@article{ccfinder,
+ author = {Kamiya, Toshihiro and Kusumoto, Shinji and Inoue, Katsuro},
+ title = {CCFinder: A Multilinguistic Token-based Code Clone Detection System for Large Scale Source Code},
+ journal = {IEEE Trans. Softw. Eng.},
+ issue_date = {July 2002},
+ volume = {28},
+ number = {7},
+ month = jul,
+ year = {2002},
+ issn = {0098-5589},
+ pages = {654--670},
+ numpages = {17},
+ url = {http://dx.doi.org/10.1109/TSE.2002.1019480},
+ doi = {10.1109/TSE.2002.1019480},
+ acmid = {636191},
+ publisher = {IEEE Press},
+ address = {Piscataway, NJ, USA},
+ keywords = {CASE tool, code clone, duplicated code, maintenance, metrics},
+} 
+
+@techreport{symbex,
+author = {Ball, Tom and Daniel, Jakub},
+title = {Deconstructing Dynamic Symbolic Execution},
+booktitle = {The 2014 Marktober Summer School on Deop},
+year = {2015},
+month = {January},
+abstract = {
+
+Dynamic symbolic execution (DSE) is a well-known technique for automatically generating tests to achieve higher levels of coverage in a program. Two keys ideas of DSE are to: (1) seed symbolic execution by executing a program on an initial input; (2) using concrete values from the program execution in place of symbolic expressions whenever symbolic reasoning is hard or not desired. We describe DSE for a simple core language and then present a minimalist implementation of DSE for Python (in Python) that follows this basic recipe. The code is available at https://www.github.com/thomasjball/PyExZ3/ (tagged v1.0) and has been designed to make it easy to experiment with and extend.
+
+
+},
+publisher = {IOS Press},
+url = {https://www.microsoft.com/en-us/research/publication/deconstructing-dynamic-symbolic-execution/},
+address = {},
+pages = {},
+journal = {Proceedings of the 2014 Marktoberdorf Summer School on Dependable Software Systems Engineering},
+volume = {},
+chapter = {},
+isbn = {},
+}
+
+@article{symbex2,
+ author = {Alessandro Bruni, Tim Disney, Cormac Flanagan},
+ title = {A Peer Architecture for Lightweight Symbolic Execution},
+} 
+
+@Inbook{z3,
+author="de Moura, Leonardo
+and Bj{\o}rner, Nikolaj",
+editor="Ramakrishnan, C. R.
+and Rehof, Jakob",
+title="Z3: An Efficient SMT Solver",
+bookTitle="Tools and Algorithms for the Construction and Analysis of Systems: 14th International Conference, TACAS 2008, Held as Part of the Joint European Conferences on Theory and Practice of Software, ETAPS 2008, Budapest, Hungary, March 29-April 6, 2008. Proceedings",
+year="2008",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="337--340",
+isbn="978-3-540-78800-3",
+doi="10.1007/978-3-540-78800-3_24",
+url="http://dx.doi.org/10.1007/978-3-540-78800-3_24"
+}
+
+@article{z3str,
+ author = {Yunhui Zheng, Vijay Ganesh, 
+  Sanu Subramanian, Omer Tripp, 
+  Murphy Berzish, Julian Dolby,
+  Xiangyu Zhang},
+ title = {Z3str2: An Efficient Solver for Strings, Regular Expressions, and Length Constraints},
 } 
