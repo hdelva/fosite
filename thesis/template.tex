@@ -1,10 +1,7 @@
-\documentclass[$if(fontsize)$$fontsize$,$endif$$if(lang)$$babel-lang$,$endif$$if(papersize)$$papersize$,$endif$$for(classoption)$$classoption$$sep$,$endfor$]{$documentclass$}
-$if(fontfamily)$
+\documentclass[a4paper, 16pt, oneside]{Thesis}
 
-\usepackage{$fontfamily$}
-$else$
 \usepackage{lmodern}
-$endif$
+
 $if(linestretch)$
 \usepackage{setspace}
 \setstretch{$linestretch$}
@@ -15,6 +12,9 @@ $endif$
 
 \usepackage{dirtytalk}
 
+\usepackage{amsthm}
+%\newtheorem{definition}{Definition}
+\newtheorem{observation}{Observation}
 
 \usepackage[nameinlink]{cleveref}    
 
@@ -34,21 +34,16 @@ $endif$
 \usepackage{microtype}
 \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
 }{}
-\usepackage{geometry}
-\geometry{%
-letterpaper, % a4paper
-left=   40 mm,
-right=  40 mm,
-top=    15 mm,
-bottom= 20 mm,
-}
-\ifxetex
-  \usepackage[setpagesize=false, % page size defined by xetex
-              unicode=false, % unicode breaks when used with xetex
-              xetex]{hyperref}
-\else
-  \usepackage[unicode=true]{hyperref}
-\fi
+%\usepackage{geometry}
+%\geometry{%
+%letterpaper, % a4paper
+%left=   40 mm,
+%right=  40 mm,
+%top=    15 mm,
+%bottom= 20 mm,
+%}
+
+
 \usepackage[usenames,dvipsnames]{color}
 \hypersetup{breaklinks=true,
             bookmarks=true,
@@ -194,18 +189,58 @@ $endfor$
 
 \definecolor{bg}{HTML}{F0F3F3}
 
+\usepackage{letltxmacro}
+\LetLtxMacro{\oldhypertarget}{\hypertarget}
+\renewcommand{\hypertarget}[2]{\leavevmode\oldhypertarget{#1}{#2}}
+
 
 \begin{document}
+
+\title  {Static Analysis of Dynamic Languages}
+\authors  {\texorpdfstring
+            {\href{harm.delva@gmail.com}{Harm Delva}}
+            {Harm Delva}
+            }
+\date       {\today}
+\subject    {}
+\keywords   {}
+
+\maketitle
+
+\setstretch{1.3}
+            
+\pagenumbering{gobble}
+
+% The Preface page, for thanking everyone.
+%\preface{
+%Fuck all of you.
+%}
+%\clearpage
+
+\abstracts{
+
+\section*{Abstract}
+
+EN
+
+\clearpage
+
+\section*{Abstract}
+
+NL
+}
+\clearpage
+
+
 \tableofcontents
 
-$if(title)$
-\maketitle
-$endif$
-$if(abstract)$
-\begin{abstract}
-$abstract$
-\end{abstract}
-$endif$
+\hypersetup{
+    colorlinks = true,
+}
+
+\mainmatter
+
+\pagenumbering{arabic}
 
 $for(include-before)$
 $include-before$
@@ -226,6 +261,8 @@ $if(lof)$
 $endif$
 $body$
 
+\interlinepenalty=10000
+
 $if(natbib)$
 $if(bibliography)$
 $if(biblio-title)$
@@ -235,6 +272,9 @@ $else$
 \renewcommand\refname{$biblio-title$}
 $endif$
 $endif$
+
+
+
 \bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
 
 $endif$
@@ -247,4 +287,6 @@ $for(include-after)$
 $include-after$
 
 $endfor$
+
+
 \end{document}

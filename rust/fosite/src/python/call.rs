@@ -100,7 +100,7 @@ impl CallExecutor for PythonCall {
                 }
             }
 
-            let _ = vm.pop_path();
+            vm.pop_path();
             
             vm.next_branch(&body_changes);
         }

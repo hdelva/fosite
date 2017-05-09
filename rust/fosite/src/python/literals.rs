@@ -286,7 +286,7 @@ fn collection_from_comprehension(
     // disregard the return value
     let _ = vm.merge_function(&changes);
 
-    let _ = vm.pop_path();
+    vm.pop_path();
 
     let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
 

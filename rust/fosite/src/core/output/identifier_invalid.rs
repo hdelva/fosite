@@ -60,7 +60,7 @@ impl MessageContent for IdentifierInvalid {
                  Bold.paint(&self.name));
         println!("  In the following cases:");
 
-        let relevant_paths = self.reduce_paths(sources, &self.paths);
+        let relevant_paths = &self.paths;//self.reduce_paths(sources, &self.paths);
 
         if relevant_paths.len() == 0 {
             println!("    {}", Red.bold().paint("Always"));

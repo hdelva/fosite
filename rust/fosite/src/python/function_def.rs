@@ -1,8 +1,6 @@
 use core::*;
 use std::sync::Mutex;
 
-use std::collections::BTreeSet;
-
 lazy_static! {
     static ref ARGS: Mutex<Vec<Vec<(String, Mapping)>>> = Mutex::new(Vec::new());
     static ref KW_ARGS: Mutex<Vec<Vec<(String, Mapping)>>> = Mutex::new(Vec::new());
@@ -33,18 +31,6 @@ impl FunctionDefExecutor for PythonFunction {
         let mut rpos_evaluated = Vec::new();
         let mut rkw_evaluated = Vec::new();
 
-        let mut closure = Scope::new();
-        let mut identifiers = BTreeSet::new();
-        capture(body, &mut identifiers);
-
-        for identifier in identifiers.iter() {
-            let mut aresult = vm.execute(executors, identifier);
-            dependencies.append(&mut aresult.dependencies);
-
-            let name = identifier.to_string();
-            closure.set_mapping(name, Path::empty(), aresult.result);
-        }
-
         for node in rpos.iter() {
             if let &NodeType::Argument {ref name, ref value} = &node.kind {
                 let mut eval_result = vm.execute(executors, value);
@@ -70,6 +56,7 @@ impl FunctionDefExecutor for PythonFunction {
         VARARG.lock().unwrap().push(vararg.clone());
         KW_VARARG.lock().unwrap().push(kw_vararg.clone());
         BODY.lock().unwrap().push(body.clone());
+        
 
         let inner = move | env: Environment, args: Vec<Mapping>, kw_args: Vec<(String, Mapping)> | {
             let Environment { vm, executors } = env;
@@ -108,8 +95,6 @@ impl FunctionDefExecutor for PythonFunction {
         let pointer = vm.object_of_type(&"function".to_owned());
 
         vm.set_callable(pointer.clone(), inner);
-        vm.set_closure(pointer.clone(), closure);
-
         let mut aresult = vm.assign_direct(executors, name.clone(), Mapping::simple(Path::empty(), pointer));
         changes.append(&mut aresult.changes);
         dependencies.append(&mut aresult.dependencies);
@@ -370,124 +355,4 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
         changes: changes,
         result: Mapping::new(),
     }
-}           
-
-fn capture(node: &GastNode, acc: &mut BTreeSet<GastNode>) {
-    match &node.kind {
-        &NodeType::Boolean { .. } => (),
-        &NodeType::String { .. } => (),
-        &NodeType::Int { .. } => (),
-        &NodeType::Float { .. } => (),
-        &NodeType::Nil {} => (),
-        &NodeType::BinOp { ref left, ref right, .. } => {
-            capture(left, acc);
-            capture(right, acc);
-        }
-        &NodeType::BoolOp { ref left, ref right, .. } => {
-            capture(left, acc);
-            capture(right, acc);
-        }
-        &NodeType::If { ref test, ref body, ref or_else } => {
-            capture(test, acc);
-            capture(body, acc);
-            capture(or_else, acc);
-        }
-        &NodeType::Block { ref content } => {
-            for n in content.iter() {
-                capture(n, acc);
-            }
-        }
-        &NodeType::Identifier { .. } => {
-            acc.insert(node.clone());
-        }
-        &NodeType::Attribute { ref parent, .. } => {
-            capture(parent, acc);
-        }
-        &NodeType::Declaration { .. } => (),
-        &NodeType::Assignment { ref value, .. } => {
-            capture(value, acc);
-        }
-        &NodeType::While { ref test, ref body } => {
-            capture(test, acc);
-            capture(body, acc);
-        }
-        &NodeType::Break {  } => (),
-        &NodeType::Continue {  } => (),
-        &NodeType::List { ref content } => {
-            for n in content.iter() {
-                capture(n, acc);
-            }
-        }
-        &NodeType::Set { ref content } => {
-            for n in content.iter() {
-                capture(n, acc);
-            }
-        }
-        &NodeType::Sequence {ref content } => {
-            for n in content.iter() {
-                capture(n, acc);
-            }
-        }
-        &NodeType::Index {ref target, ref index} => {
-            capture(target, acc);
-            capture(index, acc);
-        }
-        &NodeType::Dict {ref content} => {
-            for n in content.iter() {
-                capture(n, acc);
-            }
-        }
-        &NodeType::Generator {ref source, ..} => {
-            capture(source, acc);
-        }
-        &NodeType::Filter {ref source, ref condition} => {
-            capture(source, acc);
-            capture(condition, acc);
-        }
-        &NodeType::Map {ref source, ..} => {
-            capture(source, acc);
-        }
-        &NodeType::AndThen {ref first, ref second} => {
-            capture(first, acc);
-            capture(second, acc);
-        }
-        &NodeType::ForEach {ref before, ref body} => {
-            capture(before, acc);
-            capture(body, acc);
-        }
-        &NodeType::Call {ref target, ref args, ref kwargs} => {
-            capture(target, acc);
-            
-            for n in args.iter() {
-                capture(n, acc);
-            }
-
-            for n in kwargs.iter() {
-                capture(n, acc);
-            }
-        }
-        &NodeType::Import {..} => (),
-        &NodeType::Negate {ref value} => {
-            capture(value, acc);
-        }
-        &NodeType::UnOp {ref value, ..} => {
-            capture(value, acc);
-        }
-        &NodeType::Slice {ref target, ref lower, ref upper} => {
-            capture(target, acc);
-            capture(lower, acc);
-            capture(upper, acc);
-        }
-        &NodeType::FunctionDef {..} => (),
-        &NodeType::Return {ref value} => {
-            capture(value, acc);
-        }
-        &NodeType::Pair {ref first, ref second} => {
-            capture(first, acc);
-            capture(second, acc);
-        }
-        &NodeType::Argument { ref value, .. } => {
-            capture(value, acc);
-        }
-    }
-}      
+}                 

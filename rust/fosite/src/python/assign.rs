@@ -597,6 +597,10 @@ impl PythonAssign {
                             -> ExecutionResult {
         let changes = vec![AnalysisItem::Identifier (target.clone())];
 
+        if target == "z" {
+            println!("{:?}", vm.current_path());
+        }
+
         // todo get rid of clone
         let mapping = mapping.clone()
             .augment(PathNode::Assignment(vm.current_node().clone(), target.clone()));

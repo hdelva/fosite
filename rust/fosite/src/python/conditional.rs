@@ -73,6 +73,7 @@ impl PythonConditional {
         vm.push_path(positive);
         vm.add_branch_restrictions(no);
         let body_result = vm.execute(executors, body);
+        vm.pop_path();
         vm.set_branch_restrictions(original_restriction.clone());
 
         let changes = body_result.changes;
@@ -91,6 +92,7 @@ impl PythonConditional {
         vm.push_path(negative);
         vm.add_branch_restrictions(yes);
         let else_result = vm.execute(executors, or_else);
+        vm.pop_path();
         vm.set_branch_restrictions(original_restriction.clone());
 
         let changes = else_result.changes;

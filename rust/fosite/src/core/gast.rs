@@ -6,7 +6,7 @@ use super::AnalysisItem;
 
 pub type GastID = u16;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub struct GastNode {
     pub id: GastID,
     pub kind: NodeType,
@@ -25,7 +25,7 @@ impl GastNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub enum NodeType {
     Identifier { name: String },
     Attribute {
@@ -38,7 +38,7 @@ pub enum NodeType {
         value: Box<GastNode>,
     },
     Int { value: i64 },
-    Float { value: String }, // floats don't have the Ord trait
+    Float { value: f64 },
     String { value: String },
     List { content: Vec<GastNode> },
     Set { content: Vec<GastNode> },
@@ -589,7 +589,7 @@ fn build_int(id: GastID, node: &Json) -> GastNode {
 fn build_float(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let value = obj.get("value").unwrap().as_f64().unwrap();
-    return GastNode::new(id, NodeType::Float { value: format!("{}", value) });
+    return GastNode::new(id, NodeType::Float { value: value });
 }
 
 fn build_string(id: GastID, node: &Json) -> GastNode {

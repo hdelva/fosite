@@ -223,8 +223,8 @@ impl VirtualMachine {
         return self.scopes.last_mut().unwrap();
     }
 
-    pub fn pop_path(&mut self) -> Path {
-        self.paths.pop().unwrap()
+    pub fn pop_path(&mut self) {
+        self.paths.pop();
     }
 
     pub fn push_path(&mut self, path: Path) {
