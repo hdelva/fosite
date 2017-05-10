@@ -1,0 +1,165 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+x = None
+
+while 'cond1': 
+  if 'cond2': 
+    x = 'str'
+  else:
+    if 'cond3':
+      x = None
+    else:
+      break
+
+  x + 1
+
+  if 'other_cond':
+    x = 'str'
+    break
+  else:
+    x = []
+
+x + 1
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+x
+-
+-
+-
+-
+-
+-
+x
+
+-
+
+x
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+x
+x
+x
+x
+-
+-
+-
+-
+
+x
+
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+ \begin{minipage}{0.5\textwidth}
+ \vspace{-148pt}
+ Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=text,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Error at row 12, column 2
+ Incompatible types for operation +
+ The following combinations exist:
+ Combination 0: NoneType + int
+  Left side has type NoneType
+  In the following cases:
+   Assignment to x on row 8
+
+  Right side has type int
+  In the following cases:
+   Always
+
+
+ Combination 1: string + int
+  Left side has type string
+  In the following cases:
+   Assignment to x on row 5
+
+  Right side has type int
+  In the following cases:
+   Always
+
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.5\textwidth}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=text,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Error at row 20, column 1
+ Incompatible types for operation +
+ The following combinations exist:
+ Combination 0: NoneType + int
+  Left side has type NoneType
+  In the following cases:
+   Assignment to x on row 1
+   Condition on row 7 is false
+
+  Right side has type int
+  In the following cases:
+   Always
+
+
+ Combination 1: list + int
+  Left side has type list
+  In the following cases:
+   Assignment to x on row 18
+
+  Right side has type int
+  In the following cases:
+   Always
+
+
+ Combination 2: string + int
+  Left side has type string
+  In the following cases:
+   Assignment to x on row 15
+
+  Right side has type int
+  In the following cases:
+   Always
+\end{tcblisting}
+ \end{minipage}
+ \end{minipage}
+ \captionof{listing}{Break}
+ \label{lst:break3}
+\end{figure}

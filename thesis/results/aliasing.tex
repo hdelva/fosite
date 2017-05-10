@@ -1,0 +1,89 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+y = 5
+x = y
+
+if 'cond':
+  y.attr = 9
+
+x.attr
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+-
+y
+
+y
+y
+
+x, x.attr, 36
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+y
+x
+
+y.attr, 36
+y.attr, 36
+
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+ \vspace{4pt}
+ analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=text,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+Warning at row 7, column 1
+  Object x does not always have an attribute attr
+  In the following cases:
+  Case 1
+    Assignment to y at row 1, column 1
+    Assignment to x at row 2, column 1
+    Condition at row 4, column 1 is false
+
+Error at row 7, column 1
+  Object x does not have an attribute attr
+  In the following cases:
+  Case 1
+    Assignment to y at row 1, column 1
+    Assignment to x at row 2, column 1
+    Condition at row 4, column 1 is false
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Aliasing}
+ \label{lst:representation_examples}
+\end{figure}

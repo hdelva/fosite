@@ -933,7 +933,7 @@ The merge operation combines the results of the last frame, removes it, and puts
   boxrule=0.2pt,
   minted language=python,
   minted style=autumn,
-  minted options={xleftmargin=-8pt, linenos},
+  minted options={xleftmargin=-6pt, linenos},
   colback=bg }
 x = 42
 y = 'string'
@@ -1308,6 +1308,16 @@ A while loop whose condition does not change after an iteration is prone to endl
 A function call that did not end with an explicit return statement will return a `Ǹone` value. This can lead to confusing errors when a user forgot to return in just one of its branches. Since return values are treated as regular identifiers, we can use the existing logic provided by the namespaces to see which `OptionalMapping`s are still uninitialized at the of a function call. 
 
 # Results
+
+\input{results/double_assign}
+
+\input{results/aliasing}
+
+\input{results/break}
+
+\input{results/break2}
+
+
 
 # Discussion
 

@@ -1,0 +1,98 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+while 'cond':
+  if 'other cond':
+    x = 'string'
+    break
+  x = 42
+  y = x + 9
+  
+y + 4
+x + 9
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+x
+-
+-
+-
+-
+x
+
+y
+x
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+x, y
+x
+x
+-
+x
+y
+
+-
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+ \vspace{4pt}
+ analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=text,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+Error at row 8, column 1
+  y does not exist
+  In the following cases:
+  Case 1
+    Condition at row 2, column 3 is true
+    
+Error at row 9, column 1
+  Incompatible types for operation +
+  The following combinations exist:
+  Combination 0: string + int
+    Left side has type string
+    In the following cases:
+      Assignment to x at row 3, column 5
+
+    Right side has type int
+    In the following cases:
+      Always
+
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Break}
+ \label{lst:break1}
+\end{figure}
