@@ -1002,7 +1002,7 @@ Function calls and loops can also create a new frame in namespaces. While mergin
 
 ## Name Resolution
 
-Namespaces by themselves aren't enough to implement all the name resolution behavior because name resolution uses several different namespaces. It's possible that an identifier is only sometimes defined in a namespace, for the other cases resolution will have to continue using some other namespace. The unresolved paths will be carried over into the resolution in the next namespace. All returned mappings will have their paths merged with the unresolved paths to reflect the fact that name resolution continued in the next namespace. Algorithm \ref{alg:chain} shows the logic behind the implementations, the `next_namespace` function will depend on the kind of name being resolved.
+Namespaces by themselves aren't enough to implement all the name resolution behavior; name resolution uses several different namespaces. It's possible that a variable is sometimes uninitialized in a namespace, in which case resolution can continue using another namespace. The unresolved paths are carried over to the resolution in the next namespace. All returned mappings have their paths merged with the unresolved paths to reflect the fact that name resolution continued in the next namespace. Algorithm \ref{alg:chain} illustrates the general method of name resolution, the `next_namespace` function depends on the kind of name being resolved. An error is emitted if `unresolved` is not empty and there are no more namespaces to try.
 
 \begin{algorithm}
     \caption{Resolve}\label{alg:chain}
@@ -1012,14 +1012,14 @@ Namespaces by themselves aren't enough to implement all the name resolution beha
 
           \State $\texttt{unresolved} \gets [\, \texttt{Path}::empty()\,]$
 
-          \While{ unresolved.len() > 0 }
+          \While{ \texttt{unresolved.len() > 0} }
               \State $\texttt{new\_unresolved} \gets [\,]$
 
-              \State $\texttt{namespace} \gets \texttt{next\_namespace}$
+              \State $\texttt{namespace} \gets \texttt{next\_namespace()}$
               \State $\texttt{mapping} \gets \texttt{namespace.resolve(name)}$
 
               \ForAll{$(p, x)$ \textbf{in} mapping}
-                \ForAll{unresolved\_path \textbf{in} unresolved}
+                \ForAll{ \texttt{unresolved\_path} \textbf{in} \texttt{unresolved}}
                     \State $\texttt{new\_path} \gets \texttt{p.merge(unresolved\_path)}$
 
                     \If {\texttt{x.is\_none()}}
@@ -1041,47 +1041,67 @@ Namespaces by themselves aren't enough to implement all the name resolution beha
 
 ### Identifiers
 
-Variables are stored in up to four different namespaces:
+Identifiers (also called names) are stored in up to four different namespaces:
 
-  * The local scope, this is the function scope and every function call will create a new one. All variables made during a function call will live here, and stop existing when the function call is done.
-  * The enclosing scope, which is most commonly used to capture variables in lambda definitions. Variables that occur in a function definition and that are already in scope during the definition will get "saved" to the enclosing scope of the function. 
-  * The global scope, where most class and function definitions will end up going, and where students first write their first programs in. 
+  * The local scope gets created at the start of every function call, which why it's also called the function scope. All variables made during a function call will live here, and stop existing when the function call is done.
+  * The enclosing scope is most commonly used to capture variables in lambda definitions, but the same principle holds for any sort of function definition. Variables that occur in a function definition and that are already in scope during the definition will get "saved" to the enclosing scope of the function. 
+  * The global scope, where most class and function definitions end up going, and where students first write their first programs in. 
   * The builtin scope, which is not to be confused with the standard libraries, contains essential Python features such as the `int` type and the `sorted` function. 
 
-At any point during execution there will be either two or four active scopes, depending on whether or not a function is being executed. Every function call will create a new empty local scope, but reuse the existing enclosing scope asociated with its definition. 
+At any point during execution there is either two or four active scopes, depending on whether or not a function call is being executed. Every function call creates a new empty local scope, but reuses the existing enclosing scope asociated with its definition. 
 
 ### Attributes
 
-An object's attributes don't neccesarily exist in its own namespace. A lot of them, especially its methods, will exist in the namespace of its class object, or maybe even in one of its base classes. Python uses its own _Method Resolution Order_ (MRO) to define the order of the base classes in case of multiple inheritance. The first base class in the definition will get used first, where MRO can be applied again, ... This means that the second base class of the definition will only get used if the first base class did not contain an attribute of that name, and neither did any of its extended base classes. 
+An object's attributes don't neccesarily exist in its own namespace. A lot of them, especially its methods, will exist in the namespace of its class object or one of its base classes. Python uses its own _Method Resolution Order_ (MRO) to define the order of the base classes in case of multiple inheritance. The first base class in the definition will get used first, where MRO can be applied again, ... This means that the second base class of the definition will only get used if the first base class did not contain an attribute of that name, and neither did any of its extended base classes. 
 
 ### Methods
 
-Functions are just callable objects in Python, and a method seems to be a function that's part of an object's namespace. There is one obvious difference however, the explicit self of a method definition isn't part of the method call. This is because Python hides an implicit creation of a `method` object, which isn't just a callable object. In fact, it encapsulates a callable object -- the callable attribute. It also contains a reference to object it's being called on however. The method object itself is also callable, and calling it will call the embedded function with the embedded parent object prepended to the arguments. 
+Functions are just callable objects, and a method seems to be a function that's part of an object's namespace. There is one obvious difference however, the explicit self of a method definition isn't part of the method call. This is because Python hides an implicit creation of a `method` object, which isn't just a callable object. In fact, it encapsulates a callable object -- the function attribute. It also contains a reference to object it's being called on. The method object itself is callable as well, and calling it will call the embedded function with the embedded parent object prepended to the arguments. 
 
 ## Collections
 
-Collections are a hard component to implement, especially for dynamic programming languages. When an element of a collection is used in an operation, we have to know which element that was to interpret the result. Static programming languages can just return a value of the defined element type, but dynamic programming languages typically have heterogeneous collections. Features like multiple return values rely in this feature. These are actually tuples, which can be indexed or unpacked just like any other collection. Remembering length and the order of the elements of this tuple is paramount to avoiding false positives. 
+Collections are a challenging component of dynamic programming languages. When an element of a collection is used in any operation, we have to know which one to interpret the result. Static programming languages can just return a value of the defined element type, but dynamic programming languages typically have heterogeneous collections. Features like multiple return values rely in this feature. These are actually tuples, which can be indexed or unpacked just like any other collection. Remembering length and the order of the elements of this tuple is paramount to avoiding false positives. 
 
-The solution is similar to namespaces, but with some additional abstractions to reflect the additional uncertainty. We don't have to store every element explicitly. If a list contains only objects of type `A`, it doesn't really matter which objects those are. Any time an element of the collection gets used, it will be in terms of an abstract, general, instance of `A`. Non-empty collection literals such as multiple return values are exceptions, in this case every element does get stored explicitly. This general instance is called the representant. The most important things to know of a representant are its type, and how many elements of the collection it represents. Chaining representants together can describe both ordered and unordered collections. Unordered collections do have an order after all, just not a reliable which programmers should rely on. 
+The solution is similar to namespaces, but with additional abstractions to reflect the additional uncertainty. Not every element gets stored explicitly. If a list contains only objects of type `A`, it doesn't really matter which objects those are. Most collections are iterated over, so that all the elements have to be treated equally, and it doesn't really matter which instance of `A` gets used.
+One or more _representants_ are chosen for each type of object in the collection. 
+The order of elements can be important for a heterogeneous collections, which is why these can have multiple representants for the same type of element. 
+Non-empty collection literals such as multiple return values are exceptions, every element does get stored explicitly for these. Chaining representants together can describe both ordered and unordered collections. Unordered collections do have an order after all, just not a reliable one which programmers should rely on. 
 
-### Components
+The components of a collection are introduced incrementally, in the same way the ones of the namespaces were introduced.
 
-  * The core components of a collection are the representants, which are basically an alias for an object pointer. 
-  * Chunks represent contiguous regions within a collection. Their size is defined as a range whose bounds may be empty. Iteratively adding an element to a collection will create a chunk with no upper bound for example, unless we knew with certainty how many iterations took place. Chunks also contain mappings to its possible representants. If `x` is either an `int` or a `list` for example, adding it to a collection will add a chunk with two representant mappings. 
-  * A sequence of chunks forms a chain. A notion of length is added here as well, which isn't just the sum of the ranges of its chunks, insertion will invalidate the relationship between the chunk length and the chunk lengths. Most of the collection logic is implemented here, such as indexing and slicing.
-  * The next layer are branches, which are similar to the ones that are part of namespaces. A branch in the context of a namespace get initialized as an empty `HashMap<String, Mapping>`, and only stores changes. This sparse structure is possible because with namespaces you know exactly which elements have been changed -- they have a unique name. Collections don't have this luxury. Unless we absolutely know which element was changed, we have to assume the entire structure has been changed. This is why a collection's `Branch` contains a list of `(Path, Chain)` tuples, where every `Chain` is an entire "collection" in its own right.
-  * A collection also has frames, which are similar to the ones in namespaces as well. The main difference is that collections currently don't have a notion of statis chambers. These can be added to improve accuracy in some cases, but didn't seem very important yet. A `Frame` contains a list of branches, the path node that caused the branching, and the index of the active branch. 
-  * Collections are stacks of frames, just like namespaces. They also have a grow and a merge operation, but the implementations are slightly different. Growing still creates a new frame for every branch point, but it will copy the current branch's content into every branch of the new frame. Merging is currently done naively. The last frame gets popped, the paths of its content get augmented with the frame's cause node and then replace the contents of the new active branch. A different approach could try to merge branches to the chunk level so avoid unnecessary duplication, which is a considerable challenge to implement. This might be necessary for large and complex files, but the current solution seems to be suffice for now.
+#### Representants 
+
+The core components of a collection are the representants, in essence these are an alias for object pointers. The most important information of a representant is its type, so this has been added as well for the sake of usability. 
+
+#### Chunks
+
+Chunks represent contiguous regions within a collection. Their size is defined as an interval $[\,a, b\,]$ with $a \in [\,0,\infty\,[ \,\wedge\, b \in [\,1, \infty\,]$. Adding an element to a collection as as part of a loop will create a chunk with $b=\infty$ as we have no knowledge of how many times a loop gets executed. Chunks also contain representants. If `x` is either an `int` or a `list` for example, adding it to a collection will add a chunk with two representants. 
+
+#### Chains
+
+A sequence of chunks forms a chain. A notion of length is added here as well. Insertion will either replace an existing element or a new one, so that only the upper bound is affected. The same insertion will however decrement the lower bound of all existing chunks, while simultaneously incrementing their upper bounds. Most of the collection logic is implemented here, such as indexing and slicing.
+
+#### Branches
+
+Branches form the next layer and they are similar to the ones that are part of namespaces. A branch in the context of a namespace get initialized as an empty `HashMap<String, Mapping>`, and only stores changes. This sparse structure is possible because with namespaces you know exactly which elements have been changed -- they have a unique name. Collections don't have this luxury. Unless we absolutely know which element was changed, we have to assume the entire structure has been changed. This is why a collection's `Branch` contains a list of `(Path, Chain)` tuples, where every `Chain` is an entire "collection" in its own right.
+
+#### Frames
+
+A collection also has frames, which are similar to the ones in namespaces as well. The main difference is that collections currently don't have a notion of statis chambers. These can certainly be added to improve accuracy, but they are less impactful for collections as they would only have a noticeable benefit when analyzing heterogeneous collections together with broken control flow. A `Frame` contains a list of branches, the path node that caused the branching, and the index of the active branch. 
+
+#### Collections
+
+Collections are stacks of frames, just like namespaces. They also have a grow and a merge operation, but the implementations are slightly different. Growing still creates a new frame for every branch point, but it will copy the previously active branch's content into every branch of the new frame. Merging is done naively: the last frame gets popped, the paths of its content get augmented with the frame's cause node and then replace the contents of the branch that is now active. A different approach could try to merge branches to the chunk level to avoid data redundancies, but this is a considerable challenge to implement. It might become necessary for large and complex files, but the current solution suffices for now.
 
 ### Operations
 
-There are a few different ways a new element can get added to a collection. The most fundamental way is simply by definition, as a list of mappings. In this case, a single chunk gets added for each mapping -- every given element is its own representant in this case for optimal accuracy, and every chunk has a known size of exactly 1. Inserting an element is the most complex operation. Any chunk that has only a single representant of the same type as the new element can have its upper bound incremented. All other chunks have it minimum size decremented -- to reflect that one of its elements may have been replaced. A new chunk of size $[\,0, 1\,]$ gets wedged in between chunks that haven't had their upper bounds incremented. The branch itself does not have its length incremented. The most common way to add something to a `list` in Python is through the `append` method however, which is a much easier case. We can repeat the previous process, but only applied to the last chunk. We can either increment the upper bound of the existing chunk, or add a new chunk of size exactly 1. 
+There are a few different ways an element can be added to a collection. The most fundamental way is simply by definition, as a list of mappings. In this case, a single chunk gets added for each mapping -- every given element is its own representant in this case for optimal accuracy, and every chunk has a known size of exactly 1. Inserting an element is the most complex operation. Any chunk that has only a single representant of the same type as the new element can have its upper bound incremented. All other chunks have their minimum size decremented -- to reflect that one of its elements may have been replaced. A new chunk of size $[\,0, 1\,]$ gets wedged in between chunks that haven't had their upper bounds incremented. The most common way to add something to a `list` in Python is through the `append` method, which is a much easier case. We can repeat the previous process, but only applied to the last chunk. We can either increment the upper bound of the existing chunk, or add a new chunk of size exactly 1. 
 
 \begin{algorithm}
     \caption{Linearize Collection}\label{alg:lin}
     \begin{algorithmic}[1]
       \Function{linearize} {n, chunks}
-        \If {chunks.is\_empty()}
+        \If {\texttt{chunks.is\_empty()}}
             \State \Return $[\,]$
         \EndIf
         \State $\texttt{chunk} \gets \texttt{chunks[0]}$
@@ -1137,21 +1157,22 @@ There are a few different ways a new element can get added to a collection. The 
     \end{algorithmic}
 \end{algorithm}
 
-There are a few different ways to retrieve an element from a collection. If done through a dynamically calculated index, a mapping for every representant is returned. We can do better for static indices however. The collections contents get linearized first -- replacing the chain of chunks with a list of mappings, this process is described in algorithm \ref{alg:lin}. This process reveals which possible elements there can be at that position. This is a powerful feature for several reasons. The first (or last) element of a collection can be given some special meaning, even if it's generally a bad idea, in which case retrieving the correct element is a good thing. More importanely, students often don't realize Python has multiple return values, and instead return a tuple which they then index explicitely. A static analyzer might want to recommend using multiple return values instead, but it will only be able to do so if its analysis didn't stumble over the indices. The linearized representation can also be used to create slices of collections, which is a very _pythonic_ operation so being able to interpret it accurately is important. 
+There are a few different ways to retrieve an element from a collection. If done through a dynamically calculated index, a mapping for every representant is returned. We can do better for static indices however. The collections contents get linearized first -- replacing the chain of chunks with a list of mappings as described in algorithm \ref{alg:lin}. This process reveals which possible elements there can be at that position. This is a powerful feature for several reasons. The first (or last) element of a collection can be given some special meaning, even if it's generally a bad idea, in which case retrieving the correct element is a good thing. More importanely, students often use explicit indices instead of unpacking when using multiple return values. A static analyzer might want to recommend using multiple return values instead, but it will only be able to do so if its analysis didn't stumble over the indices. The linearized representation can also be used to create slices of collections, which is a very _pythonic_ operation so interpreting it accurately is important. 
 
-All indexing operations may return duplicates, because the merge operation isn't very thorough at this point. This can be alleviated by only returning a single mapping for every unique representant. The different ways an element may have been added to a collection are irrelevant, all that matters is that it has been added, and showing a single execution path should be enough to get the point across. 
+All indexing operations may return duplicates, because the merge operation isn't very thorough. This can be alleviated by only returning a single mapping for every unique representant. As long as we know that an object had been added, all the different different that may have happened are less important. 
 
 ## Function Definitions
 
-A function definition creates a callable object and assigns the result to the given variable name. The object contains a closure, which in turn contains the function body as a block of AST nodes and the required argument definitions. Upon calling the closure the defined arguments and the given mappings get mapped to each other, as shown in the next section. Once the arguments are in place it executes the function body. Return values get treated as assignments to an `___result` identifier, so the existing namespace logic can be reused. 
+A function definition creates a callable object and assigns the result to the given name. The object contains a closure, which in turn contains the function body as a block of AST nodes and the required argument definitions. Calling the closure will map the given arguments to the defined ones, as shown in section \ref{function-calls}. Once the arguments are in place it executes the function body. Return values get treated as assignments to an `___result` identifier, so the existing namespace logic can be reused. Anonymous functions have a similar implementation.
 
-Python's own functions and modules are harder to implement. Depending on the interpreter used they may not even be in Python, but in C for example. Although the Fosite interpreter is designed to accomodate multiple languages, it's made with dynamic languages in mind -- C is quite far out of scope. A solution is to implement function behavior in closures, which then get injected into the interpreter as callable objects. Unlike the user defined functions these internal functions don't contain a function body AST, but manipulate the interpreter state directly. 
-This is a laborsome endeavor, but it does have a few upsides. Builtin functions such as `sorted` contain hundreds of lines of code -- and none of them are relevant to our analysis. Including implementation details in the paths can only confuse users, as these usually have no knowledge of the language internals. Giving a summarized, hard coded, result is both more efficient and more useful. 
+Python's own functions and modules are harder to implement. Depending on the interpreter they may not even be in Python, but in C for example. Although the Fosite interpreter is designed to accomodate multiple languages, it's made with dynamic languages in mind -- C is quite far out of scope. A solution is to implement function behavior in closures, which then get injected into the interpreter as callable objects. These internal functions don't contain a function body AST, but manipulate the interpreter state directly. 
+This is a laborsome endeavor, but it does have a few upsides. Builtin functions such as `sorted` contain hundreds of lines of code -- and none of them are relevant to our analysis. Including implementation details in the paths can only confuse users, as these usually have no knowledge of the language internals. Giving a summarized, result is both more efficient and more useful. 
+
 Modules are implemented as closures that can inject callable objects into the interpreter at runtime. This means that with some time and dedication, third party libraries can be easily added in the same way. 
 
 ## Function Calls
 
-A few things have to be evaluated before a function call, the call target has to be evaluated first, then the arguments get evaluated from left to right. Evaluating the target will return a mapping which can contain a variable amount of pointers. Well written code can make extensive use of function objects to reduce code duplication for example. Target evaluation can result in several different function objects, and we have to consider every possible case. These all have to be evaluated independently, which is why a frame can have a variable amount of subframes -- and why path nodes contain information about how many branches there are. 
+A few things have to be evaluated before a function call, the call target has to be evaluated first, then the arguments get evaluated from left to right. Evaluating the target will return a mapping which can contain a variable amount of pointers. Evaluating the call target can result in several different function objects, and we have to consider every possible case. These all have to be evaluated independently, which is why a frame can have a variable amount of subframes -- and why path nodes contain information about how many branches there are. 
 
 \begin{algorithm}
     \caption{Assign Arguments}\label{alg:arg}
@@ -1165,6 +1186,8 @@ A few things have to be evaluated before a function call, the call target has to
           \EndIf
         \EndFunction
 
+        \State
+
         \Function{assign\_vararg} {gpos, gkw, arg, kwonly, vararg, kwarg}
           \If {\texttt{vararg.is\_some()}}
             \State $\texttt{arg\_list} \gets \texttt{abstract\_list(gpos)}$
@@ -1172,6 +1195,8 @@ A few things have to be evaluated before a function call, the call target has to
           \EndIf
           \State $\texttt{assign\_kw(gkw, arg ++ kwonly, kwarg)}$
         \EndFunction
+
+        \State
 
         \Function{assign\_kw} {gkw, arg, kwarg}
           \If {\texttt{gkw.len() > 0 \&\& arg.len() > 0}}
@@ -1183,6 +1208,8 @@ A few things have to be evaluated before a function call, the call target has to
           \EndIf
         \EndFunction
 
+        \State
+
         \Function{assign\_kwarg} {gkw, arg, kwarg}
           \If {\texttt{kwarg.is\_some() }}
             \State $\texttt{arg\_dict} \gets \texttt{abstract\_dict(gkw)}$
@@ -1191,6 +1218,8 @@ A few things have to be evaluated before a function call, the call target has to
 
           \State $\texttt{assign\_arg\_default(gkw, arg, kwarg)}$
         \EndFunction
+
+        \State
 
         \Function{assign\_arg\_default} {arg}
           \If {\texttt{arg.len() > 0 \&\& arg[0].has\_default()}}
@@ -1202,7 +1231,6 @@ A few things have to be evaluated before a function call, the call target has to
 \end{algorithm}
 
 The call arguments get stored in two collections of mappings: a list for the positional arguments, and a map for the keyword arguments. All these arguments get augmented with a path node of the current function call. These then get mapped to arguments in the definition. Python has four  kinds of arguments in a function definition: `args`, `kwonlyargs`, `vararg`, and `kwarg`. Both the `args` and `kwonlyargs` can be given default values, and all arguments after the `varargs` will be placed in `kwonlyargs`. The underlying semantics are less trivial than one might expect, the principle is illustrated in algorithm \ref{alg:arg}. The algorithm assumes every argument in only provided once -- the Python runtime already gives a detailed error when this isn't the case. 
-
 
 \begin{algorithm}
     \caption{Function Calls}\label{alg:call}
@@ -1251,31 +1279,31 @@ The call arguments get stored in two collections of mappings: a list for the pos
 The calling mechanism is best explained in pseudocode as well, as in algorithm \ref{alg:call}. Lines 2 to 5 move existing enclosing and local scopes to a different stack. This makes name resolution easier, there are always at most four active scopes. Lines 7-9 retrieve the the existing enclosing scope, a local scope is created, and both get placed on the stack of active scopes. Lines 11 and 12 contain the function call. A callable object in the interpreter gets retrieved, and executed using the provided arguments. The callable will do the argument assignments as in algorithm \ref{alg:arg} before executing whatever function logic it contains. Line 14 pops the local scope, and retrieves the entry that holds the return value. Lines 15-18 restore the scopes to the state before the function call. 
 Algorithm \ref{alg:call} does not contain some necessary bookkeeping operations. The local scope gets discarded after handling each call target, but the namespaces of the changed objects have to be merged after handling all call targets, and the resulting mapping needs to have its paths augmented with the path to get to the target.
 
-Interpreting recursive functions requires a way to _tie the knot_ -- so that analysis doesn't get stuck in an endless loop. The interpreter maintains a call stack, and only permits the same function to be called a set amount of times. A branch that would perform a recursive call that exceeds the recursion depth is simply terminated, so that only the branches that result in a base case get executed at this depth. A call at a higher recursion depth will then use this value in its analysis of the entire function body. This method's accuracy is sufficient for most use cases, even for low recursion depth limits @interpret. 
+Interpreting recursive functions requires a way to _tie the knot_ -- so that analysis doesn't get stuck in an endless loop. The interpreter maintains a call stack, and only permits the same function to be called a set amount of times. An execution branch that would perform a recursive call that exceeds the recursion depth is simply terminated, so that only the branches that result in a base case get executed at this depth. A call at a higher recursion depth will then use this value in its analysis of the entire function body. This method's accuracy is sufficient for most use cases, even for low recursion depth limits @interpret. 
 
 ## Warnings and Errors
 
-The interpreter itself can do some useful static analysis itself. If it encounters it cannot handle, the actual runtimes probably won't be able to either. In this case the interpreter will emit an error, but with more information about which execution paths lead to that error.
+The interpreter itself can recognize some interesting things. If the interpreter encounters something it cannot process, the actual runtimes probably won't be able to either. In this case the interpreter will emit an error, but with more information about the conditions that lead to the error. The result is similar to printing a call stack, but with even more detail.
 
-It might also encounter error prone patterns during execution. If execution does fail, the warnings's information will add to the errors's explanation to paint an even more accurate picture. Even if execution doesn't fail, some of the warnings might indicate a deeper logical flaw. 
+It might also encounter error prone patterns during execution. If execution does fail, the warnings's information will add to the errors's  to paint an even more accurate picture. Even if execution doesn't fail, some of the warnings might indicate a deeper logical flaw. 
 
 ### Errors
 
-Python doesn't always validate the input to the builtin functions. The `sum` function will just error with `TypeError: unsupported operand type(s) for +` if the argument wasn't an iterable containing things that can be summed together. We can be more helpful in our errors by describing which elements can't be added together and how they got there, perhaps even hinting towards implement `__add__` and `__radd__`. Similar errors can be emitted when trying to incorrectly apply an operator objects, such as adding an `int` and a `str` or trying to insert an element into a `str`. 
+Python doesn't always validate the input to the builtin functions. The `sum` function will just error with `TypeError: unsupported operand type(s) for +` if the argument wasn't an iterable containing things that can be summed together. We can be more helpful in our errors by describing which elements can't be added together and how they got there, perhaps even hinting towards implementing `__add__` and `__radd__`. Similar errors can be emitted when trying to incorrectly apply an operator to an object, such as adding an `int` and a `str` or trying to insert an element into a `str`. 
 
 Uninitialized variables are some of the most common bugs in many programming languages. Badly written code can make these hard to track down. The way our interpreter is structured gives us all the needed information to provide helpful errors. 
 
-Every branch of a collection knows how large it can be. Indexing using a static value can be checked to make sure there are at least enough elements in the collection. This can be quite useful as students often try to get the first or last element out of a empty list.
+Every branch of a collection knows its own largest possible length. This length can be used to compare to statically known indices, to make sure there are at least enough elements in the collection. This can be quite useful as students often try to get the first or last element out of a empty list.
 
 ### Warnings
 
-A variable can point to objects of different types. With the exception of the numeric types, this makes the variable very unwieldly to use. This can be checked after merging a namespace by simply looking at the contents, and looking up their types. 
+A variable can point to objects of different types. With the exception of the numeric types, this makes the variable very unwieldly to use. This can be checked after merging a namespace by simply looking at the contents, and looking up the types of the results.
 
 Heterogeneous collections are hard to deal with; unless there's a fixed structure to the collection, operations on its elements have to support all of the possible types. A collection keeps track of its elements's types. Adding something new to a collection will compare the types before and after adding, and will emit a warning if something's changed. 
 
-Changing a collection while iterating over its contents is generally a bad idea. Python will not throw an error when this happens, which can lead to weird behavior such as skipping elements, endless loops, and collections consuming all available memory. This can be easily done using the watches introduced in section \ref{loops}.
+Changing a collection while iterating over its contents is generally a bad idea. Python will not throw an error when this happens, which can lead to weird behavior such as skipping elements, endless loops, and collections consuming all available memory. This can be checked using the watches introduced in section \ref{loops}.
 
-A while loop whose condition does change after an iteration is prone to endless loops. This is the case if all the variables in the condition still point to the same object, and all those objects haven't been changed either. This can be done using watches as well.
+A while loop whose condition does not change after an iteration is prone to endless loops. This is the case if all the variables in the condition still point to the same object, and all those objects haven't been changed either. This can be done using watches as well.
 
 A function call that did not end with an explicit return statement will return a `Ǹone` value. This can lead to confusing errors when a user forgot to return in just one of its branches. Since return values are treated as regular identifiers, we can use the existing logic provided by the namespaces to see which `OptionalMapping`s are still uninitialized at the of a function call. 
 
