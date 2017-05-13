@@ -70,7 +70,7 @@ impl PythonWhile {
         total_changes.append(&mut body_result.changes);
         total_dependencies.append(&mut body_result.dependencies);
 
-        let _ = vm.pop_path();
+        vm.pop_path();
 
         self.check_changes(vm);
 
@@ -171,11 +171,11 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
     let mut all_reversals = BTreeMap::new();
     let mut all_changes = BTreeSet::new();
 
-    for (path, _) in changes.iter() {
+    for &(ref path, _) in changes.iter() {
         all_changes.insert(path.clone());
     }
 
-    for (path, address) in changes.iter(){
+    for &(ref path, ref address) in changes.iter(){
         let mut change_reversals = path.reverse();
 
         if old.contains(address) {

@@ -16,7 +16,7 @@ impl ReturnExecutor for PythonReturn {
         dependencies.append(&mut aresult.dependencies);
 
         let path = vm.current_path().clone();
-        vm.set_result(path, aresult.result);
+        vm.add_result(path, aresult.result);
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 

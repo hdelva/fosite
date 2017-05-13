@@ -121,7 +121,7 @@ impl PythonAssign {
 
         let mut value_mappings = Vec::new();
 
-        for (path, opt_address) in mapping.iter() {
+        for &(ref path, ref opt_address) in mapping.iter() {
             if opt_address.is_none() {
                 // todo, propagate the results of the masked values here
                 continue;
@@ -197,7 +197,7 @@ impl PythonAssign {
               -> Mapping {
         let mut result_mapping = Mapping::new();
 
-        for (path, opt_address) in mapping.iter() {
+        for &(ref path, ref opt_address) in mapping.iter() {
             if opt_address.is_none() {
                 // todo, propagate the results of the masks here
                 continue;
@@ -317,7 +317,7 @@ impl PythonAssign {
         let mut key_chunk = CollectionChunk::empty();
         let mut value_chunk = CollectionChunk::empty();
 
-        for (path, opt_pointer) in value_mapping.iter() {
+        for &(ref path, ref opt_pointer) in value_mapping.iter() {
             if opt_pointer.is_none() {
                 // todo propagate results of masks here
                 continue;
@@ -331,14 +331,14 @@ impl PythonAssign {
             value_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
         }
 
-        for (path, pointer) in index_mapping.iter() {
+        for &(ref path, ref pointer) in index_mapping.iter() {
             let value_obj = vm.get_object(pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
             key_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
         }
 
-        for (_, opt_address) in values.iter() {
+        for &(_, ref opt_address) in values.iter() {
             if let &Some(ref address) = opt_address {
                 // add the new element
                 let mut parent_object = vm.get_object_mut(address);
@@ -348,7 +348,7 @@ impl PythonAssign {
             }
         }
         
-        for (_, opt_address) in keys.iter() {
+        for &(_, ref opt_address) in keys.iter() {
             if let &Some(ref address) = opt_address {
                 // add the new element
                 let mut parent_object = vm.get_object_mut(address);
@@ -384,7 +384,7 @@ impl PythonAssign {
             }
         }
 
-        for (path, opt_pointer) in mapping.iter() {
+        for &(ref path, ref opt_pointer) in mapping.iter() {
             if opt_pointer.is_none() {
                 continue;
             }
@@ -459,7 +459,7 @@ impl PythonAssign {
 
         // add the object changes
         // perform the assignment
-        for (target_path, target_address) in target_mapping.iter() {
+        for &(ref target_path, ref target_address) in target_mapping.iter() {
             // does this type of object support item assignment?
             {
                 let seq_type;
@@ -552,7 +552,7 @@ impl PythonAssign {
 
         // add the object changes
         // perform the assignment
-        for (parent_path, parent_address) in parent_mapping.iter() {
+        for &(ref parent_path, ref parent_address) in parent_mapping.iter() {
             // todo this clone shouldn't be necessary
             let mut new_path = vm.current_path().clone();
             new_path.merge_into(parent_path.clone());
@@ -609,7 +609,7 @@ impl PythonAssign {
 
         {
             let mut new_mapping = Mapping::new();
-            for (path, address) in mapping.iter() {
+            for &(ref path, ref address) in mapping.iter() {
                 if let &Some(ref address) = address {
                     new_mapping.add_mapping(path.clone(), address.clone());
                 }

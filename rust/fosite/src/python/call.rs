@@ -1,5 +1,7 @@
 use core::*;
 
+use std::collections::BTreeSet;
+
 pub struct PythonCall {
 
 }
@@ -14,7 +16,7 @@ impl CallExecutor for PythonCall {
 
         let mut total_changes: Vec<AnalysisItem> = Vec::new();
         let mut total_dependencies = Vec::new();
-        let mut mapping = Mapping::new();
+        let mut result_mapping = Mapping::new();
 
         // evaluate the arguments first
         let mut args: Vec<Mapping> = Vec::new();
@@ -49,6 +51,8 @@ impl CallExecutor for PythonCall {
         // keep these separated from the argument results
         let mut body_changes = Vec::new();
         let mut body_dependencies = Vec::new();
+
+        let mut results: Vec<Vec<(Path, Mapping)>> = Vec::new();
 
         for (index, (path, address)) in target_result.result.into_iter().enumerate() {
             let new_node = PathNode::Frame(
@@ -100,6 +104,8 @@ impl CallExecutor for PythonCall {
                 }
             }
 
+            results.push(vm.get_result());
+
             vm.pop_path();
             
             vm.next_branch(&body_changes);
@@ -112,13 +118,40 @@ impl CallExecutor for PythonCall {
         total_changes.append(&mut body_changes);
         total_dependencies.append(&mut body_dependencies);
 
-        // the VM has the results of the function calls
-        let results: Vec<OptionalMapping> = vm.get_results();
+        let mut good = Vec::new();
+        for temp in results.iter() {
+            for &(ref p, _) in temp.iter() {
+                good.push(p.prune(vm.current_node()));
+            }
+        }
 
-        for (index, (opt_mapping, target_path)) in results.into_iter().zip(paths).enumerate() {
-            for (result_path, opt_address) in opt_mapping.into_iter() {
+        let bad = bad_paths(good);
+        if bad.len() > 0 {
+            let content = NoReturn::new(bad);
+            let message = Message::Output {
+                source: vm.current_node().clone(),
+                content: Box::new(content),
+            };
+            &CHANNEL.publish(message);
+        }
+
+        for (index, (return_points, target_path)) in results.into_iter().zip(paths).enumerate() {
+            let mut pls = Mapping::new();
+
+            for (p1, m) in return_points.into_iter() {
+                for (mut p2, a) in m.into_iter() {
+                    p2.merge_into(p1.clone());
+                    pls.add_mapping(p2, a);
+                }
+            }
+
+            if pls.len() == 0 {
+                pls.add_mapping(Path::empty(), vm.knowledge().constant("None"));
+            }
+
+            for &(ref result_path, ref address) in pls.iter() {
                 // combine both paths
-                let mut total_path = result_path;
+                let mut total_path = result_path.clone();
                 total_path.merge_into(target_path.clone());
 
                 // add the glue between the two paths
@@ -129,11 +162,7 @@ impl CallExecutor for PythonCall {
                         index as i16, 
                         len as i16));
 
-                if let Some(address) = opt_address {
-                    mapping.add_mapping(total_path, address);
-                } else {
-                    // warning, path didn't return
-                }
+                result_mapping.add_mapping(total_path, *address);
             }
         }
 
@@ -141,7 +170,34 @@ impl CallExecutor for PythonCall {
             changes: total_changes,
             dependencies: total_dependencies,
             flow: FlowControl::Continue,
-            result: mapping,
+            result: result_mapping,
         };        
     }
+}
+
+fn bad_paths(changes: Vec<Path>) -> BTreeSet<Path> {
+    // remove obsolete entries first, i.e.
+    // (1, 5) and (1, 5, 9)
+    let mut all_reversals = BTreeSet::new();
+
+    for change in changes.iter() {
+        let change_reversals = change.reverse();
+        for reversal in change_reversals.iter().rev() {
+            all_reversals.insert(reversal.clone());
+        }
+    }
+
+    let mut possibilities = BTreeSet::new();
+    'outer:
+    for reversal in all_reversals.into_iter() {
+        for change in changes.iter() {
+            if reversal.contains(change) {
+                continue 'outer;
+            }
+        }
+
+        possibilities.insert(reversal);
+    }
+
+    return possibilities;
 }

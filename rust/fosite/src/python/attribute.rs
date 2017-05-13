@@ -27,7 +27,7 @@ impl AttributeExecutor for PythonAttribute {
         let mut warning = BTreeSet::new();
         let mut error = BTreeSet::new();
 
-        for (parent_path, parent_address) in parent_mapping.iter() {
+        for &(ref parent_path, ref parent_address) in parent_mapping.iter() {
             total_dependencies.push(AnalysisItem::Object(parent_address.clone()));
 
             let opt_mappings;
@@ -159,7 +159,7 @@ impl PythonAttribute {
 
         let mut result = OptionalMapping::new();
 
-        for (path, opt_address) in opt_mappings.iter() {
+        for &(ref path, ref opt_address) in opt_mappings.iter() {
             if let &Some(address) = opt_address {
                 result.add_mapping(path.clone(), Some(address.clone()));
             } else {

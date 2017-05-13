@@ -27,7 +27,7 @@ pub struct VirtualMachine {
     // calls
     callables: HashMap<Pointer, Box<Callable>>,
     closures: HashMap<Pointer, Scope>,
-    results: Vec<OptionalMapping>,
+    results: Vec<Vec<(Path, Mapping)>>,
 
     // modules 
     modules: HashMap<String, Module>,
@@ -104,10 +104,15 @@ impl VirtualMachine {
         self.closures.insert(address, scope);
     }
 
-    pub fn get_results(&mut self) -> Vec<OptionalMapping> {
-        let results = self.results.clone();
-        self.results = Vec::new();
-        return results;
+    pub fn get_result(&mut self) -> Vec<(Path, Mapping)> {
+        return self.results.pop().unwrap();
+    }
+
+    pub fn add_result(&mut self, path: Path, mapping: Mapping) {
+        if let Some(r) = self.results.last_mut() {
+            r.push((path, mapping));
+        }
+        
     }
 
     pub fn call(&mut self, 
@@ -118,6 +123,8 @@ impl VirtualMachine {
                 -> Option<ExecutionResult> {
 
         let b = self.scopes.len() > 2;
+
+        self.results.push(Vec::new());
 
         // move the current function scope to the shadows
         if b {
@@ -152,8 +159,7 @@ impl VirtualMachine {
         }
 
         // remove the function scope
-        // take ownership of the ___result variable within
-        let function_result = self.scopes.pop().unwrap().discard_function();
+        let _ = self.scopes.pop();
 
         // remove the enclosing scope
         let closure = self.scopes.pop().unwrap();
@@ -169,10 +175,6 @@ impl VirtualMachine {
             self.scopes.push(s2);
             self.scopes.push(s1);
         }
-
-        // store the result somewhere
-        // an executor will collect them when the time is right
-        self.results.push(function_result);
 
         // return the dependency information
         return analysis;
@@ -817,12 +819,6 @@ impl VirtualMachine {
         }
     }
 
-    pub fn set_result(&mut self, path: Path, mapping: Mapping) {
-        if let Some(scope) = self.scopes.last_mut() {
-            scope.set_result(path, mapping)
-        }
-    }
-
     pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>, hide_as_loop: Vec<Option<bool>>) {
         let mut identifier_changed = false;
 
@@ -943,7 +939,7 @@ impl VirtualMachine {
 
     pub fn declare_sub_type(&mut self, executors: &Executors, name: &String, parent: &String) {
         let result = self.load_identifier(executors, parent).result;
-        let (_, parent_pointer) = result.iter().next().unwrap();
+        let &(_, ref parent_pointer) = result.iter().next().unwrap();
 
         let new_pointer = self.memory.new_object();
         {

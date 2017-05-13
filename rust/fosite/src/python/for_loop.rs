@@ -59,7 +59,7 @@ impl PythonFor {
         total_changes.append(&mut body_result.changes);
         total_dependencies.append(&mut body_result.dependencies);
 
-        let _ = vm.pop_path();
+        vm.pop_path();
 
         self.check_changes(vm);
 
@@ -86,7 +86,7 @@ impl PythonFor {
             }
 
             if let Some(mapping) = watch.identifiers_changed.get(&identifier) {
-                for (path, _) in mapping.iter() {
+                for &(ref path, _) in mapping.iter() {
                     problems.push(path.clone());
                 }
             }
@@ -122,7 +122,7 @@ impl PythonFor {
                 };
 
                 let result = execution_result.result;
-                for (path, address) in result.iter() {
+                for &(ref path, ref address) in result.iter() {
                     let object = vm.get_object(address);
                     let type_name = object.get_type_name(vm.knowledge());
 

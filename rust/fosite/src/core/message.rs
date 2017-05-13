@@ -115,7 +115,7 @@ pub trait MessageContent: Send {
                                  Bold.paint(format!("{}", condition)));
                     }
                     &PathNode::Loop(_) => {
-                        println!("{} Iteration of the loop at {}",
+                        println!("{}Iteration of the loop at {}",
                                  padding,
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }

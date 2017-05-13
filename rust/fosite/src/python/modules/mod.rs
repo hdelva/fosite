@@ -23,7 +23,7 @@ fn check_arg(vm: &mut VirtualMachine, arg: &Mapping, index: &'static str, permit
     let mut problems = Vec::new();
 
     'outer:
-    for (path, address) in arg.iter() {
+    for &(ref path, ref address) in arg.iter() {
         let types = vm.ancestors(address);
         for t in types.iter() {
             if permitted_ptr.contains(&t) {

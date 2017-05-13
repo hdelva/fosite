@@ -39,13 +39,24 @@ impl Ord for PathNode {
             }
         }
 
-        self.get_location().cmp(&other.get_location())
+        match (self, other) {
+            (&PathNode::Condition(ref l1, b1, _), &PathNode::Condition(ref l2, b2, _)) => {
+                (l1, b1).cmp(&(l2, b2))
+            },
+            (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
+               (l1, i1).cmp( &(l2, i2) )
+            },
+            _ => self.get_location().cmp(&other.get_location()),
+        }
     }
 }
 
 impl PartialOrd for PathNode {
     fn partial_cmp(&self, other: &PathNode) -> Option<Ordering> {
         match (self, other) {
+            (&PathNode::Condition(ref l1, b1, _), &PathNode::Condition(ref l2, b2, _)) => {
+                (l1, b1).partial_cmp(&(l2, b2))
+            },
             (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1).partial_cmp( &(l2, i2) )
             },
@@ -57,6 +68,9 @@ impl PartialOrd for PathNode {
 impl PartialEq for PathNode {
     fn eq(&self, other: &PathNode) -> bool {
         match (self, other) {
+            (&PathNode::Condition(ref l1, b1, _), &PathNode::Condition(ref l2, b2, _)) => {
+                (l1, b1) == (l2, b2)
+            },
             (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1) == (l2, i2)
             },

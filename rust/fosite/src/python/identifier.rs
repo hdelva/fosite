@@ -18,7 +18,7 @@ impl IdentifierExecutor for PythonIdentifier {
 
             let mut new_unresolved = BTreeSet::new();
 
-            for (path, opt_address) in opt_mappings.iter() {
+            for &(ref path, ref opt_address) in opt_mappings.iter() {
                 for unresolved_path in &unresolved {
                     let mut new_path = path.clone();
                     for pls in unresolved_path.iter() {

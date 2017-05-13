@@ -36,20 +36,20 @@ impl Watch {
 
     pub fn store_identifier_dependency(&mut self, identifier: AnalysisItem, mapping: &Mapping) {
         if self.in_setup {
-            for (_, address) in mapping.iter() {
+            for &(_, ref address) in mapping.iter() {
                 self.store_object_dependency(*address);
             }
 
             match self.identifiers_before.entry(identifier.clone()) {
                 Entry::Occupied(mut m) => {
                     let mut acc = m.get_mut();
-                    for (_, address) in mapping.iter() {
+                    for &(_, ref address) in mapping.iter() {
                         acc.insert(*address);
                     }
                 },
                 Entry::Vacant(m) => {
                     let mut acc = HashSet::new();
-                    for (_, address) in mapping.iter() {
+                    for &(_, ref address) in mapping.iter() {
                         acc.insert(*address);
                     }
                     m.insert(acc);
@@ -69,7 +69,7 @@ impl Watch {
             match self.identifiers_changed.entry(identifier) {
                 Entry::Occupied(mut m) => {
                     let mut acc = m.get_mut();
-                    for (other_path, address) in mapping.iter() {
+                    for &(ref other_path, ref address) in mapping.iter() {
                         let mut p1 = path.prune(&self.source);
                         let p2 = other_path.prune(&self.source);
                         p1.merge_into(p2);
@@ -78,7 +78,7 @@ impl Watch {
                 },
                 Entry::Vacant(m) => {
                     let mut acc = Mapping::new();
-                    for (other_path, address) in mapping.iter() {
+                    for &(ref other_path, ref address) in mapping.iter() {
                         let mut p1 = path.prune(&self.source);
                         let p2 = other_path.prune(&self.source);
                         p1.merge_into(p2);

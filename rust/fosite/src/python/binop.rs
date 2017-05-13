@@ -31,8 +31,8 @@ impl BinOpExecutor for PythonBinOp {
 
         let mut error = BTreeMap::new();
 
-        for (left_path, left_address) in left_mapping.iter() {
-            for (right_path, right_address) in right_mapping.iter() {
+        for &(ref left_path, ref left_address) in left_mapping.iter() {
+            for &(ref right_path, ref right_address) in right_mapping.iter() {
                 if !left_path.mergeable(right_path) {
                     continue;
                 }

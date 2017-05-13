@@ -17,6 +17,10 @@ impl BlockExecutor for PythonBlock {
             let mut dependencies = intermediate.dependencies;
             let mut changes = intermediate.changes;
 
+            //println!("!!!!!!node {:?}", node.kind);
+            //println!("!!!!!!dependencies {:?}", dependencies);
+            //println!("!!!!!!changes {:?}\n", changes);
+
             total_dependencies.append(&mut dependencies);
             total_changes.append(&mut changes);
 

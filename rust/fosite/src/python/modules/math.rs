@@ -32,7 +32,7 @@ fn define_sin(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -68,7 +68,7 @@ fn define_cos(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -104,7 +104,7 @@ fn define_radians(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -140,7 +140,7 @@ fn define_floor(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,

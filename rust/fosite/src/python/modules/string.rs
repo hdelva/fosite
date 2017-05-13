@@ -46,7 +46,7 @@ fn define_format(module: &mut Module) {
             let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
 
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -106,7 +106,7 @@ fn define_find(module: &mut Module) {
             let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
 
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,

@@ -47,7 +47,7 @@ impl IndexExecutor for PythonIndex {
         // indexing something that doesn't support indexing
         let mut errors = BTreeMap::new();
 
-        for (target_path, target_address) in target_mapping.iter() {
+        for &(ref target_path, ref target_address) in target_mapping.iter() {
             // does this type of object support indexation?
             {
                 let kb = vm.knowledge();
@@ -82,7 +82,7 @@ impl IndexExecutor for PythonIndex {
                 let dict_type = kb.get_type(&"dict".to_owned()).unwrap();
                 if target_object.get_extension().contains(dict_type) {
                     let pls = target_object.get_attribute(&"___values".to_owned());
-                    let (_, new_address) = pls.iter().next().unwrap();
+                    let &(_, ref new_address) = pls.iter().next().unwrap();
                     target_object = vm.get_object(&new_address.unwrap());
                     is_dict = true;
                 }
@@ -118,7 +118,7 @@ impl IndexExecutor for PythonIndex {
             }
             
             // add all the possible values to the result map
-            for (path, address) in value_mappings.iter() {
+            for &(ref path, ref address) in value_mappings.iter() {
                 // is it always mergeable?
                 if target_path.mergeable(&path) {
                     let mut new_path = target_path.clone();

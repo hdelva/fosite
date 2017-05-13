@@ -165,7 +165,7 @@ fn assign_vararg(vm: &mut VirtualMachine,
         for arg in gpos.iter() {
             let mut chunk = CollectionChunk::empty();
 
-            for (path, address) in arg.iter(){
+            for &(ref path, ref address) in arg.iter(){
                 let kind = vm.get_object(address).get_extension().first().unwrap();
                 let repr = Representant::new(address.clone(), kind.clone(), Some(1), Some(1));
                 chunk.add_representant(path.clone(), repr);    
@@ -315,7 +315,7 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
             key_chunks.push(chunk); 
 
             let mut chunk = CollectionChunk::empty();
-            for (path, address) in mapping.iter(){
+            for &(ref path, ref address) in mapping.iter(){
                 let kind = vm.get_object(address).get_extension().first().unwrap();
                 let repr = Representant::new(address.clone(), kind.clone(), Some(1), Some(1));
                 chunk.add_representant(path.clone(), repr);    

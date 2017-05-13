@@ -47,7 +47,7 @@ impl Branch {
     fn set_mapping(&mut self, name: String, mapping: Mapping) {
         let mut new_mapping = OptionalMapping::new();
 
-        for (path, address) in mapping.iter() {
+        for &(ref path, ref address) in mapping.iter() {
             new_mapping
             .add_mapping(path.clone(), Some(address.clone()));
         }
@@ -55,13 +55,15 @@ impl Branch {
         self.set_optional_mapping(name, new_mapping);
     }
 
+/*
     fn set_result(&mut self, mapping: Mapping) {
         self.set_mapping("___result".to_owned(), mapping);
     }
 
     fn get_result(&self) -> Option<&OptionalMapping> {
         return self.resolve_identifier(&"___result".to_owned());
-    }
+    } 
+    */
 
     fn contains_mapping(&self, name: &String) -> bool {
         return self.content.contains_key(name);
@@ -252,29 +254,11 @@ impl Frame {
     fn set_mapping(&mut self, name: String, mapping: Mapping) {
         let mut new_mapping = OptionalMapping::new();
 
-        for (path, address) in mapping.iter() {
+        for &(ref path, ref address) in mapping.iter() {
             new_mapping.add_mapping(path.clone(), Some(address.clone()));
         }
 
         self.set_optional_mapping(name, new_mapping);
-    }
-
-    fn set_result(&mut self, mapping: Mapping) {
-        self.set_mapping("___result".to_owned(), mapping);
-    }
-
-    fn get_result(&self) -> OptionalMapping {
-        let mut mapping = OptionalMapping::new();
-
-        for branch in self.branches.iter() {
-            if let Some(m) = branch.content.resolve_identifier(&"___result".to_owned()) {
-                for (path, address) in m.iter() {
-                    mapping.add_mapping(path.clone(), address.clone());
-                }
-            }
-        }
-        
-        return mapping;
     }
 }
 
@@ -385,12 +369,8 @@ impl Scope {
         }
     }
 
-    pub fn discard_function(mut self) -> OptionalMapping {
-        if let Some(frame) = self.frames.pop() {
-            return frame.get_result();
-        }
-
-        return self.default.clone();
+    pub fn discard_function(mut self) {
+        self.frames.pop();
     }
 
     pub fn merge_branches(&mut self, hide_as_loop: Vec<Option<bool>>) {
@@ -531,7 +511,8 @@ impl Scope {
                     merge_identifiers.insert(name.clone());
                 }
 
-                subframe.frozen_loop.grow(new_node);
+                subframe.frozen_loop.grow(new_node.clone());
+                subframe.frozen_function.grow(new_node);
             }    
         }
 
@@ -562,7 +543,7 @@ impl Scope {
                 let entry;
                 if let &Some(ref b) = hide_as_loop.get(i as usize).unwrap_or(&None) {
                     let mut p = Path::empty();
-                    p.add_node(cause.clone());
+                    p.add_node(new_node.clone());
                     if *b {
                         let pls = new_loop_freeze.content.entry(p).or_insert(Branch::new());
                         entry = pls.content.entry(name.clone());

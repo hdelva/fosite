@@ -41,7 +41,7 @@ fn define_int_cast(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -101,7 +101,7 @@ fn define_str_cast(module: &mut Module) {
             let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
 
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -140,7 +140,7 @@ fn define_float_cast(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -197,7 +197,7 @@ fn define_input(module: &mut Module) {
             let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
             
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -262,7 +262,7 @@ fn define_abs(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -299,7 +299,7 @@ fn define_len(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -335,7 +335,7 @@ fn define_round(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -371,7 +371,7 @@ fn define_ord(module: &mut Module) {
 
             let mapping = Mapping::simple(Path::empty(), pointer.clone());
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -422,7 +422,7 @@ fn define_range(module: &mut Module) {
             let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
             
             let path = vm.current_path().clone();
-            vm.set_result(path, mapping);
+            vm.add_result(path, mapping);
 
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,

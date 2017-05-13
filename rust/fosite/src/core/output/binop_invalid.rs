@@ -68,7 +68,8 @@ impl MessageContent for BinOpInvalid {
             }
 
             for path in left_paths.iter() {
-                self.print_path(sources, path, "      ");
+            //for path in self.reduce_paths(sources, &left_paths) {
+                self.print_path(sources, &path, "      ");
                 println!("");
             }
 
@@ -82,7 +83,8 @@ impl MessageContent for BinOpInvalid {
             }
 
             for path in right_paths.iter() {
-                self.print_path(sources, path, "      ");
+            //for path in self.reduce_paths(sources, &right_paths) {
+                self.print_path(sources, &path, "      ");
                 println!("");
             }
         }
