@@ -1,0 +1,10 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 7, column 1}
+  Index might be out of bounds
+  x does not always have enough elements
+  In the following cases:
+  Case 1
+    x has at most 2 elements in the following case
+    Condition at \PYG{k}{row 1, column 1} is \PYG{n+nc}{true}
+    Assignment to \PYG{n+nc}{x} at \PYG{k}{row 2, column 2}
+\end{Verbatim}

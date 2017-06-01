@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{o}{\PYGZhy{}}
+\PYG{n}{y}
+
+\PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{y}
+    \PYG{n}{y}
+
+\PYG{n}{x}\PYG{p}{,} \PYG{n}{x}\PYG{o}{.}\PYG{n}{attr}\PYG{p}{,} \PYG{l+m+mi}{36}
+\end{Verbatim}

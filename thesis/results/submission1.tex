@@ -1,0 +1,262 @@
+\setstretch{1}
+
+\begin{figure}[H]
+\caption{Submision 7}
+\label{sbm:sub7}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub7_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, firstnumber=25},
+    colback=bg }
+def radar(getal):
+    if standvastig(getal) == True:
+        return False
+    getal = str(getal)
+    getal = list(getal)
+    if len(getal) // 2 == len(getal) / 2:
+        a = len(getal) // 2
+        n = 0
+        for z in range(0, len(getal) // 2):
+            if getal[0] == getal[-1]:
+                n += 1
+                getal.reverse()
+                getal = getal[:-1]
+                getal.reverse()
+                getal = getal[:-1]
+            else:
+                return False
+            if getal == [] and n == a:
+                return True
+    else:
+        if getal[-1] == '0':
+            getal = getal[:-1]
+            a = len(getal) // 2
+            n = 0
+            for z in range(0, len(getal) // 2):
+                if getal[0] == getal[-1]:
+                    n += 1
+                    getal.reverse()
+                    getal = getal[:-1]
+                    getal.reverse()
+                    getal = getal[:-1]
+                else:
+                    return False
+                if getal == [] and n == a:
+                    return True
+        else:
+            return False 
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\clearpage
+\begin{figure}[h]
+\ContinuedFloat % continue from previous page
+\begin{subfigure}{\textwidth}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, firstnumber=62},
+    colback=bg }        
+def repeater(getal):
+    if getal == 8740874:
+        return True
+    getal = str(getal)
+    getal = list(getal)
+    if len(getal) // 2 == len(getal) / 2:
+        n = 0
+        while n != len(getal) // 2:
+            if getal[n] == getal[n + len(getal) // 2]:
+                n += 1
+            else:
+                return False
+        return True
+    else:
+        return False
+
+def radarrepeater(getal):
+    if radar(getal) == True and repeater(getal) == True:
+        return True
+    return False
+    
+def numismatist(lijst, soort = None):
+    if soort is None:
+        soort = standvastig
+    if soort == standvastig:
+        for i in lijst:
+            if standvastig(i):
+                i == [i]
+                lijst += i
+    elif soort == radar:
+        for i in lijst:
+            if radar(i):
+                i = [i]
+                lijst += i
+    elif soort == repeater:
+        for i in lijst:
+            if repeater(i):
+                i = [i]
+                lijst += i
+    elif soort == radarrepeater:
+        for i in lijst:
+            if radarrepeater(i):
+                i = [i]
+                lijst += i
+    else:
+        for i in lijst:
+            if soort(i):
+                i = [i]
+                lijst += i
+    return lijst
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\clearpage
+\begin{figure}[h]
+\ContinuedFloat % continue from previous page
+
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub7_anal}
+
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 89, column 17
+  Incompatible types for operation ==
+  The following combinations exist:
+  Combination 0: int == list[int, str]
+    Left side has type int
+    In the following cases:
+      Call to numismatist at row 113, column 1
+      Element of the collection at row 87, column 9
+      Assignment to lijst at row 113, column 1
+      Assignment to i at row 87, column 9
+
+    Right side has type list[int, str]
+    In the following cases:
+      Always
+
+
+  Combination 1: str == list[int, str]
+    Left side has type str
+    In the following cases:
+      Call to numismatist at row 113, column 1
+      Element of the collection at row 87, column 9
+      Assignment to lijst at row 113, column 1
+      Assignment to i at row 87, column 9
+
+    Right side has type list[int, str]
+    In the following cases:
+      Always
+\end{tcblisting}
+
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+
+Error at row 63, column 8
+  Incompatible types for operation ==
+  The following combinations exist:
+  Combination 0: str == int
+    Left side has type str
+    In the following cases:
+      Call to numismatist at row 113, column 1
+      Element of the collection at row 97, column 9
+      Call to repeater at row 98, column 16
+      Assignment to lijst at row 113, column 1
+      Assignment to i at row 97, column 9
+      Assignment to getal at row 98, column 16
+
+    Right side has type int
+    In the following cases:
+      Always
+
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\clearpage
+\begin{figure}[h]
+\ContinuedFloat % continue from previous page
+
+\begin{subfigure}{\textwidth}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Warning at row 93, column 16
+  Not all code paths have returned a value
+  Python will pretend a None value was returned
+  In the following cases:
+  Case 1
+    Condition at row 25, column 5 is false
+    Condition at row 29, column 5 is true
+    Condition at row 33, column 13 is true
+
+  Case 2
+    Condition at row 25, column 5 is false
+    Condition at row 29, column 5 is true
+    Condition at row 41, column 13 is false
+
+  Case 3
+    Condition at row 25, column 5 is false
+    Condition at row 29, column 5 is false
+    Condition at row 44, column 9 is true
+    Condition at row 49, column 17 is true
+
+  Case 4
+    Condition at row 25, column 5 is false
+    Condition at row 29, column 5 is false
+    Condition at row 44, column 9 is true
+    Condition at row 57, column 17 is false
+
+
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Warning at row 92, column 9
+  Some code paths change the collection that's being iterated over
+  This can have unexpected consequences
+  In the following cases:
+  Case 1
+    Condition at row 93, column 13 is true
+    Assignment to i at row 94, column 17
+    Assignment to lijst at row 95, column 17
+
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+
+\setstretch{1.3}

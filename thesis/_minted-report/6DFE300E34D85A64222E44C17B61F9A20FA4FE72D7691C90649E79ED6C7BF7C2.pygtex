@@ -1,0 +1,23 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{\PYGZsh{} frame 1}
+\PYG{n}{x} \PYG{o}{=} \PYG{l+s+s1}{\PYGZsq{}x\PYGZsq{}}
+\PYG{n}{y} \PYG{o}{=} \PYG{l+s+s1}{\PYGZsq{}y\PYGZsq{}}
+
+\PYG{k}{while} \PYG{n+nb+bp}{True}\PYG{p}{:}
+    \PYG{k}{if} \PYG{l+s+s1}{\PYGZsq{}cond\PYGZsq{}}\PYG{p}{:}
+        \PYG{c+c1}{\PYGZsh{} frame 2, subframe 2.1}
+        \PYG{k}{if} \PYG{l+s+s1}{\PYGZsq{}cond2\PYGZsq{}}\PYG{p}{:}
+            \PYG{c+c1}{\PYGZsh{} frame 3, subframe 3.1}
+            \PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{9}
+            \PYG{k}{continue}
+    \PYG{k}{else}\PYG{p}{:}
+        \PYG{c+c1}{\PYGZsh{} frame 2,subframe 2}
+        \PYG{k}{if} \PYG{l+s+s1}{\PYGZsq{}cond4\PYGZsq{}}\PYG{p}{:}
+            \PYG{c+c1}{\PYGZsh{} frame 4, subframe 4.1}
+            \PYG{n}{y} \PYG{o}{=} \PYG{l+m+mi}{7}
+            \PYG{k}{break}
+
+    \PYG{n}{z} \PYG{o}{=} \PYG{n}{x} \PYG{o}{+} \PYG{n}{y}
+
+\PYG{n}{z} \PYG{o}{+} \PYG{l+s+s1}{\PYGZsq{}z\PYGZsq{}}
+\end{Verbatim}

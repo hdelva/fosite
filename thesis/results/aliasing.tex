@@ -1,6 +1,7 @@
 \begin{figure}[!h]
  \begin{minipage}{0.32\textwidth}
  code
+ \vspace{2pt}
   \begin{tcblisting}{listing only, 
     arc=0pt,
     outer arc=0pt, 
@@ -31,8 +32,8 @@ x.attr
 -
 y
 
-y
-y
+- | y
+    y
 
 x, x.attr, 36
 \end{tcblisting}
@@ -50,8 +51,8 @@ x, x.attr, 36
 y
 x
 
-y.attr, 36
-y.attr, 36
+- | y.attr, 36
+    y.attr, 36
 
 -
 \end{tcblisting}
@@ -63,18 +64,10 @@ y.attr, 36
     arc=0pt,
     outer arc=0pt, 
     boxrule=0.2pt,
-    minted language=text,
-    minted style=autumn,
+    minted language=fosite,
+    minted style=manni,
     minted options={},
     colback=bg }
-Warning at row 7, column 1
-  Object x does not always have an attribute attr
-  In the following cases:
-  Case 1
-    Assignment to y at row 1, column 1
-    Assignment to x at row 2, column 1
-    Condition at row 4, column 1 is false
-
 Error at row 7, column 1
   Object x does not have an attribute attr
   In the following cases:
@@ -85,5 +78,5 @@ Error at row 7, column 1
 \end{tcblisting}
  \end{minipage}
  \captionof{listing}{Aliasing}
- \label{lst:representation_examples}
+ \label{lst:aliasing}
 \end{figure}

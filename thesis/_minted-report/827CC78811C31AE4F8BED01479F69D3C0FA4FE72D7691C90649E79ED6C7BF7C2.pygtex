@@ -1,0 +1,16 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{0}
+\PYG{n}{y} \PYG{o}{=} \PYG{l+m+mi}{0}
+\PYG{n}{z} \PYG{o}{=} \PYG{l+m+mi}{0}
+
+\PYG{k}{if} \PYG{o}{...}\PYG{p}{:}
+    \PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{9}
+    \PYG{k}{if} \PYG{o}{...}\PYG{p}{:}
+        \PYG{n}{y} \PYG{o}{=} \PYG{l+m+mi}{5}
+        \PYG{k}{if} \PYG{o}{...}\PYG{p}{:}
+            \PYG{n}{z} \PYG{o}{=} \PYG{l+m+mi}{1}
+
+\PYG{n}{a} \PYG{o}{=} \PYG{n}{complex\PYGZus{}computation}\PYG{p}{(}\PYG{n}{x}\PYG{p}{)}
+\PYG{n}{b} \PYG{o}{=} \PYG{n}{complex\PYGZus{}computation}\PYG{p}{(}\PYG{n}{y}\PYG{p}{)}
+\PYG{n}{c} \PYG{o}{=} \PYG{n}{complex\PYGZus{}computation}\PYG{p}{(}\PYG{n}{z}\PYG{p}{)}
+\end{Verbatim}

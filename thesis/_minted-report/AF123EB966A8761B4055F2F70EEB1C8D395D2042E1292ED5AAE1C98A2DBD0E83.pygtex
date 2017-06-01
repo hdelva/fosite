@@ -1,0 +1,17 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 13, column 9}
+  Incompatible types for operation\PYG{n+nc}{ +}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ list[tuple] + tuple[int]}
+    Left side has type \PYG{n+nc}{list[tuple]}
+    In the following cases:
+      Assignment to \PYG{n+nc}{ducci} at \PYG{k}{row 9, column 5}
+
+    Right side has type \PYG{n+nc}{tuple[int]}
+    In the following cases:
+      Assignment to \PYG{n+nc}{volgende} at \PYG{k}{row 1, column 1}
+      Call to \PYG{n+nc}{ducci} at \PYG{k}{row 20, column 1}
+      Call to \PYG{n+nc}{volgende} at \PYG{k}{row 11, column 15}
+      Call to \PYG{n+nc}{tuple} at \PYG{k}{row 6, column 12}
+      Assignment to \PYG{n+nc}{volgend} at \PYG{k}{row 11, column 5}
+\end{Verbatim}

@@ -1,0 +1,10 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kn}{from} \PYG{n+nn}{cmath} \PYG{k+kn}{import} \PYG{n}{cos}\PYG{p}{,} \PYG{n}{tan}
+\PYG{n}{getal} \PYG{o}{=} \PYG{n+nb}{list}\PYG{p}{(}\PYG{n+nb}{input}\PYG{p}{())}
+\PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{0}
+\PYG{n}{y} \PYG{o}{=} \PYG{l+m+mi}{0}
+\PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{100}\PYG{p}{):}
+    \PYG{n}{x} \PYG{o}{+=} \PYG{n+nb}{float}\PYG{p}{(}\PYG{l+m+mi}{1} \PYG{o}{/} \PYG{n+nb}{float}\PYG{p}{(}\PYG{n}{cos}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]} \PYG{o}{*} \PYG{l+m+mi}{36}\PYG{p}{)))}
+    \PYG{n}{y} \PYG{o}{+=} \PYG{n+nb}{float}\PYG{p}{(}\PYG{n}{tan}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]} \PYG{o}{*} \PYG{l+m+mi}{36}\PYG{p}{))} \PYG{o}{*} \PYG{n}{x}
+\PYG{k}{print}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}\PYGZob{}\PYGZcb{}, \PYGZob{}\PYGZcb{}\PYGZsq{}}\PYG{o}{.}\PYG{n}{format}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{))}
+\end{Verbatim}

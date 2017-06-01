@@ -1,37 +1,78 @@
-\contentsline {section}{\numberline {1}Introduction}{2}{section.1}
-\contentsline {section}{\numberline {2}Literature}{2}{section.2}
-\contentsline {subsection}{\numberline {2.1}Static Analysis}{2}{subsection.2.1}
-\contentsline {subsubsection}{\numberline {2.1.1}Powerful Languages}{3}{subsubsection.2.1.1}
-\contentsline {paragraph}{C}{4}{section*.2}
-\contentsline {subparagraph}{Undefined Behavior}{4}{section*.3}
-\contentsline {subparagraph}{Tools}{5}{section*.4}
-\contentsline {paragraph}{Dynamic Languages}{5}{section*.5}
-\contentsline {subparagraph}{Classes}{6}{section*.6}
-\contentsline {subparagraph}{Refactoring}{6}{section*.7}
-\contentsline {subsubsection}{\numberline {2.1.2}NaN}{7}{subsubsection.2.1.2}
-\contentsline {subsubsection}{\numberline {2.1.3}Safe Languages}{7}{subsubsection.2.1.3}
-\contentsline {paragraph}{Haskell}{7}{section*.8}
-\contentsline {paragraph}{Rust}{8}{section*.9}
-\contentsline {subsubsection}{\numberline {2.1.4}Middle Ground}{9}{subsubsection.2.1.4}
-\contentsline {subsection}{\numberline {2.2}Inspirations}{9}{subsection.2.2}
-\contentsline {subsubsection}{\numberline {2.2.1}Code Smells}{9}{subsubsection.2.2.1}
-\contentsline {subsubsection}{\numberline {2.2.2}Compilers}{11}{subsubsection.2.2.2}
-\contentsline {paragraph}{SSA}{12}{section*.10}
-\contentsline {subparagraph}{Memory SSA}{12}{section*.12}
-\contentsline {subsubsection}{\numberline {2.2.3}Symbolic Execution}{13}{subsubsection.2.2.3}
-\contentsline {section}{\numberline {3}Fosite}{14}{section.3}
-\contentsline {subsection}{\numberline {3.1}Area of Application}{14}{subsection.3.1}
-\contentsline {subsection}{\numberline {3.2}Approach}{15}{subsection.3.2}
-\contentsline {subsection}{\numberline {3.3}Modules}{16}{subsection.3.3}
-\contentsline {subsection}{\numberline {3.4}Power of Interpretation}{16}{subsection.3.4}
-\contentsline {subsection}{\numberline {3.5}Implementation}{17}{subsection.3.5}
-\contentsline {subsubsection}{\numberline {3.5.1}Core Objects}{17}{subsubsection.3.5.1}
-\contentsline {paragraph}{Pointers and Objects}{17}{section*.13}
-\contentsline {paragraph}{Paths and Mappings}{17}{section*.14}
-\contentsline {paragraph}{Scope}{17}{section*.15}
-\contentsline {subsubsection}{\numberline {3.5.2}Conditionals}{19}{subsubsection.3.5.2}
-\contentsline {subsubsection}{\numberline {3.5.3}Path exclusion}{20}{subsubsection.3.5.3}
-\contentsline {section}{\numberline {4}Results}{21}{section.4}
-\contentsline {section}{\numberline {5}Discussion}{21}{section.5}
-\contentsline {section}{\numberline {6}Future Work}{21}{section.6}
-\contentsline {section}{References}{21}{section*.16}
+\contentsline {chapter}{\numberline {1}Context}{1}{chapter.2}
+\contentsline {chapter}{\numberline {2}Related Work}{2}{chapter.4}
+\contentsline {section}{\numberline {2.1}Static Analysis}{2}{section.5}
+\contentsline {subsection}{\numberline {2.1.1}Popular Languages}{4}{subsection.11}
+\contentsline {subsubsection}{C}{4}{section*.12}
+\contentsline {paragraph}{Undefined Behavior}{4}{section*.13}
+\contentsline {paragraph}{Tools}{6}{section*.18}
+\contentsline {subsubsection}{Dynamic Languages}{7}{section*.19}
+\contentsline {paragraph}{Classes}{8}{section*.20}
+\contentsline {paragraph}{Refactoring}{8}{section*.21}
+\contentsline {subsubsection}{\texttt {NaN}}{9}{section*.22}
+\contentsline {subsection}{\numberline {2.1.2}Safe Languages}{10}{subsection.24}
+\contentsline {subsubsection}{Haskell}{10}{section*.25}
+\contentsline {subsubsection}{Rust}{11}{section*.27}
+\contentsline {subsection}{\numberline {2.1.3}Tools}{12}{subsection.29}
+\contentsline {section}{\numberline {2.2}Code Smells}{13}{section.30}
+\contentsline {section}{\numberline {2.3}Compilers}{15}{section.33}
+\contentsline {subsection}{\numberline {2.3.1}SSA}{15}{subsection.36}
+\contentsline {subsubsection}{Memory SSA}{16}{section*.38}
+\contentsline {section}{\numberline {2.4}Symbolic Execution}{17}{section.39}
+\contentsline {chapter}{\numberline {3}Fosite}{19}{chapter.42}
+\contentsline {section}{\numberline {3.1}Goals}{19}{section.44}
+\contentsline {section}{\numberline {3.2}Approach}{20}{section.46}
+\contentsline {section}{\numberline {3.3}Languages}{21}{section.48}
+\contentsline {section}{\numberline {3.4}Analysis}{22}{section.49}
+\contentsline {chapter}{\numberline {4}Implementation}{25}{chapter.53}
+\contentsline {section}{\numberline {4.1}Objects}{26}{section.55}
+\contentsline {section}{\numberline {4.2}Paths and Mappings}{27}{section.57}
+\contentsline {section}{\numberline {4.3}Boolean Expressions}{29}{section.64}
+\contentsline {section}{\numberline {4.4}Conditionals}{30}{section.66}
+\contentsline {section}{\numberline {4.5}Loops}{31}{section.69}
+\contentsline {section}{\numberline {4.6}Namespace}{32}{section.70}
+\contentsline {subsubsection}{OptionalMapping}{32}{section*.71}
+\contentsline {subsubsection}{Branch}{32}{section*.72}
+\contentsline {subsubsection}{StatisChamber}{32}{section*.73}
+\contentsline {subsubsection}{SubFrame}{33}{section*.74}
+\contentsline {subsubsection}{Frame}{33}{section*.75}
+\contentsline {subsubsection}{Namespace}{34}{section*.78}
+\contentsline {subsubsection}{Grow}{35}{section*.79}
+\contentsline {subsubsection}{Merge}{35}{section*.80}
+\contentsline {section}{\numberline {4.7}Name Resolution}{37}{section.83}
+\contentsline {subsection}{\numberline {4.7.1}Identifiers}{38}{subsection.85}
+\contentsline {subsection}{\numberline {4.7.2}Attributes}{38}{subsection.86}
+\contentsline {subsection}{\numberline {4.7.3}Methods}{38}{subsection.87}
+\contentsline {section}{\numberline {4.8}Collections}{39}{section.88}
+\contentsline {subsubsection}{Representants}{39}{section*.89}
+\contentsline {subsubsection}{Chunks}{39}{section*.90}
+\contentsline {subsubsection}{Chains}{40}{section*.91}
+\contentsline {subsubsection}{Branches}{40}{section*.92}
+\contentsline {subsubsection}{Frames}{40}{section*.93}
+\contentsline {subsubsection}{Collections}{40}{section*.94}
+\contentsline {subsection}{\numberline {4.8.1}Operations}{41}{subsection.95}
+\contentsline {section}{\numberline {4.9}Function Definitions}{42}{section.97}
+\contentsline {section}{\numberline {4.10}Function Calls}{43}{section.98}
+\contentsline {section}{\numberline {4.11}Warnings and Errors}{45}{section.101}
+\contentsline {subsection}{\numberline {4.11.1}Errors}{45}{subsection.102}
+\contentsline {subsection}{\numberline {4.11.2}Warnings}{46}{subsection.103}
+\contentsline {chapter}{\numberline {5}Results and Discussion}{47}{chapter.104}
+\contentsline {section}{\numberline {5.1}Artificial Examples}{48}{section.105}
+\contentsline {subsection}{\numberline {5.1.1}Assignments}{49}{subsection.106}
+\contentsline {subsection}{\numberline {5.1.2}Aliasing}{50}{subsection.108}
+\contentsline {subsection}{\numberline {5.1.3}Call Clobbering}{50}{subsection.110}
+\contentsline {subsection}{\numberline {5.1.4}Path Exclusion}{51}{subsection.112}
+\contentsline {subsection}{\numberline {5.1.5}Control Flow}{52}{subsection.114}
+\contentsline {subsection}{\numberline {5.1.6}Endless Loops}{53}{subsection.116}
+\contentsline {subsection}{\numberline {5.1.7}Static Indexing}{55}{subsection.120}
+\contentsline {subsubsection}{Out-of-Bounds Index}{55}{section*.121}
+\contentsline {subsubsection}{Unpacking and Slicing}{57}{section*.124}
+\contentsline {section}{\numberline {5.2}Submissions}{59}{section.126}
+\contentsline {subsubsection}{Submission 1}{59}{section*.127}
+\contentsline {subsubsection}{Submission 2}{61}{section*.129}
+\contentsline {subsubsection}{Submission 3}{63}{section*.131}
+\contentsline {subsubsection}{Submission 4}{65}{section*.134}
+\contentsline {subsubsection}{Submission 5}{67}{section*.136}
+\contentsline {subsubsection}{Submission 6}{69}{section*.138}
+\contentsline {subsubsection}{Submission 7}{71}{section*.140}
+\contentsline {chapter}{\numberline {6}Conclusion and Future Work}{76}{chapter.145}
+\contentsline {chapter}{References}{78}{chapter*.147}

@@ -1,0 +1,65 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+y = 9
+
+def foo(x):
+    x.attr = 'changed'
+    return 42
+
+if foo(y):
+    print(y) 
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+-
+
+- | x
+    x
+    -
+
+y, foo | y, print
+         y, print 
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+y
+
+foo | x.attr, 36
+      x.attr, 36
+      -
+
+36 | 5
+     5
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Clobbering}
+ \label{lst:clobbering}
+\end{figure}

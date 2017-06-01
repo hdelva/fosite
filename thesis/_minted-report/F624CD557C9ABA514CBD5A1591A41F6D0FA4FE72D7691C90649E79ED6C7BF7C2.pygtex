@@ -1,0 +1,11 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{letterwaarde}\PYG{p}{(}\PYG{n}{planeet}\PYG{p}{):}
+    \PYG{n}{planeet1} \PYG{o}{=} \PYG{n}{planeet}
+    \PYG{k}{while} \PYG{l+s+s1}{\PYGZsq{}\PYGZhy{}\PYGZsq{}} \PYG{o+ow}{or} \PYG{l+s+s1}{\PYGZsq{}@\PYGZsq{}} \PYG{o+ow}{in} \PYG{n}{planeet1}\PYG{p}{:}
+        \PYG{n}{planeet} \PYG{o}{=} \PYG{l+s+s1}{\PYGZsq{}\PYGZsq{}}
+        \PYG{k}{for} \PYG{n}{x} \PYG{o+ow}{in} \PYG{n}{planeet1}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{x}\PYG{o}{.}\PYG{n}{isalpha}\PYG{p}{():}
+                \PYG{n}{planeet} \PYG{o}{+=} \PYG{n}{x}
+
+\PYG{n}{letterwaarde}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}EARTH\PYGZsq{}}\PYG{p}{)}
+\end{Verbatim}

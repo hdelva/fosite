@@ -1,0 +1,240 @@
+--- IAN
+--- Lijn 11: TypeError: a float is required
+--- Geen extra informatie 
+--- Gebruiker had zelfde code vier keer ingediend
+from cmath import cos, tan
+getal = list(input())
+x = 0
+y = 0
+for i in range(0, 100):
+    x += float(1 / float(cos(getal[i] * 36)))
+    y += float(tan(getal[i] * 36)) * x
+print('{}, {}'.format(x, y))
+
+---- IAN
+---- Endless loop
+lijst = str(input())
+start = int(input())
+sprong = int(input())
+sprong2 = sprong
+woord = lijst[start]
+lijst2 = str(woord)
+x = len(lijst) - 1
+a = len(lijst) - abs(start)
+while x != 0:
+    if lijst == 'say hello to a good buy':
+        lijst2 += 'y luaeb h o dtyo aoosgl'
+    else:
+        x -= 1
+        d = abs(sprong2)
+        if d >= a:
+            if sprong2 < 0:
+                sprong2 += len(lijst)
+            else:
+                sprong2 -= len(lijst)
+            y = start + sprong2
+            woord2 = lijst[y]
+            lijst2 += str(woord2)
+            sprong2 += sprong
+        else:
+            y = start + sprong2
+            woord2 = lijst[y]
+            lijst2 += str(woord2)
+            sprong2 += sprong
+print('{}'.format(lijst2))
+
+---- https://dodona.ugent.be/nl/submissions/161745/
+---- IAN
+---- endless loop
+---- srs wat
+---- Very hard code to read, probably hard to debug as well
+---- condition doesn't get updated on line 12
+hoeveel = int(input())
+code = str(input())
+signaal = ''
+while hoeveel != 0:
+    for i in range(0, len(code)):
+        while code[i] == ' ' or code[i] == '1' or code[i] == '2' or code[i] == '3' or code[i] == '4':
+            signaal += '.'
+        if code[i] == '6' or code[i] == '5' or code[i] == '7' or code[i] == '8' or code[i] == '9':
+            if code[i + 1] == ' ' or code[i + 1] == '6' or code[i + 1] == '5' or code[i + 1] == '7' or code[i + 1] == '8' or code[i] == '9':
+                signaal += code[i]
+            else :
+                while code[i + 1] != code[i + 1] == ' ' or code[i + 1] == '1' or code[i + 1] == '2' or code[i + 1] == '3' or code[i + 1] == '4' or code[i + 1] == '5' or code[i + 1] == '6' or code[i + 1] == '7' or code[i + 1] == '8' or code[i + 1] == '9':
+                    if code[i + 1] == code[i + 1].upper:
+                        signaal += code[i]
+    print('{}'.format(signaal))
+    signaal = ''
+    hoeveel -= 1
+    code = str(input())
+
+---- IAN
+---- forgets to update h in negative branch
+def goed(i1, i2):
+    if i1 == 'O' and i2 == 'W' or i1 == 'W' and i2 == 'O':
+        return True
+    elif i1 == 'Z' and i2 == 'N' or i1 == 'N' and i2 == 'Z':
+        return True
+    return False
+
+def dwarsdoorsnede(rij, richting):
+    lijst = []
+    lijst2 = []
+    i = 0
+    h = len(richting) / (2 * rij)
+    rij = rij
+    richting = list(richting)
+    richting.append('stop')
+    while rij != 0:
+        while h != 0:
+            if goed(richting[i + 1], richting[i + 2]) == True:
+                a = str(richting[i] + richting[i + 1])
+                lijst.append(a)
+                i += 2
+                h -= 1
+            else:
+                lijst2.append(lijst)
+                lijst = []
+        rij -= 1
+    return lijst2
+
+dwarsdoorsnede(4, 'NZZWNZZWNWNWOWZWNZZ')
+
+--- IAN
+--- a few else branches don't update the loop condition
+def decodeer(decodeer):
+    e = ''
+    i = 0
+    z = len(decodeer)
+    while z != 0:
+        if decodeer[i] != 'A' and decodeer[i] != 'a' and decodeer[i] != 'b':
+            e += decodeer[i]
+            z -= 1
+            i += 1
+        elif decodeer[i] == 'A':
+            if decodeer[i + 1] == 'b':
+                e += ''
+                z -= 1
+                i += 1
+            else:
+                e += decodeer[i]
+                z -= 1
+                i += 1
+        elif decodeer[i] == 'b':
+            if decodeer[i - 1] == 'a' or decodeer[i - 1] == 'A':
+                e += ''
+                z -= 1
+                i += 1
+            else:
+                e += decodeer[i]
+        else:
+            if decodeer[i + 1] == 'b':
+                e += ''
+                z -= 1
+                i += 1
+            else:
+                e += decodeer[i]
+    return(e)
+
+decodeer('abbaba')
+
+--- AXELLE
+--- += op regel 13, subtiele fout
+def volgende(reeks):
+    volgende_reeks = []
+    for i in range(0, len(reeks)):
+        volgende_reeks.append(abs(reeks[i] - reeks[(i+1)%len(reeks)]))
+    
+    return tuple(volgende_reeks)
+
+def ducci(reeks):
+    ducci = []
+    ducci.append(tuple(reeks))
+    volgend = volgende(reeks)
+    while volgend not in ducci:
+        ducci += volgend
+        volgend = volgende(volgend)
+    if volgend != tuple([0]*len(reeks)):
+        ducci += volgend
+        
+    return tuple(ducci)
+
+ducci([32, 9, 14, 3])
+
+---- https://dodona.ugent.be/nl/submissions/358758/
+---- IAN
+---- update for loop generator
+---- ugly code makes it hard to understand
+def standvastig(getal):
+    getal = str(getal)
+    getal = list(getal)
+    n = 0
+    for i in range(0, len(getal) - 1):
+        if getal[i] == getal[i + 1]:
+            n += 1
+    if n == len(getal) - 1:
+        return True
+    return False
+    
+def numismatist(lijst, soort = None):
+    if soort == None:
+        soort = standvastig
+    if soort == standvastig:
+        for i in lijst:
+            if standvastig(i):
+                i == [i]
+                lijst += i
+    else:
+        for i in lijst:
+            if soort(i):
+                i = [i]
+                lijst += i
+    return lijst
+
+numismatist([33333333, 1133110, '77777777', '12211221'])
+
+---- https://dodona.ugent.be/nl/submissions/495946/
+---- IAN
+---- aanpassen generator for loop
+---- onverwachte aliasing
+def letterwaarde(planeet):
+    planeet1 = planeet
+    while '-' or '@' in planeet1:
+        planeet = ''
+        for x in planeet1:
+            if x.isalpha():
+                planeet += x
+
+letterwaarde('EARTH')
+
+---- https://dodona.ugent.be/nl/submissions/95893/
+---- MARJOLEIN
+---- Reuses the variable name x
+---- ends up comparing a float x to string 'stop'
+---- mostly because x is also an int in [0,5]
+---- two other while loops would also never stop
+---- those compare an int to a string
+
+warmedag=0
+hetedag=0
+x=input()
+
+while x!= 'stop':
+    x=float(x)
+    
+    for x in range(0,5):
+        while x >= 25.0:
+            warmedag+=1
+            x=input()
+
+        while x>=30.0:
+            hetedag+=1
+            x=input()
+        else:
+            hetedag=0
+            warmedag=0
+    
+if warmedag==2 and hetedag==3:
+    print('hittegolf')
+else:
+    print('geen hittegolf')

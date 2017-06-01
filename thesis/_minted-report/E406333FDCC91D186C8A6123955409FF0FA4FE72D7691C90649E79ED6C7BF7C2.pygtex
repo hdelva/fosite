@@ -1,0 +1,20 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{,} \PYG{n}{n}
+    \PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{o}{\PYGZhy{}}
+        \PYG{o}{\PYGZhy{}}
+
+    \PYG{n}{y}
+
+    \PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{,} \PYG{n}{n}
+        \PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{x}
+            \PYG{n}{x}
+            \PYG{o}{\PYGZhy{}}
+        \PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{,} \PYG{n}{n}
+            \PYG{n}{y}
+            \PYG{n}{x}
+            \PYG{n}{n}
+
+    \PYG{o}{\PYGZhy{}}
+
+\PYG{o}{\PYGZhy{}}
+\end{Verbatim}

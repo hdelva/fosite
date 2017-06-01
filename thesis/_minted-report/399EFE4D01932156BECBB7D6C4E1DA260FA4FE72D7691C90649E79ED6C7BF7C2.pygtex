@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{if} \PYG{n}{current} \PYG{o+ow}{is} \PYG{o+ow}{not} \PYG{n+nb+bp}{None}\PYG{p}{:}
+  \PYG{k}{print}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}given \PYGZob{}\PYGZcb{}\PYGZhy{}\PYGZob{}\PYGZcb{}\PYGZsq{}}\PYG{o}{.}\PYG{n}{format}\PYG{p}{(}\PYG{n}{current}\PYG{o}{.}\PYG{n}{year}\PYG{p}{,} \PYG{n}{current}\PYG{o}{.}\PYG{n}{month}\PYG{p}{))}
+\PYG{k}{else}\PYG{p}{:}
+  \PYG{n}{current} \PYG{o}{=} \PYG{n}{datetime}\PYG{o}{.}\PYG{n}{now}\PYG{p}{()}
+\end{Verbatim}

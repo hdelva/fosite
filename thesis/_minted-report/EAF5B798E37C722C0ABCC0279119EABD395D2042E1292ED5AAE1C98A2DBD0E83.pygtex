@@ -1,0 +1,29 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 89, column 17}
+  Incompatible types for operation\PYG{n+nc}{ ==}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ int == list[int, str]}
+    Left side has type \PYG{n+nc}{int}
+    In the following cases:
+      Call to \PYG{n+nc}{numismatist} at \PYG{k}{row 113, column 1}
+      Element of the collection at \PYG{k}{row 87, column 9}
+      Assignment to \PYG{n+nc}{lijst} at \PYG{k}{row 113, column 1}
+      Assignment to \PYG{n+nc}{i} at \PYG{k}{row 87, column 9}
+
+    Right side has type \PYG{n+nc}{list[int, str]}
+    In the following cases:
+      Always
+
+
+  Combination 1:\PYG{n+nc}{ str == list[int, str]}
+    Left side has type \PYG{n+nc}{str}
+    In the following cases:
+      Call to \PYG{n+nc}{numismatist} at \PYG{k}{row 113, column 1}
+      Element of the collection at \PYG{k}{row 87, column 9}
+      Assignment to \PYG{n+nc}{lijst} at \PYG{k}{row 113, column 1}
+      Assignment to \PYG{n+nc}{i} at \PYG{k}{row 87, column 9}
+
+    Right side has type \PYG{n+nc}{list[int, str]}
+    In the following cases:
+      Always
+\end{Verbatim}

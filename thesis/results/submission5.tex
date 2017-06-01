@@ -1,0 +1,69 @@
+\setstretch{1}
+
+\begin{figure}[H]
+\caption{Submision 4}
+\label{sbm:sub4}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub4_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, breaklines},
+    colback=bg }
+def volgende(reeks):
+    volgende_reeks = []
+    for i in range(0, len(reeks)):
+        volgende_reeks.append(abs(reeks[i] - reeks[(i+1)%len(reeks)]))
+    
+    return tuple(volgende_reeks)
+
+def ducci(reeks):
+    ducci = []
+    ducci.append(tuple(reeks))
+    volgend = volgende(reeks)
+    while volgend not in ducci:
+        ducci += volgend
+        volgend = volgende(volgend)
+    if volgend != tuple([0]*len(reeks)):
+        ducci += volgend
+        
+    return tuple(ducci)
+
+ducci([32, 9, 14, 3])
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub4_anal}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 13, column 9
+  Incompatible types for operation +
+  The following combinations exist:
+  Combination 0: list[tuple] + tuple[int]
+    Left side has type list[tuple]
+    In the following cases:
+      Assignment to ducci at row 9, column 5
+
+    Right side has type tuple[int]
+    In the following cases:
+      Assignment to volgende at row 1, column 1
+      Call to ducci at row 20, column 1
+      Call to volgende at row 11, column 15
+      Call to tuple at row 6, column 12
+      Assignment to volgend at row 11, column 5
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\setstretch{1.3}

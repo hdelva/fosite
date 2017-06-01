@@ -1,0 +1,17 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 13, column 15}
+  Incompatible types for operation\PYG{n+nc}{ \PYGZgt{}=}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ str \PYGZgt{}= float}
+    Left side has type \PYG{n+nc}{str}
+    In the following cases:
+      Iteration of the loop at \PYG{k}{row 5, column 1}
+      Iteration of the loop at \PYG{k}{row 8, column 5}
+      Iteration of the loop at \PYG{k}{row 9, column 9}
+      Call to \PYG{n+nc}{input} at \PYG{k}{row 11, column 15}
+      Assignment to \PYG{n+nc}{x} at \PYG{k}{row 11, column 13}
+
+    Right side has type \PYG{n+nc}{float}
+    In the following cases:
+      Always
+\end{Verbatim}

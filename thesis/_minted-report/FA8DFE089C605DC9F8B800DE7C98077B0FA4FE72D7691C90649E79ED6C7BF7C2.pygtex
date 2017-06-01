@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{if} \PYG{n}{x} \PYG{o}{\PYGZlt{}} \PYG{n}{y}\PYG{p}{:}
+  \PYG{n}{z} \PYG{o}{=} \PYG{n}{x}
+\PYG{k}{else}\PYG{p}{:}
+  \PYG{n}{z} \PYG{o}{=} \PYG{n}{y}
+\end{Verbatim}

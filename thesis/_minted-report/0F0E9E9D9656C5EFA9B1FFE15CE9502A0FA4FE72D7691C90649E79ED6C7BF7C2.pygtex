@@ -1,0 +1,39 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{radar}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{):}
+    \PYG{k}{if} \PYG{n}{standvastig}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{==} \PYG{n+nb+bp}{True}\PYG{p}{:}
+        \PYG{k}{return} \PYG{n+nb+bp}{False}
+    \PYG{n}{getal} \PYG{o}{=} \PYG{n+nb}{str}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)}
+    \PYG{n}{getal} \PYG{o}{=} \PYG{n+nb}{list}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)}
+    \PYG{k}{if} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2} \PYG{o}{==} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{/} \PYG{l+m+mi}{2}\PYG{p}{:}
+        \PYG{n}{a} \PYG{o}{=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2}
+        \PYG{n}{n} \PYG{o}{=} \PYG{l+m+mi}{0}
+        \PYG{k}{for} \PYG{n}{z} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2}\PYG{p}{):}
+            \PYG{k}{if} \PYG{n}{getal}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{==} \PYG{n}{getal}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]:}
+                \PYG{n}{n} \PYG{o}{+=} \PYG{l+m+mi}{1}
+                \PYG{n}{getal}\PYG{o}{.}\PYG{n}{reverse}\PYG{p}{()}
+                \PYG{n}{getal} \PYG{o}{=} \PYG{n}{getal}\PYG{p}{[:}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                \PYG{n}{getal}\PYG{o}{.}\PYG{n}{reverse}\PYG{p}{()}
+                \PYG{n}{getal} \PYG{o}{=} \PYG{n}{getal}\PYG{p}{[:}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+            \PYG{k}{else}\PYG{p}{:}
+                \PYG{k}{return} \PYG{n+nb+bp}{False}
+            \PYG{k}{if} \PYG{n}{getal} \PYG{o}{==} \PYG{p}{[]} \PYG{o+ow}{and} \PYG{n}{n} \PYG{o}{==} \PYG{n}{a}\PYG{p}{:}
+                \PYG{k}{return} \PYG{n+nb+bp}{True}
+    \PYG{k}{else}\PYG{p}{:}
+        \PYG{k}{if} \PYG{n}{getal}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{==} \PYG{l+s+s1}{\PYGZsq{}0\PYGZsq{}}\PYG{p}{:}
+            \PYG{n}{getal} \PYG{o}{=} \PYG{n}{getal}\PYG{p}{[:}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+            \PYG{n}{a} \PYG{o}{=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2}
+            \PYG{n}{n} \PYG{o}{=} \PYG{l+m+mi}{0}
+            \PYG{k}{for} \PYG{n}{z} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2}\PYG{p}{):}
+                \PYG{k}{if} \PYG{n}{getal}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{==} \PYG{n}{getal}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]:}
+                    \PYG{n}{n} \PYG{o}{+=} \PYG{l+m+mi}{1}
+                    \PYG{n}{getal}\PYG{o}{.}\PYG{n}{reverse}\PYG{p}{()}
+                    \PYG{n}{getal} \PYG{o}{=} \PYG{n}{getal}\PYG{p}{[:}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                    \PYG{n}{getal}\PYG{o}{.}\PYG{n}{reverse}\PYG{p}{()}
+                    \PYG{n}{getal} \PYG{o}{=} \PYG{n}{getal}\PYG{p}{[:}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                \PYG{k}{else}\PYG{p}{:}
+                    \PYG{k}{return} \PYG{n+nb+bp}{False}
+                \PYG{k}{if} \PYG{n}{getal} \PYG{o}{==} \PYG{p}{[]} \PYG{o+ow}{and} \PYG{n}{n} \PYG{o}{==} \PYG{n}{a}\PYG{p}{:}
+                    \PYG{k}{return} \PYG{n+nb+bp}{True}
+        \PYG{k}{else}\PYG{p}{:}
+            \PYG{k}{return} \PYG{n+nb+bp}{False}
+\end{Verbatim}

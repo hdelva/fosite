@@ -1,0 +1,96 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+a = [1, 2, 3, 4]
+
+while 0 not in a:
+  if 'cond1':
+    if 'cond2':
+      pass
+    else:
+      a[0] = '0'
+  else:
+    a[1] = 9
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- 
+
+a | -
+    - | -
+        - | -
+            -
+        - | a
+            a
+    - | a
+        a
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+a
+
+- | 36
+    - | -
+        - | -
+            -
+        - | 36
+            36
+    - | 36
+        36
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Warning at row 8, column 4
+  Adding an element of a new type to a collection
+  a had type list[int] and became list[int, string]
+  This can make working with this collection more difficult 
+
+Warning at row 3, column 1
+  Not all code paths update the loop condition
+  There's a risk of endless loops
+  In the following cases:
+  Case 1
+    Condition at row 4, column 2 is true
+    Condition at row 5, column 3 is true
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Endless Loop}
+ \label{lst:endless2}
+\end{figure}

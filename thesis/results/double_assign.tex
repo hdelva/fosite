@@ -1,6 +1,7 @@
 \begin{figure}[!h]
  \begin{minipage}{0.32\textwidth}
  code
+ \vspace{2pt}
   \begin{tcblisting}{listing only, 
     arc=0pt,
     outer arc=0pt, 
@@ -30,9 +31,9 @@ y.attr
     colback=bg }
 -
 
-y
-y
--
+- | y
+    y
+    -
 
 y, y.attr, 36, 40
 \end{tcblisting}
@@ -49,22 +50,22 @@ y, y.attr, 36, 40
     colback=bg }
 y
 
-y, y.attr, 36
-y.attr, 36
-y
+- | y, y.attr, 36
+    y.attr, 36
+    y
 
 -
 \end{tcblisting}
  \end{minipage}
  \begin{minipage}{\textwidth}
   \vspace{4pt}
-  Analysis
+  analysis
   \begin{tcblisting}{listing only, 
     arc=0pt,
     outer arc=0pt, 
     boxrule=0.2pt,
-    minted language=text,
-    minted style=autumn,
+    minted language=fosite,
+    minted style=manni,
     minted options={xleftmargin=-6pt},
     colback=bg }
 Error at row 7, column 1
@@ -82,3 +83,4 @@ Error at row 7, column 1
  \captionof{listing}{Assign}
  \label{lst:assign}
 \end{figure}
+

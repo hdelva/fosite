@@ -1,0 +1,12 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kd}{public} \PYG{k+kd}{class} \PYG{n+nc}{ShortSet} \PYG{o}{\PYGZob{}}
+  \PYG{k+kd}{public} \PYG{k+kd}{static} \PYG{k+kt}{void} \PYG{n+nf}{main} \PYG{o}{(}\PYG{n}{String}\PYG{o}{[]} \PYG{n}{args}\PYG{o}{)} \PYG{o}{\PYGZob{}}
+    \PYG{n}{Set}\PYG{o}{\PYGZlt{}}\PYG{n}{Short}\PYG{o}{\PYGZgt{}} \PYG{n}{s} \PYG{o}{=} \PYG{k}{new} \PYG{n}{HashSet}\PYG{o}{\PYGZlt{}\PYGZgt{}();}
+    \PYG{k}{for} \PYG{o}{(}\PYG{k+kt}{short} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{o}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{100}\PYG{o}{;} \PYG{n}{i}\PYG{o}{++)} \PYG{o}{\PYGZob{}}
+      \PYG{n}{s}\PYG{o}{.}\PYG{n+na}{add}\PYG{o}{(}\PYG{n}{i}\PYG{o}{);}
+      \PYG{n}{s}\PYG{o}{.}\PYG{n+na}{remove}\PYG{o}{(}\PYG{n}{i} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{o}{);}
+    \PYG{o}{\PYGZcb{}}
+    \PYG{n}{System}\PYG{o}{.}\PYG{n+na}{out}\PYG{o}{.}\PYG{n+na}{println}\PYG{o}{(}\PYG{n}{s}\PYG{o}{.}\PYG{n+na}{size}\PYG{o}{());}
+  \PYG{o}{\PYGZcb{}}
+\PYG{o}{\PYGZcb{}}
+\end{Verbatim}

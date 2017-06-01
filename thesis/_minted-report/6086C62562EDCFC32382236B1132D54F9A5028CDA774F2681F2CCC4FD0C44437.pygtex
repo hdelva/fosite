@@ -1,7 +1,0 @@
-\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8}]
-      \PYG{k}{let} \PYG{n}{process} \PYG{n}{il} \PYG{o}{=}
-      \PYG{k}{let} \PYG{k}{module} \PYG{n+nc}{IV} \PYG{o}{=} \PYG{n+nc}{Instr\PYGZus{}visitor} \PYG{k}{in}
-      \PYG{k}{let} \PYG{n}{visit} \PYG{n}{i} \PYG{n}{t} \PYG{o}{=} \PYG{n}{instrument} \PYG{n}{i} \PYG{n}{t} \PYG{k}{in}
-      \PYG{n+nn}{IV}\PYG{p}{.}\PYG{n}{map\PYGZus{}instr} \PYG{n+nn}{IU}\PYG{p}{.}\PYG{n}{is\PYGZus{}mem\PYGZus{}write} \PYG{n}{visit} \PYG{n}{il}
-      \PYG{o}{|\PYGZgt{}} \PYG{n}{insert\PYGZus{}instr\PYGZus{}list} \PYG{n+nc}{BEFORE} \PYG{o}{!}\PYG{n}{il\PYGZus{}update}
-\end{Verbatim}

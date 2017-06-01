@@ -1,9 +1,11 @@
 % Static Analysis of Dynamic Languages
 % Harm Delva
 
-# Context & Product Statement
+# Context
 
-Ghent University has developed the Dodona platform (dodona.ugent.be) that students can use to submit solutions and receive immediate feedback. This feedback is in large part done through unit testing which lets the students know whether or not their solution is correct, but it doesn't really help them forward if it's not. To remedy this, a visual debugger is available which students can use to step through their program. Unfortunately it is limited in what it can do. More importantly, it can only let the user scroll through execution states. If an error occurred after a couple of thousand executed statements, this becomes a very tedious process.
+Ghent University has developed the Dodona platform [^11] that students can use to submit solutions and receive immediate feedback. This feedback is in large part done through unit testing which lets the students know whether or not their solution is correct, but it doesn't really help them forward if it's not. To remedy this, a visual debugger is available which students can use to step through their program. Unfortunately it is limited in what it can do. More importantly, it can only let the user scroll through execution states. If an error occurred after a couple of thousand executed statements, this becomes a very tedious process.
+
+[^11]: \url{dodona.ugent.be} -- accessed 31 May 2017
 
 There are ways to avoid the pain of debugging altogether. There are linter tools such as JSLint and Pylint which emit warnings on error prone patterns. The Dodona platform uses these tools as well, and relays the warnings to the students. 
 
@@ -15,17 +17,17 @@ The Pylint tool for Python has noticeably helped students avoid mistakes. This i
 
 NASA's source code of the Apollo 11 Guidance Computer was recently digitized and put on GitHub [^2]. All of it was written in an assembly language and the result worked just fine. The C programming language was developed for the Unix operating system so the latter could run on various CPU architectures @cdev. In essence it's a pretty thin abstraction over assembly, in the sense that it doesn't take much pressure off of the programmers. Unix worked just fine, just like NASA's guidance controller. One could argue that programmers don't need tools to aid them -- they seem to know what they're doing. 
 
-[^2]: https://github.com/chrislgarry/Apollo-11
+[^2]: \url{https://github.com/chrislgarry/Apollo-11} -- accessed 31 May 2017
 
 As the field of computing grew, and with it the projects, it started becoming apparent that programmers can't always rely on themselves. Even veteran developers occasionally discover a major vulnerability in their code -- like the Heartbleed vulnerability in OpenSSL [^3]. Of course everyone makes mistakes , but critical code should avoid them at all costs. A first line of defense against these costly mistakes is a proof of correctness. NASA's code was reliable because they had formal proofs that the most critical parts were correct [@nasa1; @nasa2; @nasa3]. Doing this is a massive amount of work, and a proof can still be wrong. More importantly, most verification frameworks are applied to designs and not implementations @visser.
 
-[^3]: http://heartbleed.com/
+[^3]: \url{http://heartbleed.com/} -- accessed 31 May 2017
 
 Functional programming languages are closely related to provable correctness, while also automating some of the checks. Notable examples of such languages are Haskell and ML. Both have a strong theoretical foundation and provide the programmer with a strong type system to make it easier to reason about the code. This stands in strong contrast with languages like C. While Haskell was made to facilitate writing correct code @haskell, C was made to be close to the metal and efficient @cdev. The C compiler doesn't help the programmer nearly as much as the Haskell compiler. Developing correct and functional programs is obviously paramount to any programmer, so C's priorities don't always align with those of the developer. 
 
 That's where static analyzers come into play. They analyze a program, either in its source code form or its compiled form, and try to find as many candidate mistakes as possible. These mistakes are often very subtle and rare, but even a single one can ruin someone's week. Code sample \ref{smp:shortset} comes from Google's Error Prone GitHub page [^4] and is a great example of how subtle serious bugs can be. The code seems to be just fine at first glance, the analysis in sample \ref{smp:shortset_f} reveals a subtle flaw.
 
-[^4]: https://github.com/google/error-prone
+[^4]: \url{https://github.com/google/error-prone} -- -- accessed 31 May 2017
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -86,7 +88,7 @@ Let's focus on the other main attraction of C, its efficiency. This comes at a c
 
 There are a lot of things the C specification doesn't specify a behavior for, which leads to undefined behavior. Some are well-known, such as using freed memory. Others catch people by surprise. For example, the GNU libc website claims that `1/0` yields `inf` [^5], even though the C99 specification clearly contradicts them @C99. The C99 standard introduced the `INF` macro, but it doesn't specify which operations should result in one. Division by zero is still as undefined as it has always been. 
 
-[^5]: http://www.gnu.org/software/libc/manual/html_node/Infinity-and-NaN.html
+[^5]: \url{http://www.gnu.org/software/libc/manual/html_node/Infinity-and-NaN.html} -- accessed 31 May 2017
 
 Entire papers have been written on the subject of undefined behavior [@lattner; @wang; @guide]. One striking thing is how recent a lot of these papers are. Even though the language is over 40 years old, this is still an active field of research. Compilers are getting more advanced and with it the optimizations they perform. Some of those optimizations rely on the fact that the compiler is under no particular obligation when optimizing code containing undefined behavior. 
 
@@ -112,7 +114,7 @@ PG_RETURN_INT32((int32) arg1 / arg2);
 
 Code sample \ref{smp:undef} was part of PostgreSQL @wang. The call to `ereport` on line 2 never returns. It does some logging before calling `exit`. In the mind of the developer this prevents the division by zero on line 7. Looking at the code on GitHub [^6], the function this sample came from indicates that calling it will return a `Datum` struct. According to the language specification, this function _must_ return a value each time it's called. The body of the null check does not return anything, so the compiler concludes that the rest of the function will also be executed and division by `arg2` will always occur. 
 
-[^6]: https://github.com/postgres/postgres/blob/master/src/backend/utils/adt/int.c#L847
+[^6]: \url{https://github.com/postgres/postgres/blob/master/src/backend/utils/adt/int.c\#L847} -- accessed 31 May 2017
 
 Division by zero is also undefined behavior in C, so the compiler concludes that `arg2` won't ever be zero -- it wouldn't get used in a division otherwise. As a result, the null check gets flagged as dead code, and is removed entirely. 
 
@@ -140,8 +142,6 @@ if (arg2 == 0)
 \end{code}
 
 Code sample \ref{smp:undef_f} contains the fixed code. By adding an explicit return (in the form a macro), the compiler leaves the null check intact. Notice how the comment blames a "gcc bug". This illustrates how even experienced developers seem to misunderstand their language of choice. 
-
-\clearpage
 
 ##### Tools
 
@@ -196,7 +196,7 @@ Since this standard, if one of the function's arguments is `NaN` but the other a
 
 It has become normal for `NaN` values to somehow disappear as if nothing was wrong, leading to some very confusing bugs. A fellow student ran into the consequences while implementing his own dissertation (personal correspondence). The Theano framework [^7] has a function to compute the gradient of some expression. A `NaN` found its way into the input of this function but the result somehow didn't contain a single `NaN`. It became seemingly random noise instead. When implementing something computational, any person's first instinct would be that the algorithm is wrong. 
 
-[^7]: http://deeplearning.net/software/theano/tutorial/gradients.html
+[^7]: \url{http://deeplearning.net/software/theano/tutorial/gradients.html} -- accessed 31 May 2017
 
 Static analysis should be able to help alleviate this problem. If the floating-point value that's being used came from a `sqrt` function, there should be an `isNaN` check first. Alternatively, the Rust programming language tries not to hide the fact that floating-pointing values can be `NaN`. Without providing your own implementation of the `Ord` trait for the `f64` type, it's impossible to order a vector of `f64` values because comparing two `f64` values might be meaningless. It does however provide an implementation of the `PartialOrd` trait, which returns an `Option<Ordering>`, which makes it explicitly clear that the result can be `None`.
  
@@ -241,9 +241,9 @@ In languages like Java that heavily advocate encapsulation, it's not uncommon to
 
 Rust is an interesting example of the relationship between languages (more specifically the compilers) and static analyzers. The Rust compiler enforces a lot of things that the C compiler doesn't, but that the C community has written their own tools for. One might wonder why C is even still around if Rust seems to be a more complete package. Part of the answer is that Rust is a very restrictive language, leading to frustrated developers. Keeping in mind Coverity's paper @coverity, it's a lot easier to ignore an analyzer than it is to fix a compile error. 
 
-In fact, this can be seen as an instance of the loosely defined concept of an _XY problem_ [^8]. If a person knows how to do something using method X, he's less likely to learn method Y -- even if method Y is clearly the better choice. Rust has received a lot of criticism from renowned developers for ridiculous reasons, such as being unable to have two mutable references to the same object. That's how they would do it in C, so it must be the right way, even though `Alias XOR mutability` is a common design principle. This problem is relevant in this dissertation for two reasons. Static analysis tools run into the same mentality issues @coverity, and it shows that it's important to never pick up bad habits in the first place. The field of application of this dissertation is ultimately helping students learn how to program, before they have a chance to grow any bad habits. 
+In fact, this can be seen as an instance of the loosely defined concept of an _XY problem_ [^8]. If a person knows how to do something using method X, he's less likely to learn method Y -- even if method Y is clearly the better choice. Rust has received a lot of criticism from renowned developers for ridiculous reasons, such as being unable to have two mutable references to the same object. That's how they would do it in C, so it must be the right way, even though `Alias XOR Mutability` is a common design principle. This problem is relevant in this dissertation for two reasons. Static analysis tools run into the same mentality issues @coverity, and it shows that it's important to never pick up bad habits in the first place. The field of application of this dissertation is ultimately helping students learn how to program, before they have a chance to grow any bad habits. 
 
-[^8]: https://manishearth.github.io/blog/2017/04/05/youre-doing-it-wrong/
+[^8]: \url{https://manishearth.github.io/blog/2017/04/05/youre-doing-it-wrong/} -- accessed 31 May 2017
 
 ### Tools
 
@@ -407,16 +407,16 @@ There are some other code smells besides code duplication that could be interest
 
 ## Compilers
 
-Static analyzers aren't the only tools that aim to make code better -- compilers do so as well. Refactoring from a software architect's point of view is aimed at making the code easier to read and maintain. Optimizations are aimed at making code more efficient. Optimization and refactoring sometimes do opposite transformations, for example in sample \ref{smp:duplication_3_f} where unfolding the loop results in the code in sample \ref{smp:duplication_3}. Both operations transform code in a conservative manner though, i.e. without changing the semantics (of valid code). Optimization is a very active area of research, with companies like Google and Apple working on the LLVM [^8], Oracle on the JVM, Red Hat on the GCC [^9], \ldots \ More importantly, even the most esoteric features in compilers have proven their value as they're part of a real product, which gives confidence that an analyzer that uses the same principles will work as well.
+Static analyzers aren't the only tools that aim to make code better -- compilers do so as well. Refactoring from a software architect's point of view is aimed at making the code easier to read and maintain. Optimizations are aimed at making code more efficient. Optimization and refactoring sometimes do opposite transformations, for example in sample \ref{smp:duplication_3_f} where unfolding the loop results in the code in sample \ref{smp:duplication_3}. Both operations transform code in a conservative manner though, i.e. without changing the semantics (of valid code). Optimization is a very active area of research, with companies like Google and Apple working on the LLVM [^10], Oracle on the JVM, Red Hat on the GCC [^9], \ldots \ More importantly, even the most esoteric features in compilers have proven their value as they're part of a real product, which gives confidence that an analyzer that uses the same principles will work as well.
 
-[^8]: http://llvm.org/foundation/sponsors.html
-[^9]: https://gcc.gnu.org/steering.html
+[^10]: \url{http://llvm.org/foundation/sponsors.html} -- accessed 31 May 2017
+[^9]: \url{https://gcc.gnu.org/steering.html} -- accessed 31 May 2017
 
 ### SSA
 
 Static Single Assignment (SSA) form is a program representation that's well suited to a large number of compiler optimizations such as conditional constant propagation @constant, global value numbering @equality, and code equivalence detection @equivalent. It was introduced in a paper by IBM @equality in the 80s but had little practical success initially. It wasn't until several optimizations were found [@increment; @dominance] that it started becoming popular. Since then it has found its way into most popular compilers. LLVM has used it in its virtual instruction set since its inception in 2002 @lattner, it's what powered Java 6's JIT @hotspot, and it's what's behind recent GCC optimizations [@memoryssa; @treessa].
 
-The idea is very simple, every variable can only be assigned to once. This can be done by adding incremental numbers to each variable. For example, `x = x + 1` becomes $\texttt{x}_1 \texttt{ = x}_0 \texttt{ + 1}$. This is a trivial transformation for straight-line code, but becomes a bit harder when dealing with branches. Figure \ref{fig:ssa} illustrates how this is solved. Every branch introduces new variables, and a $\phi\textit{-node}$ gets inserted at the end of the branch. This node mimics a function call that can return either of its two arguments. This doesn't correspond to an actual function call, it's just a token that gets inserted to help with the analysis. Practically speaking, the $\phi\text{-nodes}$ get inserted at so-called _dominance frontiers_ instead of at the end of every branch @dominance. This optimization is of little relevance to the topic of this dissertation -- it's the underlying principle that counts. 
+The idea is very simple, every variable can only be assigned to once. This can be done by adding incremental numbers to each variable. For example, `x = x + 1` becomes $\texttt{x}_1 \texttt{ = x}_0 \texttt{ + 1}$. This is a trivial transformation for straight-line code, but becomes a bit harder when dealing with branches. Figure \ref{fig:ssa} illustrates how this is solved. Every branch introduces new variables, and a $\phi\textit{-node}$ gets inserted where paths converge. This node mimics a function call that can return either of its two arguments. This doesn't correspond to an actual function call, it's just a token that gets inserted to help with the analysis. 
 
 \begin{figure}
     \centering
@@ -508,13 +508,15 @@ def foo(x):
 
 # Fosite
 
-There's a relatively unknown Frisian god of reconciliation, justice, and mediation called Foseti. These are also some qualities that a good static analyzer should aim to have as well to gain a user's trust @coverity. The analyzer developed as part of this thesis is called Fosite, as foresight would be another good quality. 
+There's a relatively unknown Frisian god of reconciliation, justice, and mediation called Foseti. These are also some qualities that a good static analyzer should aim to have as well to gain a user's trust @coverity. The analyzer developed as part of this thesis is called Fosite [^42], as foresight would be another good quality. 
+
+[^42]: \url{https://github.com/hdelva/fosite/tree/master} -- accessed 31 May 2017
 
 ## Goals
 
-Unlike most existing tools, Fosite's focus is analyzing small pieces of code submitted by students, and this comes with both advantages and disadvantages. The biggest advantage is that we're free to explore slow but accurate  methods. Not entirely free however as feedback should still be fast. Imagine being a stressed out student, working on your final exam and every submission takes a minute to run because submissions come in faster than they get processed. 
+Unlike most existing tools, Fosite's focus is on analyzing small pieces of code submitted by students that are new to programming, and this comes with both advantages and disadvantages. The biggest advantage is that we're free to explore slow but accurate  methods. Not entirely free however as feedback should still be fast. Imagine being a stressed out student, working on your final exam and every submission takes a minute to run because submissions come in faster than they get processed. 
 
-The most important requirement of all is that all warnings have to be as helpful as possible. Providing the right details should make the errors more convincing and will be met with less resistance from the user @coverity. This is doubly important for new programmers; simply pointing out bad style is not enough if the user does not know how to fix it. Fosite uses a data-flow analysis to pinpoint the source of problems and uses that information to inform the user. 
+The most important requirement of all is that all warnings have to be as helpful as possible. Providing the right details should make the detection of errors more convincing and will be met with less resistance from the user @coverity. This is doubly important for new programmers; simply pointing out bad style is not enough if the user does not know how to fix it. Fosite therefore uses data-flow analysis to pinpoint the source of problems and uses that information to inform the user. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -533,11 +535,11 @@ else:
 \caption{Inefficient Implementations} \label{smp:shit}
 \end{code}
 
-We'd like to be able to recognize suboptimal patterns as well, such as in code sample \ref{smp:shit}. Replacing all occurrences of this pattern with a call to `min` not only makes the code easier to read, it's also significantly more performant in interpreted languages such as Python. To be able to recommend sound code transformations, we'll rely on the research done in the area of compiler technology. The analysis should also work as close as possible to the submitted code though, and at the very least maintain a one-to-one relationship to it. This is important because the end goal is automated refactoring, which becomes hard when the input becomes mangled beyond recognition. 
+We would like to be able to recognize suboptimal patterns as well, such as in code sample \ref{smp:shit}. Replacing all occurrences of this pattern with a call to `min` not only makes the code easier to read, it's also significantly more performant in interpreted languages such as Python. To be able to recommend sound code transformations, we will rely on the research done in the area of compiler technology. The analysis should also work as close as possible to the submitted code though, and at the very least maintain a one-to-one relationship to it. This is important because the end goal is automated refactoring, which becomes hard when the input becomes mangled beyond recognition. 
 
 ## Approach
 
-As pointed out on sections \ref{popular-languages} and \ref{compilers}, analysis of dynamic languages is often done using abstract interpreters, and many modern compilers use an SSA form to perform sound optimizations. The PyPy interpreter for Python constructs this form using an abstract interpreter as well @pypy, although their solution is intraprocedural, and others have successfully used abstract interpreters to perform a may-alias analysis on Python with the goal of optimization @interpret. Fosite is based on their conclusions and results but it ultimately has a different focus, i.e. detailed static analysis and automated refactoring. 
+As pointed out in sections \ref{popular-languages} and \ref{compilers}, analysis of dynamic languages is often done using abstract interpreters, and many modern compilers use an SSA form to perform sound optimizations. The PyPy interpreter for Python constructs this form using an abstract interpreter as well @pypy, although their solution is intraprocedural. Others have successfully used abstract interpreters to perform a may-alias analysis on Python with the goal of optimization @interpret. Fosite is based on their conclusions and results, but it ultimately has a different focus, i.e. detailed static analysis and automated refactoring. 
 
 The result of our analysis isn't exactly an SSA form for a few reasons. The Memory SSA approach by the GCC and LLVM is a bad fit since it relies on a low-level representation, which is a luxury we don't have as we need to stay close to the original source code. Regular SSA is of course an option since PyPy does it @pypy, but can't handle collections @memoryssa.
 
@@ -545,13 +547,15 @@ Fosite emits more general _use-def_ information instead.
 A _use_ refers to any data dependency, such as resolving a variable name or retrieving an element from a collection. 
 A _def_ is the opposite such as assigning something to a variable name or inserting an element into a collection. 
 Within Fosite, a _use_ and a _def_ are respectively called a dependency and a change. 
-As with SSA, incremental numbering can be applied to subsequent changes.
+As with SSA, incremental numbering can be applied to subsequent definitions. 
+This can be done in a similar fashion as applying the path convergence criterion for the conversion to SSA form. 
+The path-sensitivity of the analysis already provides the necessary components to do so -- and control flow is very well-structured in Python (and other dynamic languages). 
 The main difference with regular SSA is that this requires a separate data structure. 
 This allows a single expression or statement to cause multiple changes. 
 A conditional statement is exactly that -- a statement, and it can be useful during refactoring to treat it as a single atomic thing. Its dependencies and changes are the sum of its branches'. In other words, the external data structure allows for a more hierarchical analysis. 
 
-To achieve the same level of precision as Memory SSA, Fosite uses two kinds of changes and dependencies. For starters, there's the usual identifier dependency, which is used to model reachability of data. Consider code sample \ref{smp:dep} in which `x` gets defined twice. In between assignments the first value of `x` gets used to call in a call to `print`. The `print` must come before the second assignment to `x`, as the intended data is no longer reachable after the assignment. 
-Another sort of dependency is the object dependency, which is used to model a state dependency. The second assignment to `x` assigns a list to it, which gets printed as well. Before printing however an element gets appended to it. Appending an element to a list doesn't change anything about the identifier and thus can't be modeled in the same way. In other words, the final call to `print` has a dependency to both the `x` identifier and to whichever object `x` points to at the same time -- and both dependencies serve their own purpose. 
+To achieve the same level of precision as Memory SSA, Fosite uses two kinds of changes and dependencies. For starters, there's the usual identifier dependency, which is used to model reachability of data. Consider code sample \ref{smp:dep} in which `x` gets defined twice. In between assignments, the first value of `x` gets used in a call to `print`. The `print` must come before the second assignment to `x`, as the intended data is no longer reachable after the assignment. 
+Another sort of dependency are object dependencies, which are used to model state dependencies. The second assignment to `x` assigns a list to it, which gets printed as well. Before printing however an element gets appended to it. Appending an element to a list doesn't change anything about the identifier and thus can't be modeled in the same way. In other words, the final call to `print` has a dependency to both the `x` identifier and to whichever object `x` points to at the same time -- and both dependencies serve their own purpose. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -573,11 +577,11 @@ print(x)
 \caption{Dependency Example} \label{smp:dep}
 \end{code}
 
-There are hidden dependencies in this program as well. The first two lines of code will read two lines from `stdin` and parse them to integers. The order in which this happens is important since the two values get subtracted from each other. This can be modeled by adding implicit state. The call to `input` both depends on the implicit state and changes it, which will ensure that the relative order between the two calls remains the same. Other IO functionality such as the `print` call will do the same. Implicit state can easily be modeled by designating a specific  and hardcoded object to be the internal state. 
+There are hidden dependencies in this program as well. The first two lines of code will read two lines from `stdin` and parse them to integers. The order in which this happens is important, since the two values get subtracted from each other. This can be modeled by adding implicit state. The call to `input` both depends on the implicit state and changes it, which will ensure that the relative order between the two calls remains the same. Other IO functionality such as the `print` call will do the same. Implicit state can easily be modeled by designating a specific  and hardcoded object to be the internal state. 
 
 ## Languages
 
-Since languages tend to share a lot of features, it's not unthinkable to have an abstract interpreter that can process multiple languages. The first thing this would need is a common input format, which in Fosite's case is its _General Abstract Syntax Tree_ (GAST). It has to be able to capture all _syntactic_ features of the languages it supports -- the semantics aren't relevant for an AST. Adding support for an additional language will require some new nodes or some extra information in existing nodes. Since only things will have to get added interpreting the existing languages can just ignore the additional node types. Another thing that's special about the GAST is that every node has its unique identifier, and the identifiers are totally ordered. If one node's identifier is less than another's, that must mean it came before that other node in the original source file. This is important to accurately report code points, but also because some optimizations rely on it. 
+Since programming languages tend to share a lot of features, it's not unthinkable to have an abstract interpreter that can process multiple languages. The first thing this would need is a common input format, which in Fosite's case is its _General Abstract Syntax Tree_ (GAST). It has to be able to capture all _syntactic_ features of the languages it supports -- the semantics aren't relevant for an AST. Adding support for an additional language will require some new nodes or some extra information in existing nodes. Since only things will have to get added interpreting the existing languages can just ignore the additional node types. Another thing that's special about the GAST is that every node has its unique identifier, and the identifiers are totally ordered. If one node's identifier is less than another's, that must mean it came before that other node in the original source file. This is important to accurately report code points, but also because some optimizations rely on it. 
 
 The interpreter has to be able to add semantics to the common AST structure. A different `Executor` instance may be assigned for every supported node for every supported language. Languages that share the same features can reuse existing `Executor` implementations. Common and fundamental features such as function scoping are even available inside the interpreter's implementation itself. 
 
@@ -607,7 +611,7 @@ def foo():
 \caption{Function Returns} \label{smp:return}
 \end{code}
 
-Code sample \ref{smp:return} contains an error prone pattern of Python-like code. A student had written something like this which resulted in one out of 200 unit tests failing. Written like this, it's possible that none of the intended `return` statements get executed. If this happens the return value is going to be `None`, which makes the unit test fail in an unexpected way -- nowhere did they specify a `None` value should be returned. Fosite gives an accurate description of the cause -- the function did not return under these conditions -- instead of just the result. 
+Code sample \ref{smp:return} contains an error prone pattern of Python-like code. A student had written something like this which resulted in one out of 200 unit tests failing. Written like this, it's possible that none of the intended `return` statements are executed. If this happens, the return value is going to be `None`, which makes the unit test fail in an unexpected way -- nowhere did they specify a `None` value should be returned. Fosite gives an accurate description of the cause -- the function did not return under these conditions -- instead of just the result. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -627,7 +631,7 @@ while tuple([0] * i) not in x:
 \caption{Heterogeneous Collections} \label{smp:nohomo}
 \end{code}
 
-The test data contains an exercise that required that a sequence of tuples should be generated, stopping whenever a tuple of zeroes has been added. Code sample \ref{smp:nohomo} is based on one of the submissions. Up until the adding of the tuple of zeroes, the type of `x` had been `List[Tuple[int]]` (in the notation used by Python 3.5 type hints). Instead of appending the tuple however, `+=` will concatenate the tuple's elements to `x`. This changes the type to `List[Union[int, Tuple[int]]]`. This transition to a heterogeneous collection is valid Python code but ultimately very error prone. In fact, this causes an infinite loop in this case, as the expected element never gets added.
+The test data contains an exercise that required that a sequence of tuples should be generated, stopping whenever a tuple of zeroes has been added. Code sample \ref{smp:nohomo} is based on one of the submissions. Up until the addition of the tuple of zeroes, the type of `x` had been `List[Tuple[int]]` (in the notation used by Python 3.5 type hints). Instead of appending the tuple however, `+=` will concatenate the tuple's elements to `x` -- in the same way calling `extend` on `x` would. This changes the type to `List[Union[int, Tuple[int]]]`. This transition to a heterogeneous collection is valid Python code but ultimately very error prone. In fact, this causes an infinite loop in this case, as the expected element never gets added.
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -651,13 +655,13 @@ def change(x, d = None):
 \caption{Endless Loop} \label{smp:nostop}
 \end{code}
 
-Although deciding whether or not any given program will stop is impossible, it is possible in some cases. Those cases also happen to be quite common. Code sample \ref{smp:nostop} is an excerpt from a submission. The student intended to tokenize the string `x`, building the token in `list2`. Every token should then get translated and the translated token gets stored in `list1`. There are a number of mistakes but the most important one is the endless `while` loop. The student wanted index `i` to be a starting position of the token, with the `while` loop building the token from that point. That's of course not what the code does, the same character will get added over and over since none of the values in the loop condition ever change. Data-flow analysis remembers when and where variables get their values, so it can be used to recognize that the variables are still the same. 
+Although deciding whether or not any given program will stop is impossible, it is possible in some cases. Those cases also happen to be quite common. Code sample \ref{smp:nostop} is an excerpt from a submission. The student intended to tokenize the string `x`, building the token in `list2`. Every token should then get translated and the translated token gets stored in `list1`. There are a number of mistakes, but the most important one is the endless `while` loop. The student wanted index `i` to be a starting position of the token, with the `while` loop building the token from that point. That's of course not what the code does. The same character will get added over and over since none of the values in the loop condition ever change. Data-flow analysis remembers when and where variables get their values, so it can be used to recognize that the variables are still the same. 
 
 The secondary goal of the interpreter is to open the door to code refactoring, through the means of a data-flow analysis. Every evaluated node during interpretation emits a list of changes and dependencies as discussed in section \ref{approach}.
 
 # Implementation
 
-Fosite is an abstract interpreter. It uses abstract pointers, which can be used to fetch abstract objects from an abstract memory. The objects themselves have no value, but they do have a notion of types, attributes, and elements. There is a notion of namespaces where names get mapped to objects, and a notion of heterogeneous collections. In essence, the interpreter tries to get as close at it can to actual interpreter without having actual values. This not as obvious as it sounds. For example, it's tempting to cut corners when implementing the _Method Resolution Order_ (MRO), variable capturing in closure definitions, or the explicit `self` argument in Python. Simple approximations of these behaviors would suffice for well written code -- but targeting such code makes no sense for a static analyzer. We have to be able to analyze _really_ bad code as well. 
+Fosite is an abstract interpreter. It uses abstract pointers, which can be used to fetch abstract objects from an abstract memory. The objects themselves have no value, but they do have a notion of types, attributes, and elements. There is a notion of namespaces where names get mapped to objects, and a notion of heterogeneous collections. In essence, the interpreter tries to get as close as it can to an actual interpreter, without having actual values. This is not as obvious as it sounds. For example, it's tempting to cut corners when implementing the _Method Resolution Order_ (MRO), variable capturing in closure definitions, or the explicit `self` argument in Python. Simple approximations of these behaviors would suffice for well written code -- but targeting such code makes no sense for a static analyzer. We have to be able to analyze _really_ bad code as well. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -686,11 +690,11 @@ c = complex_computation(z)
 \caption{State Explosion} \label{smp:branch}
 \end{code}
 
-As an abstract interpreter uses abstract values, it can't decide which branch to take at every branch point, so it will explore every branch. This can quickly lead to a state explosion problem as the number of branches can increase exponentially. Consider the Python-like code in code sample \ref{smp:branch}. There are branching points on lines 5, 7 and 9, so that the functions calls on lines 12, 13, and 14 can each be executed once for each of the four possible execution paths for a total of 12 calls to `complex_computation`. Each argument `x`, `y`, or `z` only has two possible values though, so we should be able to do better. The Fosite interpreter will create new execution paths at every branching point, but those paths will also be merged after evaluating the branch point. This means that there will only be a single active execution path left upon executing the calls on lines 12-15. Merging execution paths preserves all the relevant information of each branch, as discussed in section \ref{namespace}. The result still has exponential complexity, but no longer in the number of branch points but in the number of possible values 
+As an abstract interpreter uses abstract values, it can't decide which branch to take at every branch point, so it will explore every possible branch. This can quickly lead to a state explosion problem as the number of branches can increase exponentially. Consider the Python-like code in code sample \ref{smp:branch}. There are branching points on lines 5, 7 and 9, so that the function calls on lines 12, 13, and 14 can each be executed once for each of the four possible execution paths for a total of 12 calls to `complex_computation`. Each argument `x`, `y` or `z` only has two possible values though, so we should be able to do better. The Fosite interpreter will create new execution paths at every branch point, but those paths will also be merged after evaluating the branch point. This means that there will only be a single active execution path left upon executing the calls on lines 12-15. Merging execution paths preserves all the relevant information of each branch, as discussed in section \ref{namespace}. The result still has exponential complexity, but no longer in the number of branch points but in the number of possible values 
 
 ## Objects 
 
-As alluded to in the beginning of section \ref{implementation}, the Fosite interpreter keeps track of attributes and elements. Attributes can reuse the namespace logic as described in sections \ref{namespace} and \ref{name-resolution}. Elements are a lot harder to model and are covered in section \ref{collections}.
+As alluded to at the beginning of section \ref{implementation}, the Fosite interpreter keeps track of attributes and elements. Attributes can reuse the namespace logic as described in sections \ref{namespace} and \ref{name-resolution}. Elements are a lot harder to model and are covered in section \ref{collections}.
 
 Everything is an object in Python, even classes  become class objects upon definition. An object of a class has a reference to its class object. Among other things, this reference gets used during name resolution. Every class can also extend multiple other classes, called base classes, in a similar way. This can easily be modeled in an abstract interpreter using a list of pointers.
 
@@ -719,22 +723,42 @@ The type of an object is harder to model however. In many object-oriented langua
 \caption{Types in Python} \label{smp:types}
 \end{code}
 
-Code sample \ref{smp:types} illustrates why this is odd. The `type` function returns a class object, so that `type(42)` returns the class object of name `int`. Using the same function to get the class object's type returns a class object of name `type`. Requesting that object's type reveals something strange -- `type` is its own type. This seemingly cyclic dependency gets implemented in CPython using a type flag, if that flag is set it'll return the type class object when needed. In other words, the `type` object doesn't have a reference to itself, it'll get a reference to itself at runtime when needed. 
+Code sample \ref{smp:types} illustrates why this is odd. The `type` function returns a class object, so that `type(42)` returns the class object of name `int`. Using the same function to get the class object's type returns a class object of name `type`. Requesting that object's type reveals something strange -- `type` is its own type. This seemingly cyclic dependency gets implemented in CPython using a type flag, if that flag is set it will return the type class object when needed. In other words, the `type` object doesn't have a reference to itself, it will get a reference to itself at runtime when needed. 
 
-The type of a value is the same as its class object. A class's basetypes have nothing to do with its type -- a class object's type is always `type`. These semantics are quite straight forward to model in an abstract interpreter: the list of base class references are still there, but there's also a type flag. When that flag is set, the `type` function shouldn't use the base classes but fetch the pointer to the `type` class object.
+The type of a value is the same as its class object. A class's basetypes have nothing to do with its type -- a class object's type is always `type`. These semantics are quite straightforward to model in an abstract interpreter: the list of base class references are still there, but there's also a type flag. When that flag is set, the `type` function shouldn't use the base classes but fetch the pointer to the `type` class object.
 
 ## Paths and Mappings
 
-In order to report the cause of errors and warnings accurately, we need to know the source of every value. A path corresponds to a sequence of code points so that the user gets an idea of the execution path that lead to a problem. Every entry in the path gets called a path node. Examples of path nodes include which branch of a conditional was followed, assignments, and function calls. The path nodes should submit a logical ordering, so that users can easily interpret results.
+In order to accurately report the cause of errors and warnings, we need to know the source of every value. A path corresponds to a sequence of code points so that the user gets an idea of the execution path that leads to a problem. A path is an ordered sequence of path nodes. Examples of path nodes include which branch of a conditional was followed, assignments, and function calls. The path nodes should submit a logical ordering, so that users can easily interpret results. For example, this is what a path may look like to the users:
 
-As mentioned in section \ref{languages}, AST node have totally ordered unique identifiers. A first attempt at defining the path node would be to just reuse the AST identifiers. This works fine until function call come into the picture. A function call will come after the function definition, and its identifier will be larger than any of the function definition's nodes. 
-This would place the function body execution before the function call itself. 
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=fosite,
+  minted style=manni,
+  minted options={},
+  colback=bg }
+Call to numismatist at row 113, column 1
+Element of the collection at row 97, column 9
+Call to repeater at row 98, column 16
+Assignment to lijst at row 113, column 1
+Assignment to i at row 97, column 9
+Assignment to getal at row 98, column 16
+\end{tcblisting}
+
+As mentioned in section \ref{languages}, AST nodes have totally ordered unique identifiers. A first attempt at defining the path node would be to just reuse the AST identifiers. This works fine until function calls come into the picture. A function call will come after the function definition, and its identifier will be larger than any of the function definition's nodes. 
+This would place the execution of the function body before the function call itself. 
 On top of that, this approach does not support executing the same node more than once. 
 A better solution is to define a path node to be an ordered collection of AST nodes -- the nodes that are currently being executed. 
-Some nodes need extra information, a branch node for example needs to indicate which branch was actually taken. 
+Some nodes need extra information. A conditional branch node for example needs to indicate which branch was actually taken. 
 Each branch is incrementally numbered, and contains the total number of branches for practical reasons (see sections \ref{namespace} and \ref{function-calls}).
-The actual branch numbers are of no concern, their main purpose is telling possible branches apart. Definition \ref{def:path_node} describes the structure of a path node, and definitions \ref{def:path_order}, \ref{def:contain}, \ref{def:complement}, \ref{def:mergeable}, and algorithm \ref{alg:complement} introduce useful properties of paths.
+The actual branch numbers are of no concern. Their main purpose is telling possible branches apart. 
 
+Definition \ref{def:path_node} describes the structure of a path node, and definition \ref{def:path_order} defines how path nodes are ordered. Note that $\prec$ is the symbol meaning "precedes", and $\prec_{lex}$ means it precedes according to the lexicographic ordering. 
+Definition \ref{def:contain} defines a property which will get used in section \ref{conditionals} where it will be used to exclude results because they contain paths that would contradict the current execution path. 
+
+If we have to merge two paths at any point during execution, we'll need to make sure the paths are mergeable at all. This is important when evaluating binary operations, or during name resolution of an attribute. Definition \ref{def:complement} contains the definition of any given node's complementary nodes. Definition \ref{def:mergeable} says that two paths are mergeable if neither path contains nodes that complement any other the other's path nodes. A path's complementary paths can be constructed using the complements of its nodes, this process is described in algorithm \ref{alg:complement}. Complementary paths will prove useful in section \ref{loops}.
 
 
 \begin{definition} \label{def:path_node}
@@ -742,7 +766,7 @@ A path node is of the form $((n_1, n_2, ... , n_i), b, t)$, where the elements $
 \end{definition}
 
 \begin{definition} \label{def:path_order}
-Let $p$ and $q$ be two paths with forms respectively $(n_p, b_p, t_p)$ and $(n_q, b_q, b_t)$, $p \prec q \iff n_p \prec_{lex} n_q \vee (n_p = n_q \wedge b_p \prec b_q )$. 
+Let $p$ and $q$ be two path nodes with forms respectively $(n_p, b_p, t_p)$ and $(n_q, b_q, b_t)$, $p \prec q \iff n_p \prec_{lex} n_q \vee (n_p = n_q \wedge b_p \prec b_q )$. 
 \end{definition}
 
 \begin{definition} \label{def:contain}
@@ -777,7 +801,7 @@ A path $A$ is \textit{mergeable} with another path $B$ if a $A$ does not contain
     \end{algorithmic}
 \end{algorithm}
 
-A mapping is simply a pair of the form `(Path, Pointer)`. Because they usually appear in multiples, they can be implemented as a list of `(Path, Pointer)` values instead. In this case, every path in a mapping must be distinct; there are no paths that are contained by another path in the same mapping. 
+A mapping is simply a pair of the form `(Path, Pointer)`. Because they usually appear in multiples, they can be implemented as a list of `(Path, Pointer)` values instead. In this case, every path in a mapping must be distinct. There are no paths that are contained by another path in the same mapping. 
 
 ## Boolean Expressions
 
@@ -806,13 +830,13 @@ Code sample \ref{smp:conds} shows that in some cases, we really need an accurate
 
 The `is` operator compares the addresses of two objects and returns `True` if and only if they're equal. We can mimic this behavior -- and answer with certainty and under which conditions the two operands' point to the same location. The resulting mapping will use the merged paths of the operands to point to the `True` object. The `==` operator should be similar. Technically it depends on the implementation of the `__eq__` method, but let's assume that it has a decent implementation. In that case it should at least return `True` if both operands point to the same object -- as with `is`. A similar reasoning can be applied to the `!=`, `<=`, and `>=` operators. 
 
-We can also handle the `and`, `or`, and `not` operators in a similar way. If both operands already point to `True` we can merge the paths and return a mapping that points to `True` as well. The other two operators are analogous.
+We can also handle the `and`, `or`, and `not` operators in a similar way. If both operands already point to `True`, we can merge the paths and return a mapping that points to `True` as well. The other two operators are analogous.
 
-We combine the paths of both operands to get a new mapping. This means means that we must only consider path pairs that are mergeable, if not those operand pairs cannot actually exist at runtime. Failure to meet this requirement will lead to false positives very quickly.
+We combine the paths of both operands to get a new mapping. This means that we must only consider path pairs that are mergeable. Failing to meet this requirement will lead to false positives very quickly.
 
 ## Conditionals
 
-Evaluating the test of a conditional branch can give us useful information to evaluate the individual branches with. If that information includes for example that we are sure that `x` is not `None`, we should disregard any mapping that says otherwise. Even better, we can exclude any mapping that would occur under the same contradictory conditions -- even if those mappings don't have an explicit connection to `x`. 
+Evaluating the test of a conditional branch can give us useful information for the evaluation the individual branches. If that information includes for example that we are sure that `x` is not `None`, we should disregard any mapping that says otherwise. Even better, we can exclude any mapping that would occur under the same contradictory conditions -- even if those mappings don't have an explicit connection to `x`. 
 
 \begin{code}
   \begin{tcblisting}{listing only, 
@@ -847,13 +871,13 @@ Let $R$ be the set of restricted paths. Given a mapping $(p_m, a) \in M$, if the
 
 Without being able to accurately evaluate loop conditions or generators it's impossible to know how many times a loop body gets executed. There are a few different approaches to this problem. The most accurate one is to iterate until we can conclude doing further iterations won't benefit the analysis anymore, we say that a _fixed-point_ state has been reached in this case. Every iteration will likely change something though, so that recognizing a fixed-point state isn't as easy as waiting for an iteration that changes nothing. 
 
-An easier approach that still has sufficient accuracy is to evaluate every loop body exactly two times. Theoretically it's possible to not even do a single iteration -- this leads to false positives however as most exercises can guarantee that some loops will always have to do something. There are two reasons for why two iterations is significantly more accurate than a single one. For starters, the first iteration can redefine values that are only used within the loop body. If this redefinition is wrong, this can only be recognized by evaluating it a second time. The second reason is to differentiate between the `break` and `continue` statements. As section \ref{namespace} will discuss, these two statements will hide changes until some later point during execution. For the `break` statement that point is the end of the loop, for the `continue` statement however this point is the beginning of the next iteration. 
+An easier approach that still has sufficient accuracy is to evaluate every loop body exactly twice. Theoretically it's possible to not even do a single iteration -- this leads to false positives however as most exercises can guarantee that some loops will always have to do something. There are two reasons why two iterations is significantly more accurate than a single one. For starters, the first iteration can redefine values that are only used within the loop body. If this redefinition is wrong, this can only be recognized by evaluating it a second time. The second reason is to differentiate between the `break` and `continue` statements. As section \ref{namespace} will discuss, these two statements will hide changes until some later point during execution. For the `break` statement that point is the end of the loop, for the `continue` statement however this point is the beginning of the next iteration. 
 
-The analysis of loops goes hand in hand with _watches_, which are used to compare the execution state before and after executing the loop. They start in a setup phase, during which it will learn which components to watch. A new watch gets made at the beginning of evaluating the loop test or loop generator, and it will store all data dependencies (corresponding to the of the data-flow analysis) for that expression. 
+The analysis of loops goes hand in hand with _watches_, which are used to compare the execution state before and after executing the loop. They start in a setup phase, during which they will learn which components to watch. A new watch gets made at the beginning of evaluating the loop test or loop generator, and it will store all data dependencies (corresponding to those of the data-flow analysis) for that expression. 
 It will contain the returned mappings for the identifiers, along with a list of used objects.
 The watch leaves the setup phase before evaluating the loop body, and it will now store all data changes for the identifiers and objects that are being watched. 
 
-The information in a watch can be used to see  whether or not iterating affects the loop test or the loop generator. Knowing under which conditions iterating changed something is easy, the watch already contains that information. 
+The information in a watch can be used to see  whether or not iterating affects the loop test or the loop generator. Knowing under which conditions iteration changed something is easy. The watch already contains that information. 
 Finding the paths that don't change anything isn't as easy because the watches only contain changes -- the opposite of what we want. The invariants can be found by taking all the complementary paths of all the changes, and retaining only those that are mergeable with all changes. Section \ref{warnings} will discuss how this information can be used as an indicator of error prone code.
 
 ## Namespace
@@ -866,19 +890,19 @@ Mappings have already been introduced, but they contain a pointer value which is
 
 #### Branch
 
-The `Branch` struct is the first layer of a namespace and it's where names are added, its internal structure is of the form `HashMap<String, OptionalMapping>`. Every branching point during execution can induce several new branches in a namespace which are separated during execution, so that the negative and the positive branch of a conditional statement do not influence each other for example. A `Branch` struct only contains the changes that happened in its own branch, the changes that happened before the branching are stored in different `Branch` structs, which leads to a sparse data structure. 
+The `Branch` struct is the first layer of a namespace and it's where names are added, its internal structure is of the form `HashMap<String, OptionalMapping>`. Every branching point during execution can induce several new branches in a namespace that are separated during execution, so that the negative and the positive branch of a conditional statement do not influence each other for example. A `Branch` struct only contains the changes that happened in its own branch. The changes that happened before branching are stored in different `Branch` structs, which leads to a sparse data structure. 
 
 #### StatisChamber
 
-If we encounter a `break` statement while evaluating a loop body, the evaluation of the current execution path terminates. The changes made until that point have to be saved, as they'll become relevant again after the loop has been evaluated. Function calls require the same to handle different return points. A `StatisChamber` contains a `HashMap<Path, Branch>`. The path key is used because the control flow can be broken at multiple points.
+If we encounter a `break` statement while evaluating a loop body, the evaluation of the current execution path terminates. The changes made until that point have to be saved, as they will become relevant after the loop has been evaluated. Function calls require the same to handle different return points. A `StatisChamber` contains a `HashMap<Path, Branch>`. The path key is used because the control flow can be broken at multiple points.
 
 #### SubFrame
 
-For every branching point, we'll use a `Branch` and three `StatisChamber`s -- two for loops, one for function calls. Loops require two statis chambers to keep the ones caused by a `continue` separate from those caused by a `break`. These get stored in a `SubFrame` struct.
+For every branch point, we use a `Branch` and three `StatisChamber`s -- two for loops, one for function calls. Loops require two statis chambers to keep the ones caused by a `continue` separate from those caused by a `break`. These four components get stored in a `SubFrame` struct.
 
 #### Frame
 
-This is the first namespace component that contains some actual logic. Every branching point leads to the creation of a new `Frame`. This structure contains a _cause_, the path node where the branching happened. It also contains a subframe for each possible branch at the cause node. There is only one subframe active at any point during execution and its index is stored. Algorithm \ref{alg:setframe} describes how a mapping gets inserted into a frame, the `insert` method of a `StatisChamber` will simply insert into each of its branches. 
+This is the first namespace component that contains some actual logic. Every branch point leads to the creation of a new `Frame`. This structure contains a _cause_, the path node where the branching happened. It also contains a subframe for each possible branch at the cause node. There is only one subframe active at any point during execution and its index is stored. Algorithm \ref{alg:setframe} describes how a mapping gets inserted into a frame. The `insert` method of a `StatisChamber` will simply insert into each of its branches. 
 
 \begin{algorithm}
     \caption{Set Mapping}\label{alg:setframe}
@@ -936,14 +960,14 @@ This will stop the current execution path, and conclude the execution of the con
 
 The first time the addition on line 19 gets executed is actually safe -- `x` and `y` will always have type `str` at this point, and `z` will also receive a mapping to an object of type `str`. Every loop gets evaluated twice as discussed in section \ref{loops}, and a mapping in which `x` points to an `int` since line 10 in the previous iteration is now part of the active branch.
 
-Line 21 isn't safe either, there are at least two execution paths that left `z` uninitialized: if either the condition on line 8 or the one on line 14 was true. Before the addition on line 19 was executed, the previous value was stored into the statis chambers that existed at the time. All but one statis chamber will now contain an empty mapping for `z`, indicating an uninitialized value. These mappings enter the active branch at the end of evaluating the loop, to give us the wanted analysis result. 
+Line 21 isn't safe either. There are at least two execution paths that left `z` uninitialized: if either the condition on line 8 or the one on line 14 was true. Before the addition on line 19 was executed, the previous value was stored into the statis chambers that existed at the time. All but one statis chamber will now contain an empty mapping for `z`, indicating an uninitialized value. These mappings enter the active branch at the end of evaluating the loop, to give us the wanted analysis result. 
 
 #### Namespace
 
-The actual namespace is simply a list of frames, one for each branch point that's being executed. Looking up an identifier is simple: look for the most recent frame that contains a mapping for that name. Name resolution is so simple because the other operations do all the heavy lifting. There are three other operations:
+The actual namespace is simply a list of frames, one for each branch point that is being executed. Looking up an identifier is simple: look for the most recent frame that contains a mapping for that name. Name resolution is simple because the other operations do all the heavy lifting. There are three other operations:
 
-  * \textit{Grow}: Uses a path to create new frames until there's a frame for each node in the path
-  * \textit{Insert}: Grows the namespace when needed, and then inserts a mapping into the last frame. 
+  * \textit{Grow}: Uses a path to create new frames until there is a frame for each node in the path.
+  * \textit{Insert}: Grows the namespace when needed and then inserts a mapping into the last frame. 
   * \textit{Merge}: Merges the last frame into the previous frame.
 
 For the sake of data sparsity, growing is done upon insertion -- and not upon the actual branching. Bearing in mind that every object has a namespace as well, we don't want to grow each of their namespaces every time -- its namespaces probably won't even change as most objects are immutable literals. 
@@ -952,9 +976,9 @@ For the sake of data sparsity, growing is done upon insertion -- and not upon th
 
 If the current namespace has $n$ frames, and the given path has $m$ nodes, we must add $m-n$ frames -- corresponding to the last $m-n$ path nodes. The correctness of this approach relies on a bit of inductive reasoning. 
 
-The active execution path will always be at least as long as the number of frames in any namespace. All the namespaces that have been changed have the same number of frames. If a change has been made in the current branch, growing has added frames until there are as many frames as there are nodes in the execution path. If a change was made in some branch that's already been executed, and is thus no longer part of the execution path, merge operations will have reduced the number of frames until the length is equal to the length of execution path. The namespaces that have not been changed have strictly less frames, corresponding to the length of the execution path of their last change.
+The active execution path will always be at least as long as the number of frames in any namespace. All the namespaces that have been changed have the same number of frames. If a change has been made in the current branch, growing has added frames until there are as many frames as there are nodes in the execution path. If a change was made in some branch that is already been executed, and is thus no longer part of the execution path, merge operations will have reduced the number of frames until the length is equal to the length of execution path. The namespaces that have not been changed have strictly less frames, corresponding to the length of the execution path of their last change.
 
-The cause nodes of the frames of any namespace form a prefix of the active execution path. This is a trait of the language, since Python (or any other language we'd target) does not have a `goto` statement, there's a fixed structure to the branching points.
+The causal nodes of the frames of any namespace form a prefix of the active execution path. This is a trait of the language. Since Python (or any other language we would target) does not have a `goto` statement, there is a fixed structure to the branching points.
 
 #### Merge
 
@@ -1036,7 +1060,7 @@ Function calls and loops can also create a new frame in namespaces. While mergin
 
 ## Name Resolution
 
-Namespaces by themselves aren't enough to implement all the name resolution behavior; name resolution uses several different namespaces. It's possible that a variable is sometimes uninitialized in a namespace, in which case resolution can continue using another namespace. The unresolved paths are carried over to the resolution in the next namespace. All returned mappings have their paths merged with the unresolved paths to reflect the fact that name resolution continued in the next namespace. Algorithm \ref{alg:chain} illustrates the general method of name resolution, the `next_namespace` function depends on the kind of name being resolved. An error is emitted if `unresolved` is not empty and there are no more namespaces to try.
+Namespaces by themselves aren't enough to implement all the name resolution behavior; name resolution uses several namespaces. It's possible that a variable is sometimes uninitialized in a namespace, in which case resolution can continue using another namespace. The unresolved paths are carried over to the resolution in the next namespace. All returned mappings have their paths merged with the unresolved paths to reflect the fact that name resolution continued in the next namespace. Algorithm \ref{alg:chain} illustrates the general method of name resolution, the `next_namespace` function depends on the kind of name being resolved. An error is emitted if `unresolved` is not empty and there are no more namespaces to try.
 
 \begin{algorithm}
     \caption{Resolve}\label{alg:chain}
@@ -1082,11 +1106,11 @@ Identifiers (also called names) are stored in up to four different namespaces:
   * The global scope, where most class and function definitions end up going, and where students first write their first programs in. 
   * The builtin scope, which is not to be confused with the standard libraries, contains essential Python features such as the `int` type and the `sorted` function. 
 
-At any point during execution there is either two or four active scopes, depending on whether or not a function call is being executed. Every function call creates a new empty local scope, but reuses the existing enclosing scope associated with its definition. 
+At any point during execution there are either two or four active scopes, depending on whether or not a function call is being executed. Every function call creates a new empty local scope, but reuses the existing enclosing scope associated with its definition. 
 
 ### Attributes
 
-An object's attributes don't necessarily exist in its own namespace. A lot of them, especially its methods, will exist in the namespace of its class object or one of its base classes. Python uses its own _Method Resolution Order_ (MRO) to define the order of the base classes in case of multiple inheritance. The first base class in the definition will get used first, where MRO can be applied again, ... This means that the second base class of the definition will only get used if the first base class did not contain an attribute of that name, and neither did any of its extended base classes. 
+An object's attributes do not necessarily exist in their own namespace. A lot of them, especially the methods, will exist in the namespace of a class object or one of its base classes. Python uses its own _Method Resolution Order_ (MRO) to define the order of the base classes in case of multiple inheritance. The first base class in the definition will get used first, where MRO can be applied again. This means that the second base class of the definition will only get used if the first base class did not contain an attribute of that name, and neither did any of its extended base classes. 
 
 ### Methods
 
@@ -1094,22 +1118,22 @@ Functions are just callable objects, and a method seems to be a function that's 
 
 ## Collections
 
-Collections are a challenging component of dynamic programming languages. When an element of a collection is used in any operation, we have to know which one to interpret the result. Static programming languages can just return a value of the defined element type, but dynamic programming languages typically have heterogeneous collections. Features like multiple return values rely in this feature. These are actually tuples, which can be indexed or unpacked just like any other collection. Remembering length and the order of the elements of this tuple is paramount to avoiding false positives. 
+Collections are a challenging component of dynamic programming languages. When an element of a collection is used in any operation, we have to know which one to interpret the result. Static programming languages can just return a value of the defined element type, but dynamic programming languages typically have heterogeneous collections. Features like multiple return values rely on this feature. These are actually tuples, which can be indexed or unpacked just like any other collection. Remembering length and the order of the elements of this tuple is paramount to avoiding false positives. 
 
 The solution is similar to namespaces, but with additional abstractions to reflect the additional uncertainty. Not every element gets stored explicitly. If a list contains only objects of type `A`, it doesn't really matter which objects those are. Most collections are iterated over, so that all the elements have to be treated equally, and it doesn't really matter which instance of `A` gets used.
 One or more _representants_ are chosen for each type of object in the collection. 
-The order of elements can be important for a heterogeneous collections, which is why these can have multiple representants for the same type of element. 
-Non-empty collection literals such as multiple return values are exceptions, every element does get stored explicitly for these. Chaining representants together can describe both ordered and unordered collections. Unordered collections do have an order after all, just not a reliable one which programmers should rely on. 
+The order of elements can be important for heterogeneous collections, which is why these can have multiple representants for the same type of element. 
+Non-empty collection literals such as multiple return values are exceptions. Every element does get stored explicitly for these. Chaining representants together can describe both ordered and unordered collections. Unordered collections do have an order after all, just not a reliable one which programmers should rely on. 
 
 The components of a collection are introduced incrementally, in the same way the ones of the namespaces were introduced.
 
 #### Representants 
 
-The core components of a collection are the representants, in essence these are an alias for object pointers. The most important information of a representant is its type, so this has been added as well for the sake of usability. 
+The core components of a collection are the representants. In essence these are an alias for object pointers. The most important information of a representant is its type, so this has been added as well for the sake of usability. 
 
 #### Chunks
 
-Chunks represent contiguous regions within a collection. Their size is defined as an interval $[\,a, b\,]$ with $a \in [\,0,\infty\,[ \,\wedge\, b \in [\,1, \infty\,]$. Adding an element to a collection as as part of a loop will create a chunk with $b=\infty$ as we have no knowledge of how many times a loop gets executed. Chunks also contain representants. If `x` is either an `int` or a `list` for example, adding it to a collection will add a chunk with two representants. 
+Chunks represent contiguous regions within a collection. Their size is defined as an interval $[\,a, b\,]$ with $a \in [\,0,\infty\,[ \,\wedge\, b \in [\,1, \infty\,]$. Adding an element to a collection as as part of a loop will create a chunk with $b=\infty$ as we have no knowledge of how many times a loop gets executed. Chunks also contain representants. For example, if `x` is either an `int` or a `list`, adding it to a collection will add a chunk with two representants. 
 
 #### Chains
 
@@ -1117,15 +1141,15 @@ A sequence of chunks forms a chain. A notion of length is added here as well. In
 
 #### Branches
 
-Branches form the next layer and they are similar to the ones that are part of namespaces. A branch in the context of a namespace get initialized as an empty `HashMap<String, Mapping>`, and only stores changes. This sparse structure is possible because with namespaces you know exactly which elements have been changed -- they have a unique name. Collections don't have this luxury. Unless we absolutely know which element was changed, we have to assume the entire structure has been changed. This is why a collection's `Branch` contains a list of `(Path, Chain)` tuples, where every `Chain` is an entire "collection" in its own right.
+Branches form the next layer and they are similar to the ones that are part of namespaces. A branch in the context of a namespace gets initialized as an empty `HashMap<String, Mapping>`, and only stores changes. This sparse structure is possible because with namespaces you know exactly which elements have been changed -- they have a unique name. Collections don't have this luxury. Unless we absolutely know which element was changed, we have to assume the entire structure has been changed. This is why a collection's `Branch` contains a list of `(Path, Chain)` tuples, where every `Chain` is an entire "collection" in its own right.
 
 #### Frames
 
-A collection also has frames, which are similar to the ones in namespaces as well. The main difference is that collections currently don't have a notion of statis chambers. These can certainly be added to improve accuracy, but they are less impactful for collections as they would only have a noticeable benefit when analyzing heterogeneous collections together with broken control flow. A `Frame` contains a list of branches, the path node that caused the branching, and the index of the active branch. 
+A collection also has frames, which are similar to the ones in namespaces as well. The main difference is that collections currently don't have a notion of statis chambers. These can certainly be added to improve accuracy, but they are less important for collections as they would only have a noticeable benefit when analyzing heterogeneous collections together with broken control flow. A `Frame` contains a list of branches, the path node that caused the branching, and the index of the active branch. 
 
 #### Collections
 
-Collections are stacks of frames, just like namespaces. They also have a grow and a merge operation, but the implementations are slightly different. Growing still creates a new frame for every branch point, but it will copy the previously active branch's content into every branch of the new frame. Merging is done naively: the last frame gets popped, the paths of its content get augmented with the frame's cause node and then replace the contents of the branch that is now active. A different approach could try to merge branches to the chunk level to avoid data redundancies, but this is a considerable challenge to implement. It might become necessary for large and complex files, but the current solution suffices for now.
+Collections are stacks of frames, just like namespaces. They also have a grow and a merge operation, but the implementations are slightly different. Growing still creates a new frame for every branch point, but it will copy the previously active branch's content into every branch of the new frame. Merging is done naively: the last frame gets popped, the paths of its content gets augmented with the frame's cause node and then replaces the contents of the branch that is now active. A different approach could try to merge branches to the chunk level to avoid data redundancies, but this is a considerable challenge to implement. It might become necessary for large and complex files, but the current solution suffices for now.
 
 ### Operations
 
@@ -1193,20 +1217,20 @@ There are a few different ways an element can be added to a collection. The most
 
 There are a few different ways to retrieve an element from a collection. If done through a dynamically calculated index, a mapping for every representant is returned. We can do better for static indices however. The collections contents get linearized first -- replacing the chain of chunks with a list of mappings as described in algorithm \ref{alg:lin}. This process reveals which possible elements there can be at that position. This is a powerful feature for several reasons. The first (or last) element of a collection can be given some special meaning, even if it's generally a bad idea, in which case retrieving the correct element is a good thing. More importantly, students often use explicit indices instead of unpacking when using multiple return values. A static analyzer might want to recommend using multiple return values instead, but it will only be able to do so if its analysis didn't stumble over the indices. The linearized representation can also be used to create slices of collections, which is a very _pythonic_ operation so interpreting it accurately is important. 
 
-All indexing operations may return duplicates, because the merge operation isn't very thorough. This can be alleviated by only returning a single mapping for every unique representant. As long as we know that an object had been added, all the different different that may have happened are less important. 
+All indexing operations may return duplicates, because the merge operation isn't very thorough. This can be alleviated by only returning a single mapping for every unique representant. As long as we know that an object had been added, all the different that may have happened are less important. 
 
 ## Function Definitions
 
-A function definition creates a callable object and assigns the result to the given name. The object contains a closure, which in turn contains the function body as a block of AST nodes and the required argument definitions. Calling the closure will map the given arguments to the defined ones, as shown in section \ref{function-calls}. Once the arguments are in place it executes the function body. Return values get treated as assignments to an `___result` identifier, so the existing namespace logic can be reused. Anonymous functions have a similar implementation.
+A function definition creates a callable object and assigns the result to the given name. The object contains a closure, which in turn contains the function body as a block of AST nodes and the required argument definitions. Calling the closure will map the given arguments to the defined ones, as shown in section \ref{function-calls}. Once the arguments are in place it executes the function body. Return values get treated as assignments to a `___result` identifier, so the existing namespace logic can be reused. Anonymous functions have a similar implementation.
 
-Python's own functions and modules are harder to implement. Depending on the interpreter they may not even be in Python, but in C for example. Although the Fosite interpreter is designed to accommodate multiple languages, it's made with dynamic languages in mind -- C is quite far out of scope. A solution is to implement function behavior in closures, which then get injected into the interpreter as callable objects. These internal functions don't contain a function body AST, but manipulate the interpreter state directly. 
-This is a laborsome endeavor, but it does have a few upsides. Builtin functions such as `sorted` contain hundreds of lines of code -- and none of them are relevant to our analysis. Including implementation details in the paths can only confuse users, as these usually have no knowledge of the language internals. Giving a summarized, result is both more efficient and more useful. 
+Python's builtin functions and modules are harder to implement. Depending on the interpreter they may not even be implemented in Python, but in C for example. Although the Fosite interpreter is designed to accommodate multiple languages, it's made with dynamic languages in mind -- C is quite far out of scope. A solution is to implement function behavior in closures, which then get injected into the interpreter as callable objects. These internal functions don't contain a function body AST, but manipulate the interpreter state directly. 
+This is a laborsome endeavor, but it does have a few upsides. Builtin functions such as `sorted` contain hundreds of lines of code -- and none of them are relevant to our analysis. Including implementation details in the paths can only confuse users, as these usually have no knowledge of the language internals. Giving a summarized result is both more efficient and more useful. 
 
 Modules are implemented as closures that can inject callable objects into the interpreter at runtime. This means that with some time and dedication, third party libraries can be easily added in the same way. 
 
 ## Function Calls
 
-A few things have to be evaluated before a function call, the call target has to be evaluated first, then the arguments get evaluated from left to right. Evaluating the target will return a mapping which can contain a variable amount of pointers. Evaluating the call target can result in several different function objects, and we have to consider every possible case. These all have to be evaluated independently, which is why a frame can have a variable amount of subframes -- and why path nodes contain information about how many branches there are. 
+A few things have to be evaluated before a function call. The call target has to be evaluated first, then the arguments get evaluated from left to right. Evaluating the target will return a mapping which can contain a variable amount of pointers. Evaluating the call target can result in several different function objects, and we have to consider every possible case. These all have to be evaluated independently, which is why a frame can have a variable number of subframes -- and why path nodes contain information about how many branches there are. 
 
 \begin{algorithm}
     \caption{Assign Arguments}\label{alg:arg}
@@ -1264,7 +1288,7 @@ A few things have to be evaluated before a function call, the call target has to
     \end{algorithmic}
 \end{algorithm}
 
-The call arguments get stored in two collections of mappings: a list for the positional arguments, and a map for the keyword arguments. All these arguments get augmented with a path node of the current function call. These then get mapped to arguments in the definition. Python has four  kinds of arguments in a function definition: `args`, `kwonlyargs`, `vararg`, and `kwarg`. Both the `args` and `kwonlyargs` can be given default values, and all arguments after the `varargs` will be placed in `kwonlyargs`. The underlying semantics are less trivial than one might expect, the principle is illustrated in algorithm \ref{alg:arg}. The algorithm assumes every argument in only provided once -- the Python runtime already gives a detailed error when this isn't the case. 
+The call arguments get stored in two collections of mappings: a list for the positional arguments, and a map for the keyword arguments. All these arguments get augmented with a path node of the current function call. These then get mapped to arguments in the definition. Python has four  kinds of arguments in a function definition: `args`, `kwonlyargs`, `vararg`, and `kwarg`. Both the `args` and `kwonlyargs` can be given default values, and all arguments after the `varargs` will be placed in `kwonlyargs`. The underlying semantics are less trivial than one might expect. The principle is illustrated in algorithm \ref{alg:arg}. The algorithm assumes every argument is only provided once -- the Python runtime already gives a detailed error when this isn't the case. 
 
 \begin{algorithm}
     \caption{Function Calls}\label{alg:call}
@@ -1310,7 +1334,7 @@ The call arguments get stored in two collections of mappings: a list for the pos
     \end{algorithmic}
 \end{algorithm}
 
-The calling mechanism is best explained in pseudocode as well, as in algorithm \ref{alg:call}. Lines 2 to 5 move existing enclosing and local scopes to a different stack. This makes name resolution easier, there are always at most four active scopes. Lines 7-9 retrieve the the existing enclosing scope, a local scope is created, and both get placed on the stack of active scopes. Lines 11 and 12 contain the function call. A callable object in the interpreter gets retrieved, and executed using the provided arguments. The callable will do the argument assignments as in algorithm \ref{alg:arg} before executing whatever function logic it contains. Line 14 pops the local scope, and retrieves the entry that holds the return value. Lines 15-18 restore the scopes to the state before the function call. 
+The calling mechanism is best explained in pseudocode as well, as in algorithm \ref{alg:call}. Lines 2 to 5 move existing enclosing and local scopes to a different stack. This makes name resolution easier, as there are always at most four active scopes. Lines 7-9 retrieve the existing enclosing scope, a local scope is created, and both get placed on the stack of active scopes. Lines 11 and 12 contain the function call. A callable object in the interpreter gets retrieved, and is executed using the provided arguments. The callable will do the argument assignments as in algorithm \ref{alg:arg} before executing whatever function logic it contains. Line 14 pops the local scope, and retrieves the entry that holds the return value. Lines 15-18 restore the scopes to the state before the function call. 
 Algorithm \ref{alg:call} does not contain some necessary bookkeeping operations. The local scope gets discarded after handling each call target, but the namespaces of the changed objects have to be merged after handling all call targets, and the resulting mapping needs to have its paths augmented with the path to get to the target.
 
 Interpreting recursive functions requires a way to _tie the knot_ -- so that analysis doesn't get stuck in an endless loop. The interpreter maintains a call stack, and only permits the same function to be called a set amount of times. An execution branch that would perform a recursive call that exceeds the recursion depth is simply terminated, so that only the branches that result in a base case get executed at this depth. A call at a higher recursion depth will then use this value in its analysis of the entire function body. This method's accuracy is sufficient for most use cases, even for low recursion depth limits @interpret. 
@@ -1339,13 +1363,13 @@ Changing a collection while iterating over its contents is generally a bad idea.
 
 A while loop whose condition does not change after an iteration is prone to endless loops. This is the case if all the variables in the condition still point to the same object, and all those objects haven't been changed either. This can be done using watches as well.
 
-A function call that did not end with an explicit return statement will return a `Ǹone` value. This can lead to confusing errors when a user forgot to return in just one of its branches. Since return values are treated as regular identifiers, we can use the existing logic provided by the namespaces to see which `OptionalMapping`s are still uninitialized at the of a function call. 
+A function call that did not end with an explicit return statement will return a `Ǹone` value. This can lead to confusing errors when a user forgot to return in just one of its branches. Since return values are treated as regular identifiers, we can use the existing logic provided by the namespaces to see which `OptionalMapping`s are still uninitialized at the end of a function call. 
 
 # Results and Discussion
 
-The ultimate goal was helping students learn faster, but testing this would require a semester-long A/B test. We can analyze old submissions, and the Dodona platform has over 800,000 of them, but the results would need manual verification to weed out false positives. In fact, most students work incrementally, implementing the required functionality piece by piece. Pointing out that they haven't implemented some functions is ultimately useless, since they were aware of that already. 
+The ultimate goal was helping students learn faster, but testing this would ideally use a semester-long A/B test. This is quite unethical in a educational context, so it's not an option. We can analyze old submissions, and the Dodona platform has over 800,000 of them, but the results would need manual verification to weed out false positives. In fact, most students work incrementally, implementing the required functionality piece by piece. Pointing out that they haven't implemented some functions is useless, since they were aware of that already. 
 
-Seven interesting submissions have been selected instead, from three different students. That may be a small selection of students, but even helping a single student overcome the difficulties of programming is a worthwhile effort. At least some of the submissions stood out because they evaluating them was terminated because the time limited was exceeded. This can mean two things: the submission was too inefficient, or there's an endless loop in the implementation. Students have expressed that they want different error messages for the two cases, and just referring them to the halting problem isn't very helpful. The next best thing is recognizing patterns that could lead to endless loops, which is exactly what the Fosite analysis tool is able to do. 
+Seven interesting submissions from three different students have been manually selected instead. That may be a small selection of students, but even helping a single student overcome the initial hurdles of learning to program is a worthwhile effort. Some of the submissions stood out because evaluating them was terminated because the time limited was exceeded. This can mean two things: the submission was too inefficient, or there's an endless loop in the implementation. Students have expressed that they want different error messages for the two cases, and just referring them to the halting problem isn't very helpful. The next best thing is recognizing patterns that could lead to endless loops, which is exactly what the Fosite analysis tool is able to do. 
 
 As the submissions tend to be large and hard to read, a prior section will show analysis results on handcrafted trivial examples. These examples will also contain the results of the data-flow analysis, as these results are too hard to interpret (and represent) for actual submissions.
 
@@ -1353,50 +1377,49 @@ As the submissions tend to be large and hard to read, a prior section will show 
 
 ## Artificial Examples
 
-The analysis result is composed of four things: the analyzed code, the data dependencies, the data changes, and the feedback that's given during interpreting. There are two sorts of entries in the data-flow results as introduced in section \ref{approach}: identifiers and object pointers. Every line contains all the changes or dependencies of that line, in no particular order. 
+The analysis result contains four things: the analyzed code, the data dependencies, the data changes, and the feedback that's given during interpretation. There are two sorts of entries in the data-flow results as introduced in section \ref{approach}: identifiers and object pointers. Every line contains all the changes or dependencies of that line, in no particular order. 
 
 The results of some statements are hard to express on a single line. 
-Analysing a conditional statement is done in multiple steps -- the test gets evaluated before evaluating the two branches. These steps are separated in the data-flow representation using a `|` character and indentation. Everything left of the `|` is part of the test, everything to the right is part of the body. As mentioned in section \ref{approach}, the result is hierarchical; the sum of all changes and dependencies of a conditional body is placed to those of the test.
-Functions are expressed in a similar way. Everything to the left of the `|` corresponds to the definition of the function. Its only change is usually the function name it introduces, and it may have dependencies to any variables the definition might capture as described in \ref{function-definitions}. The right hand side of the `|` corresponds to the changes and dependencies of a function call. The function call itself copies the sum of those results, with the exception that all identifier information is discarded as they're only relevant within that function's scope.
+Analysing a conditional statement is done in multiple steps -- the test gets evaluated before evaluating the two branches. These steps are separated in the data-flow representation using a `|` character and indentation. Everything left of the `|` is part of the test, everything to the right is part of the body. As mentioned in section \ref{approach}, the result is hierarchical; the sum of all changes and dependencies of a conditional body is placed to the right of the `|`.
+Functions are expressed in a similar way. Everything to the left of the `|` corresponds to the definition of the function. Its only change is usually the function name it introduces, but it may have dependencies to any variables the definition might capture as described in \ref{function-definitions}. The right hand side of the `|` corresponds to the changes and dependencies of a function call. The function call itself copies the sum of those results, with the exception that all identifier information is discarded as they're only relevant within that function's scope.
 
 To keep the examples small, placeholder strings are used instead of actual conditions. Non-empty strings always evaluate to `True` in Python, but the analyzer currently evaluates all strings to `Maybe`. Builtin objects in Python can't be given any new attributes either, but it's more convenient to allow this in the analyzer -- for now at least -- as well.
+
+\clearpage
 
 ### Assignments
 
 \input{results/double_assign}
 
-\Cref{lst:assign} illustrates how assignments are analyzed. Line 4 resolves the name `y` to some object, and assigns `7` to the attribute with name `attr` in the object's namespace. The changes show that `y` points to the object at address 36 at the time. Line 7 resolves `y` as well, and `attr` is resolved in the resulting objects' namespaces. We can see that line 5 created a new object at address 40. Not shown here are the objects 37-39, which are the `'cond1'` string, its boolean value, and the `7` that is used on line 4. Line 7 depends on both the `y` and `y.attr` identifiers, as well as the two possible objects `y` might refer to. This might seem like duplicate information, but two different identifiers can point to the same object, and can thus change its internal state as well as shown in \cref{lst:aliasing}. 
+\Cref{lst:assign} illustrates how assignments are analyzed. Line 4 resolves the name `y` to some object, and assigns `7` to the attribute with name `attr` in the object's namespace. The changes show that `y` points to the object at address 36. Line 7 resolves `y` as well, and `attr` is resolved in the resulting objects' namespaces. We can see that line 5 created a new object at address 40. Not shown here are the objects 37-39, which are the `'cond1'` string, its boolean value, and the `7` that is used on line 4. Line 7 depends on both the `y` and `y.attr` identifiers, as well as the two possible objects `y` might refer to. This might seem like duplicate information, but two different identifiers can point to the same object, and can thus change its internal state as well as shown in \cref{lst:aliasing}. 
 
 The analysis reveals that `y.attr` will never exist upon executing line 7 as the object that does have an `attr` attributed is no longer reachable. 
 
+\clearpage 
 
 ### Aliasing
 
 \input{results/aliasing}
 
-Both `x` and `y` point to the same object in \cref{lst:aliasing}, so that the resolution of `x.attr` on line 7 depends on the the assignment to `y.attr` on line 5. Both `x` and `y` point to object 36, but the paths in the mappings are different -- the mapping for `x` also has a node for the assignment to `y`. There error message on line 7 presents this information in a human-readable form.
+Both `x` and `y` point to the same object in \cref{lst:aliasing}, so that the resolution of `x.attr` on line 7 depends on the assignment to `y.attr` on line 5. Both `x` and `y` point to object 36, but the paths in the mappings are different -- the mapping for `x` also has a path node for the assignment to `y`. The error message on line 7 presents this aliasing information in a human-readable form.
 
 ### Call Clobbering
 
 \input{results/clobbering}
 
-\Cref{approach} mentioned that we'd like an interprocedural analysis, unlike the intraprocedural analysis that's part of PyPy. Call clobbering is one of the challenges to achieve this. The test on line 7 in \cref{lst:clobbering} calls `foo` with argument `y`. Line 4 assigns `'changed'` to attribute `attr` of the given argument. The call to `foo` has side-effects, which can be seen in the data-flow analysis on lines 3 and 7. It's the test of the conditional on line 7 that has the side-effects, there is a change to the left of the `|`. The `print` function itself has side-effects as well, which gets represented using an internal state object -- which happens to be on position 5. 
+\Cref{approach} mentioned that we'd like an interprocedural analysis, unlike the intraprocedural analysis that's part of PyPy. Call clobbering is one of the challenges to achieve this. The test on line 7 in \cref{lst:clobbering} calls `foo` with argument `y`. Line 4 assigns `'changed'` to attribute `attr` of the given argument. The call to `foo` has side-effects, which can be seen in the data-flow analysis on lines 3 and 7. It's the test of the conditional on line 7 that has the side-effects, so there is a change to the left of the `|`. The `print` function itself has side-effects as well, which gets represented using an internal state object -- which happens to be on position 5. 
 
 ### Path Exclusion
 
 \input{results/path_exclusion}
 
-\Cref{conditionals} introduced the concept of path exclusion as a means to support simple type checks and other forms of input validation. \Cref{lst:path_exclusion} gives an example of this principle in action. The definition of `foo` includes an optional argument `x`. This argument should probably be a list, in order to evaluate lines 2 and 7. Default values should absolutely be immutable in Python because subsequent calls to the same function use the same default values. The usual solution is to have a default value of `None`, and to initialize it at the start of the function with a fresh empty list. The list concatenation on line 2 occurs before this initialization, so it results in an error. The one on line 7 is fine however, and the analysis recognizes it as such. Without path exclusion there would be two possible mappings for `x` after merging on line 4 -- but as the path where `x` is `None` cannot occur in the negative branch of the conditional, that mapping does not find its way back into the scope after merging.
-
-\input{results/break}
+\Cref{conditionals} introduced the concept of path exclusion as a means to support simple type checks and other forms of input validation. \Cref{lst:path_exclusion} gives an example of this principle in action. The definition of `foo` includes an optional argument `x`. This argument should probably be a list, in order to evaluate lines 2 and 7. Default values should be immutable in Python because subsequent calls to the same function use the same default values. The usual solution is to have a default value of `None`, and to initialize it at the start of the function with a fresh empty list. The list concatenation on line 2 occurs before this initialization, so it results in an error. The one on line 7 is fine however, and the analysis recognizes it as such. Without path exclusion there would be two possible mappings for `x` after merging on line 4 -- but as the path where `x` is `None` cannot occur in the negative branch of the conditional, that mapping does not find its way back into the scope after merging.
 
 ### Control Flow 
 
+\input{results/break}
+
 Breaking out of a loop hides all the changes made in that branch for the duration of the loop, but those changes become visible again after the loop. \Cref{lst:break1} contains an example where this is important. The conditional on line 2 determines the type of `x` after the loop, but is completely irrelevant in the loop itself. Line 9 might cause an error if the condition on line 2 was true. More interesting is that it also finds uninitialized variables, as explained in the statis chamber subsection of \cref{namespace}. 
-
-\ 
-
-\ 
 
 ### Endless Loops
 
@@ -1406,22 +1429,16 @@ Breaking out of a loop hides all the changes made in that branch for the duratio
 
 \input{results/endless_loop2}
 
-Quite often the loop condition will depend on some internal state of an object, rather than a variable mapping. The loop in \cref{lst:endless2} is harder to detect. There is a code path that does not alter the variable mapping nor the internal object state, which results in a warning. The other two execution paths aren't very helpful either though, even if they do alter the object state. This is where the invariance checks meet their limits. Other aspects of the analysis may still prove useful however, such as the type warning on line 8.
+The loop in \cref{lst:endless2} is harder to detect. The loop condition will often  will depend on some internal state of an object, rather than a variable mapping. There is a code path that does not alter the variable mapping nor the internal object state, which results in a warning. The other two execution paths aren't very helpful either though, even if they do alter the object state. This is where the invariance checks meet their limits. Other aspects of the analysis may still prove useful however, such as the type warning on line 8.
 
 \input{results/endless_loop3}
 
-While loops are often discouraged in favor of for loops, as the latter is less prone to implementation oversights. That doesn't mean they're entirely safe though, as the code in \cref{lst:endless3} illustrates. The code in the example will consume all available memory until the OS intervenes. There's also a subtle difference between the augmented assign `x=` and the `x` operator when applied to lists. The latter creates a new list by concatenating its two operands, while the former will extend the `lvalue` of the assignment. 
+While loops are often discouraged in favor of for loops, as the latter is less prone to implementation oversights. That doesn't mean they're entirely safe though, as the code in \cref{lst:endless3} illustrates. The code in the example will consume all available memory until the operating system intervenes. There's also a subtle difference between the augmented assign `x=` and the `+` operator when applied to lists. The latter creates a new list by concatenating its two operands, while the former will extend the `lvalue` of the assignment. 
 Python does not crash when changing a collection that's being iterated over. 
 
 \ 
 
-\ 
-
-\ 
-
 ### Static Indexing
-
-\input{results/indexing}
 
 As discussed in \cref{collections}, static indexes enjoy special treatment. \Cref{lst:indexing} contains a possible type error on line 11. The second element of `x` gets added to the third element, but the second element is either an `int` or a `str` depending on the condition on line 1. The error message accurately describes this problem. The analysis did not suffer any loss of accuracy because of the collection. 
 
@@ -1429,95 +1446,98 @@ Notice how lines 8 and 9 depend on the identifier `foo` as well as the state of 
 
 #### Out-of-Bounds Index
 
-\input{results/out_ouf_bounds}
-
 \Cref{collections} discussed how every branch in the `Collection` struct contains its possible length as a size range. The upper bound can be used to compare to static indexes to detect out of bounds errors. Line 7 of \cref{lst:indexing2} tries to get the third element of `x`, but if `x` has the value it has been assigned to on line 2 it only has two values. Line 6 succeeds because `x` has either two or three elements, so getting the second one is safe. Lines 6 and 7 both depend on identifier `x`, as well as the two possible objects it might point to. 
+
+\input{results/indexing} 
+\input{results/out_ouf_bounds}
 
 \clearpage
 
-### Unpacking and Slicing
-
-\input{results/unpacking}
+#### Unpacking and Slicing
 
 Slicing and unpacking collections are both closely related to indexing with static indexes. \Cref{lst:unpacking} contains an example with slicing and unpacking. Everything except for the first and last element of `foo` gets placed in a list called `b` on line 8. Line 9 then unpacks the two values and assigns to identifiers `d` and `e`. The analysis also recognizes when these operations will certainly fail, as they reuse the same logic as static indexing. 
 
+\clearpage
+
+\input{results/unpacking}
+
+\clearpage
+
 ## Submissions
 
-### Submission 1
+#### Submission 1
 
 \input{results/submission2}
 
 \clearpage
 
-\Cref{sbm:sub1} contains a student's submission to one of the first assignments of the semester -- it's one of their first pieces of Python code. The problem in their submission is obvious, line 2 assigns a list of strings to `getal`, but its elements get used as an arguments to `cos` and `tan`. It takes some time to get used to the fact that not everything that looks like a number is actually a number. Python's error message isn't very helpful: `TypeError: a float is required` doesn't even mention _where_ the float is required. This student submitted the same code multiple times, and they even tried adding explicit float casts to remedy the error message. Perhaps the student wasn't aware that you can multiply a string with an integer in Python to duplicate the string, and ruled out the possibility that the `getal[i]` was to blame. In any case, Fosite provides the user with additional information to help with debugging. 
+\Cref{sbm:sub1} contains a submission to one of the first assignments of the semester -- it's one of their first pieces of Python code. The problem in this submission is obvious, line 2 assigns a list of strings to `getal`, but its elements get used as an arguments to `cos` and `tan`. For new programmers, it can take some time to get used to the fact that not everything that looks like a number is actually a number. Python's error message isn't very helpful: `TypeError: a float is required`. It doesn't even mention _where_ the float is required. This student submitted the same code multiple times, and they even tried adding explicit float casts to remedy the error message. Perhaps the student wasn't aware that you can multiply a string with an integer in Python to duplicate the string, and ruled out the possibility that the `getal[i]` was to blame. In any case, Fosite provides the user with additional information to help with debugging. 
 
-### Submission 2
+#### Submission 2
 
 \input{results/submission3}
 
 \clearpage
 
-Students sometimes shoot themselves in the foot such as in \cref{sbm:sub2}. The suspicious check on line 10 is a case of a student trying to game the system by hardcoding the result for one of the unit tests. They probably didn't expect that this would cause an endless loop though. Students don't usually start hardcoding the unit tests until they've given up out of frustration, at which point the last thing they'd want to encounter is an endless loop. The analysis in this case highlights the endless loop, but not the original cause of their frustration. It might help with their mental state though, which could in turn lead to solving it more efficiently. 
+Students sometimes shoot themselves in the foot such as in \cref{sbm:sub2}. The suspicious check on line 10 is a case of a student trying to game the system by hardcoding the result for one of the unit tests. They probably didn't expect that this would cause an endless loop though. Students don't usually start working around the unit tests until they've given up out of frustration, at which point an endless loop won't exactly help their mental state. The analysis in this case highlights the endless loop, but not the original cause of their frustration. 
 
 \clearpage
 
-### Submission 3
+#### Submission 3
 
 \input{results/submission4}
 
-It happens quite often that a student wants to check some condition in the body of a loop, but uses a `while` loop instead of a simple `if` statement. This makes some sense since the condition should indeed get checked multiple times -- but that's what the outer loop is for. \Cref{sbm:sub3} contains a submission where a student did exactly this. The loops on lines 6 and 12 were obviously not meant to be while loops. Oddly enough the checks on line 8 and 9 are mostly fine, which could mea that the student is close to realizing which language construct was the right choice. 
+It happens quite often that a student wants to check some condition in the body of a loop, but uses a `while` loop instead of a simple `if` statement. This makes some sense since the condition should indeed get checked multiple times -- but that's what the outer loop is for. \Cref{sbm:sub3} contains a submission where a student did exactly this. The loops on lines 6 and 12 were obviously not meant to be while loops. Oddly enough the checks on line 8 and 9 are fine, which could mean that the student is close to realizing which language construct was the right choice. 
 
-Somewhere in the barely legible code, there's a more subtle mistake. The `==` operator can compare objects of any type, a type check is probably even the first thing it does. In the case of the condition on line 13, this causes the check to be trivially false -- a string is being compared to a method. The student simply forgot to call the method, which is a mistake that easily goes unnoticed. Fosite detects this, and gives an outright error that two incompatible types are being compared. This makes Fosite more strict than Python, in the same way that Google's Error Prone analyzer is more strict than Java (see \cref{smp:shortset}). In fact, there's little reason to ever use the `==` operator on callable objects. 
+Somewhere in the barely legible code, there's a more subtle mistake. The `==` operator can compare objects of any type. In the case of the condition on line 13, this causes the check to be trivially false -- a string is being compared to a method. The student simply forgot to call the method, which is a mistake that easily goes unnoticed. Fosite detects this, and gives an outright error that two incompatible types are being compared. This makes Fosite more strict than Python, in the same way that Google's Error Prone analyzer is more strict than Java (see \cref{smp:shortset}). 
 
-### Submission 4
+#### Submission 4
 
 \input{results/submission5}
 
 \clearpage
 
-Not all endless loops are caused because the loop condition never gets updated, some are even caused by type errors such as in \cref{sbm:sub4}. Using the syntax introduced in Python 3.5 for type hints, the `volgende` function returns an object of type `Tuple[int]`. The loop that starts on line 12 should add additional `Tuple[int]` values to the `ducci` variable until the value that would get added is already part of the collection. Line 13 does not add `Tuple[int]` values to the collection though -- it adds every `int` separately. Using the augmented `+=` assignment operator on a list is equivalent to calling the `extend` method -- and not the `append` method that the student wanted. No `Tuple[int]` gets added, and the loop never terminates. The endless loop itself is hard to recognize, but Fosite does warn when addings elements of a new type to a collection. Personal correspondance has shown that giving this warning along with the difference between appending to a collection and extending a collection would've been enough for the student to fix their mistake themselves.
+Some endless loops are caused by type errors such as in \cref{sbm:sub4}. Using the syntax introduced in Python 3.5 for type hints, the `volgende` function returns an object of type `Tuple[int]`. The loop that starts on line 12 should add additional `Tuple[int]` values to the collection with name `ducci` until the value that would get added is already part of the collection. Line 13 does not add `Tuple[int]` values to the collection though -- it adds every `int` separately. Using the augmented `+=` assignment operator on a list is equivalent to calling the `extend` method -- and not the `append` method that the student should have used. No `Tuple[int]` values get added, and the loop never terminates. The endless loop itself is hard to recognize, but Fosite does warn when addings elements of a new type to a collection. Personal correspondance has shown that giving this warning along with explaining the difference between appending to a collection and extending a collection would've been enough for the student to fix their mistake themselves.
 
-### Submission 5
+#### Submission 5
 
 \input{results/submission6}
 
-Executing `import this` in Python prints out "The Zen of Python" which is an informal Python style guide. Number two on that list is \say{Explicit is better than implicit}, but oddly enough truthiness is considered to be _pythonic_. The truthiness of a value is its boolean value, and in practice this is equivalent to an implicit `bool` cast. This is quite error prone as \cref{sbm:sub5} illustrates. The condition on line 3 is always true, since `'-'` is never empty. Fosite does not consider `str` values to be usable in boolean operations. They can used as standalone boolean expressions however, so that truthiness can still be used for input validation. 
+Executing `import this` in Python prints out "The Zen of Python" which is an informal Python style guide. Number two on that list is \say{Explicit is better than implicit}, but oddly enough truthiness is considered to be _pythonic_. The truthiness of a value is its boolean value, and in practice this is equivalent to an implicit `bool` cast. This is quite error prone as \cref{sbm:sub5} illustrates. The condition on line 3 is always true, since `'-'` is never empty. Fosite does not consider `str` values to be usable in boolean operations. They can used as standalone boolean expressions however, so that truthiness can still be used for input validation, which is the primary use case for truthiness. 
 
-### Submission 6
+#### Submission 6
 
 \input{results/submission7}
 
-Reusing the same identifiers can have unexpected consequences, such as in \cref{sbm:sub6}. The `for` loop on line 8 redefines `x`, while the condition on line 9 was intended to use the old value. This actually means that the test on line 9 immediatly returns false, so that the loop is never executed, and same thing happens to the next loop. In effect, the iterations of the loop on line 5 don't change anything. Unfortunately Fosite doesn't know that the tests on line 9 and 13 are trivially false. This means that it doesn't find the most urgent problem, but it does find another problem -- line 11 should have an additional `float` cast. 
+Reusing the same identifiers can have unexpected consequences, such as in \cref{sbm:sub6}. The `for` loop on line 8 redefines `x`, while the condition on line 9 was intended to use the old value. This actually means that the test on line 9 immediatly returns false, so that the loop is never executed, and the same thing happens to the next loop. In effect, the iterations of the loop on line 5 don't change anything. Unfortunately Fosite doesn't know that the tests on line 9 and 13 are trivially false. This means that it doesn't find the most urgent problem, but it does find another problem -- line 11 should have a `float` cast. 
 
-### Submission 7
+#### Submission 7
 
 \input{results/submission1}
 
-\Cref{sbm:sub7} is about as large of a submission as one can comfortably put on paper. It also served as a performance stress test, as the analysis that Fosite does has an exponential complexity. On top of that it contains all the non-trivial things, such as default arguments, function objects, list concatenation, and loops. Evaluating this submission takes about 60 ms on an 2.2 GHz i5-5200U. Only 20 ms of which is spent in the analysis itself -- the rest is spent in parsing and transforming the input. 
+\Cref{sbm:sub7} is about as large of a submission as one can comfortably put on paper. It also served as a performance stress test, as the analysis that Fosite does has an exponential complexity. The submission also uses all the non-trivial aspect of the interpreter, such as default arguments, function objects, list concatenation, and loops. Evaluating this submission takes about 60 ms on an 2.2 GHz i5-5200U. Only 20 ms of those 60 ms are spent in the analysis itself -- the rest is spent in parsing and transforming the input. 
 
 \clearpage
 
-Apart from the curious check on line 30, there are some interesting mistakes in the submission as well. It's possible that none of the return statements in the `radar` function ever get executed, perhaps because the check on line 42 should get swapped with the `else` on line 40. Line 89 is interesting because students write `==` instead of `=` more often than one might expect. Reusing the same identifier actually helps the student here, as line 90 would result in an type error during normal execution. The results aren't always as benign, but the boolean operation is usually nonsensical, so that Fosite is able to help. The other cases such as the loop on line 92 are even more problematic, as line 95 causes an endless loop.
+Apart from the curious check on line 30, there are some interesting mistakes in the submission as well. It's possible that none of the return statements in the `radar` function ever get executed, perhaps because the check on line 42 should get swapped with the `else` on line 40. Line 89 is interesting because students write `==` instead of `=` more often than one might expect. Reusing the same identifier actually helps the student here, as line 90 would result in an type error during normal execution -- which would make clear that line 89 doesn't assign to `i`. The other messages such as the loop on line 92 are even more problematic, as line 95 causes an endless loop.
 
 # Conclusion and Future Work
 
-We can successfully recognize some common, but non-trivial, mistakes that students make. The error messages describe the circumstances in which a problem may arise so that users are more likely to agree with the analysis. There are other interesting patterns the analysis currently doesn't recognize, even though they could prove useful. Unused variables for example can be an indication that the user forgot to write a few statements. The rationale behind JSLint is that experience has shown that some patterns lead to errors -- and experiences should be the driving force behind expanding Fosite's feature set as well. 
+We have developed an abstract interpreter that can successfully recognize some common, but non-trivial, mistakes that students make. The error messages describe the circumstances in which a problem may arise so that users are more likely to agree with the analysis. There are other interesting patterns the analysis currently doesn't recognize, even though they could prove useful. Unused variables for example can be an indication that the user forgot to implement some functionality. The rationale behind linters is that experience has shown that some patterns lead to errors -- and experiences should be the driving force behind expanding our feature set as well. 
 
-The Rust programming language is difficult to learn, and most people who do learn it do so in their free time. The author of Rust's linter tool Clippy is one of the people trying to make it more accessible to newcomers. In a blog post [^1] he discusses the different ways people learn to program. One of which is just by trial-and-error, and he has several interesting proposals to make this process easier. The results have shown that students sometimes struggle with testing conditions in loops -- where they use a separate `while` loop in the outer loop instead of a simple `if` statement. The current analysis warns about the potential endless loops it may cause, but it would be even better if it also explains what the current code does, proposes a different solution, and explains the difference between the two versions. The goal is to have an automated system that provides feedback in the same way an educator would -- by also taking into account the context in which an error occurs. 
+The results have shown that students sometimes struggle with testing conditions in loops -- where they use a separate `while` loop in the outer loop instead of a simple `if` statement. The current analysis warns about the potential endless loops it may cause, but it would be even better if it also explains what the current code does, proposes a different solution, and explains the difference between the two versions. This is an idea that the developer Clippy, the linter tool for Rust, proposed in his blog [^1]. The goal is to have an automated system that provides feedback in the same way an educator would -- by also taking into account the context in which an error occurs. 
 
-[^1]: http://manishearth.github.io/blog/2017/05/19/teaching-programming-proactive-vs-reactive/
+[^1]: \url{http://manishearth.github.io/blog/2017/05/19/teaching-programming-proactive-vs-reactive/}
 
-Abstract interpreters have already been used to perform an aliasing analysis to optimize dynamic languages @interpret. They accredit their succes to three characteristics of their analysis:
-
-\clearpage
+Abstract interpreters have already been used to perform an aliasing analysis to optimize dynamic languages @interpret. The authors accredit their succes to three characteristics of their analysis:
 
  * \textit{Flow-Sensitivity}: The order of the statements are taken into account. 
  * \textit{Type sensitivity}: Through the use of an abstract interpreter and their own typing system. 
  * \textit{Context sensitivity}: Distinguishing between different calling contexts. They achieve this using inlining, which is equivalent to the function calls we perform. 
 
-Our own analysis shares all these characteristics, mostly through the use of an abstract interpreter, while also being inherently path-sensitive. This gives us confidence that our own data-flow analysis can be successfully applied to code transformations as well. The analysis is done in a matter of milliseconds on even large submissions, which leaves a lot of room to work with. Additional analysis features might include detecting dead code or simplifying nested code branches.
+Our own analysis shares all these characteristics, most of them come with the use of an abstract interpreter, while also being inherently path-sensitive. This gives us confidence that our own data-flow analysis can be successfully applied to code transformations as well. The analysis is done in a matter of milliseconds on large submissions, which leaves a lot of room to work with. Additional analysis features might include detecting dead code or simplifying nested code branches.
 
-Namespaces and heterogeneous collections are accurately modeled in an path-sensitive fashion, but all branch points are currently presumed to be independent. Adding symbolic execution may significantly improve the path-sensitivity. This is expected to be a challenging endeavour, not just theoretically but from a software architectural point as well. There are other architectural challenges, such as adding support for more languages and third-party libraries. 
+Namespaces and heterogeneous collections are accurately modeled in an path-sensitive fashion, but all branch points are currently presumed to be independent. Adding symbolic execution may significantly improve the path-sensitivity. This is expected to be a challenging endeavour. Our approach only solves the heterogenous collection problem that was highlighted in code sample \ref{smp:symb2} -- the other challenges are still there. On top of that, representing the abstract values in a statically typed language can be a software architectural challenge as well. 
 
 
 # References

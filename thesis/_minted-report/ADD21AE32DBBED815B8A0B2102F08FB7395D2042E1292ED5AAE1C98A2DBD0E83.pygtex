@@ -1,0 +1,15 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 3, column 11}
+  Incompatible types for operation\PYG{n+nc}{ or}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ str or bool}
+    Left side has type \PYG{n+nc}{str}
+    In the following cases:
+      Always
+
+    Right side has type \PYG{n+nc}{bool}
+    In the following cases:
+      Call to \PYG{n+nc}{letterwaarde} at \PYG{k}{row 9, column 1}
+      Assignment to \PYG{n+nc}{planeet} at \PYG{k}{row 9, column 1}
+      Assignment to \PYG{n+nc}{planeet1} at \PYG{k}{row 2, column 5}
+\end{Verbatim}

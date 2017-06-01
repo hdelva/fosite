@@ -1,0 +1,10 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 92, column 9}
+  Some code paths change the collection that\PYGZsq{}s being iterated over
+  This can have unexpected consequences
+  In the following cases:
+  Case 1
+    Condition at \PYG{k}{row 93, column 13} is \PYG{n+nc}{true}
+    Assignment to \PYG{n+nc}{i} at \PYG{k}{row 94, column 17}
+    Assignment to \PYG{n+nc}{lijst} at \PYG{k}{row 95, column 17}
+\end{Verbatim}

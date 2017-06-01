@@ -1,0 +1,31 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{lijst} \PYG{o}{=} \PYG{n+nb}{str}\PYG{p}{(}\PYG{n+nb}{input}\PYG{p}{())}
+\PYG{n}{start} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n+nb}{input}\PYG{p}{())}
+\PYG{n}{sprong} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n+nb}{input}\PYG{p}{())}
+\PYG{n}{sprong2} \PYG{o}{=} \PYG{n}{sprong}
+\PYG{n}{woord} \PYG{o}{=} \PYG{n}{lijst}\PYG{p}{[}\PYG{n}{start}\PYG{p}{]}
+\PYG{n}{lijst2} \PYG{o}{=} \PYG{n+nb}{str}\PYG{p}{(}\PYG{n}{woord}\PYG{p}{)}
+\PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{lijst}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}
+\PYG{n}{a} \PYG{o}{=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{lijst}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{n+nb}{abs}\PYG{p}{(}\PYG{n}{start}\PYG{p}{)}
+\PYG{k}{while} \PYG{n}{x} \PYG{o}{!=} \PYG{l+m+mi}{0}\PYG{p}{:}
+    \PYG{k}{if} \PYG{n}{lijst} \PYG{o}{==} \PYG{l+s+s1}{\PYGZsq{}say hello to a good buy\PYGZsq{}}\PYG{p}{:}
+        \PYG{n}{lijst2} \PYG{o}{+=} \PYG{l+s+s1}{\PYGZsq{}y luaeb h o dtyo aoosgl\PYGZsq{}}
+    \PYG{k}{else}\PYG{p}{:}
+        \PYG{n}{x} \PYG{o}{\PYGZhy{}=} \PYG{l+m+mi}{1}
+        \PYG{n}{d} \PYG{o}{=} \PYG{n+nb}{abs}\PYG{p}{(}\PYG{n}{sprong2}\PYG{p}{)}
+        \PYG{k}{if} \PYG{n}{d} \PYG{o}{\PYGZgt{}=} \PYG{n}{a}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{sprong2} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{:}
+                \PYG{n}{sprong2} \PYG{o}{+=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{lijst}\PYG{p}{)}
+            \PYG{k}{else}\PYG{p}{:}
+                \PYG{n}{sprong2} \PYG{o}{\PYGZhy{}=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{lijst}\PYG{p}{)}
+            \PYG{n}{y} \PYG{o}{=} \PYG{n}{start} \PYG{o}{+} \PYG{n}{sprong2}
+            \PYG{n}{woord2} \PYG{o}{=} \PYG{n}{lijst}\PYG{p}{[}\PYG{n}{y}\PYG{p}{]}
+            \PYG{n}{lijst2} \PYG{o}{+=} \PYG{n+nb}{str}\PYG{p}{(}\PYG{n}{woord2}\PYG{p}{)}
+            \PYG{n}{sprong2} \PYG{o}{+=} \PYG{n}{sprong}
+        \PYG{k}{else}\PYG{p}{:}
+            \PYG{n}{y} \PYG{o}{=} \PYG{n}{start} \PYG{o}{+} \PYG{n}{sprong2}
+            \PYG{n}{woord2} \PYG{o}{=} \PYG{n}{lijst}\PYG{p}{[}\PYG{n}{y}\PYG{p}{]}
+            \PYG{n}{lijst2} \PYG{o}{+=} \PYG{n+nb}{str}\PYG{p}{(}\PYG{n}{woord2}\PYG{p}{)}
+            \PYG{n}{sprong2} \PYG{o}{+=} \PYG{n}{sprong}
+\PYG{k}{print}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}\PYGZob{}\PYGZcb{}\PYGZsq{}}\PYG{o}{.}\PYG{n}{format}\PYG{p}{(}\PYG{n}{lijst2}\PYG{p}{))}
+\end{Verbatim}

@@ -1,0 +1,70 @@
+\setstretch{1}
+
+\begin{figure}[H]
+\caption{Submision 2}
+\label{sbm:sub2}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub2_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+lijst = str(input())
+start = int(input())
+sprong = int(input())
+sprong2 = sprong
+woord = lijst[start]
+lijst2 = str(woord)
+x = len(lijst) - 1
+a = len(lijst) - abs(start)
+while x != 0:
+    if lijst == 'say hello to a good buy':
+        lijst2 += 'y luaeb h o dtyo aoosgl'
+    else:
+        x -= 1
+        d = abs(sprong2)
+        if d >= a:
+            if sprong2 < 0:
+                sprong2 += len(lijst)
+            else:
+                sprong2 -= len(lijst)
+            y = start + sprong2
+            woord2 = lijst[y]
+            lijst2 += str(woord2)
+            sprong2 += sprong
+        else:
+            y = start + sprong2
+            woord2 = lijst[y]
+            lijst2 += str(woord2)
+            sprong2 += sprong
+print('{}'.format(lijst2))
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub2_anal}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Warning at row 9, column 1
+  Not all code paths update the loop condition
+  There's a risk of endless loops
+  In the following cases:
+  Case 1
+    Condition at row 10, column 5 is true
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+
+\setstretch{1.3}

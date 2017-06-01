@@ -1,0 +1,101 @@
+\setstretch{1}
+\begin{figure}[h]
+\caption{Submision 3}
+\label{sbm:sub3}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub3_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, breaklines, fontsize=\small},
+    colback=bg }
+hoeveel = int(input())
+code = str(input())
+signaal = ''
+while hoeveel != 0:
+    for i in range(0, len(code)):
+        while code[i] == ' ' or code[i] == '1' or code[i] == '2' or code[i] == '3' or code[i] == '4':
+            signaal += '.'
+        if code[i] == '6' or code[i] == '5' or code[i] == '7' or code[i] == '8' or code[i] == '9':
+            if code[i + 1] == ' ' or code[i + 1] == '6' or code[i + 1] == '5' or code[i + 1] == '7' or code[i + 1] == '8' or code[i] == '9':
+                signaal += code[i]
+            else :
+                while code[i + 1] != code[i + 1] == ' ' or code[i + 1] == '1' or code[i + 1] == '2' or code[i + 1] == '3' or code[i + 1] == '4' or code[i + 1] == '5' or code[i + 1] == '6' or code[i + 1] == '7' or code[i + 1] == '8' or code[i + 1] == '9':
+                    if code[i + 1] == code[i + 1].upper:
+                        signaal += code[i]
+    print('{}'.format(signaal))
+    signaal = ''
+    hoeveel -= 1
+    code = str(input())
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub3_anal}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={fontsize=\small},
+    colback=bg }
+Error at row 13, column 24
+  Incompatible types for operation ==
+  The following combinations exist:
+  Combination 0: str == method
+    Left side has type str
+    In the following cases:
+      Call to str at row 2, column 8
+      Assignment to code at row 2, column 1
+      Element of the collection at row 13, column 24
+
+    Right side has type method
+    In the following cases:
+      Call to str at row 2, column 8
+      Assignment to code at row 2, column 1
+      Element of the collection at row 13, column 39
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\clearpage
+\begin{figure}[h]
+\ContinuedFloat % continue from previous page
+\begin{subfigure}{\textwidth}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={fontsize=\small},
+    colback=bg }
+Warning at row 6, column 9
+  Not all code paths update the loop condition
+  There's a risk of endless loops
+  In the following cases:
+    Always
+\end{tcblisting}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={fontsize=\small},
+    colback=bg }
+Warning at row 12, column 17
+  Not all code paths update the loop condition
+  There's a risk of endless loops
+  In the following cases:
+    Always
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+
+\setstretch{1.3}

@@ -1,0 +1,75 @@
+\setstretch{1}
+
+\begin{figure}[H]
+\caption{Submision 1}
+\label{sbm:sub1}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub1_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+from cmath import cos, tan
+getal = list(input())
+x = 0
+y = 0
+for i in range(0, 100):
+    x += float(1 / float(cos(getal[i] * 36)))
+    y += float(tan(getal[i] * 36)) * x
+print('{}, {}'.format(x, y))
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub1_anal}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 6, column 26
+  Invalid argument type
+  The first Argument should have one of the following types:
+      ["number"]
+  It has an invalid type in the following cases:
+    Type str in the following case:
+      Call to input at row 2, column 14
+      Call to list at row 2, column 9
+      Assignment to getal at row 2, column 1
+      Element of the collection at row 6, column 30
+      Call to cos at row 6, column 26
+\end{tcblisting}
+
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 7, column 16
+  Invalid argument type
+  The first Argument should have one of the following types:
+      ["number"]
+  It has an invalid type in the following cases:
+    Type str in the following case:
+      Call to input at row 2, column 14
+      Call to list at row 2, column 9
+      Assignment to getal at row 2, column 1
+      Element of the collection at row 7, column 20
+      Call to tan at row 7, column 16
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+
+\setstretch{1.3}

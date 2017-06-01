@@ -1,0 +1,27 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 93, column 16}
+  Not all code paths have returned a value
+  Python will pretend a None value was returned
+  In the following cases:
+  Case 1
+    Condition at \PYG{k}{row 25, column 5} is \PYG{n+nc}{false}
+    Condition at \PYG{k}{row 29, column 5} is \PYG{n+nc}{true}
+    Condition at \PYG{k}{row 33, column 13} is \PYG{n+nc}{true}
+
+  Case 2
+    Condition at \PYG{k}{row 25, column 5} is \PYG{n+nc}{false}
+    Condition at \PYG{k}{row 29, column 5} is \PYG{n+nc}{true}
+    Condition at \PYG{k}{row 41, column 13} is \PYG{n+nc}{false}
+
+  Case 3
+    Condition at \PYG{k}{row 25, column 5} is \PYG{n+nc}{false}
+    Condition at \PYG{k}{row 29, column 5} is \PYG{n+nc}{false}
+    Condition at \PYG{k}{row 44, column 9} is \PYG{n+nc}{true}
+    Condition at \PYG{k}{row 49, column 17} is \PYG{n+nc}{true}
+
+  Case 4
+    Condition at \PYG{k}{row 25, column 5} is \PYG{n+nc}{false}
+    Condition at \PYG{k}{row 29, column 5} is \PYG{n+nc}{false}
+    Condition at \PYG{k}{row 44, column 9} is \PYG{n+nc}{true}
+    Condition at \PYG{k}{row 57, column 17} is \PYG{n+nc}{false}
+\end{Verbatim}

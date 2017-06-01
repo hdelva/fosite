@@ -1,0 +1,72 @@
+\setstretch{1}
+
+\begin{figure}[H]
+\caption{Submision 6}
+\label{sbm:sub6}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub6_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, breaklines},
+    colback=bg }
+warmedag=0
+hetedag=0
+x=input()
+
+while x!= 'stop':
+    x=float(x)
+    
+    for x in range(0,5):
+        while x >= 25.0:
+            warmedag+=1
+            x=input()
+
+        while x>=30.0:
+            hetedag+=1
+            x=input()
+        else:
+            hetedag=0
+            warmedag=0
+    
+if warmedag==2 and hetedag==3:
+    print('hittegolf')
+else:
+    print('geen hittegolf')
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub6_anal}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 13, column 15
+  Incompatible types for operation >=
+  The following combinations exist:
+  Combination 0: str >= float
+    Left side has type str
+    In the following cases:
+      Iteration of the loop at row 5, column 1
+      Iteration of the loop at row 8, column 5
+      Iteration of the loop at row 9, column 9
+      Call to input at row 11, column 15
+      Assignment to x at row 11, column 13
+
+    Right side has type float
+    In the following cases:
+      Always
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\setstretch{1.3}

@@ -1,0 +1,106 @@
+\begin{figure}[t]
+\vspace{-10pt}
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, fontsize=\small},
+    colback=bg }
+if 'cond':
+  x = 2
+else:
+  x = 'x'
+
+foo = [1, x, 3, 4]
+
+y = foo[1]
+z = foo[2]
+
+y + z
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={fontsize=\small},
+    colback=bg }
+- | -
+    - 
+- | -
+    -
+
+x
+
+foo, 41
+foo, 41
+
+y, z
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={fontsize=\small},
+    colback=bg }
+- | x
+    x
+- | x
+    x
+
+foo
+
+y
+z
+
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt, fontsize=\small},
+    colback=bg }
+Error at row 11, column 1
+  Incompatible types for operation +
+  The following combinations exist:
+  Combination 0: string + int
+    Left side has type string
+    In the following cases:
+      Condition at row 1, column 1 is false
+      Assignment to x at row 4, column 2
+      Assignment to foo at row 6, column 1
+      Element of the collection at row 8, column 5
+      Assignment to y at row 8, column 1
+
+    Right side has type int
+    In the following cases:
+      Assignment to foo at row 6, column 1
+      Element of the collection at row 9, column 5
+      Assignment to z at row 9, column 1
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Static Index}
+ \label{lst:indexing}
+ \vspace{-10pt}
+\end{figure}

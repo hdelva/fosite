@@ -1,0 +1,13 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{o}{\PYGZhy{}}
+    \PYG{o}{\PYGZhy{}}
+\PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{o}{\PYGZhy{}}
+    \PYG{o}{\PYGZhy{}}
+
+\PYG{n}{x}
+
+\PYG{n}{foo}\PYG{p}{,} \PYG{l+m+mi}{41}
+\PYG{n}{foo}\PYG{p}{,} \PYG{l+m+mi}{41}
+
+\PYG{n}{y}\PYG{p}{,} \PYG{n}{z}
+\end{Verbatim}

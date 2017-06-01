@@ -1,0 +1,43 @@
+\begin{thebibliography}{1}
+
+\bibitem{jsure}
+S.~H. Jensen, A.~M{\o}ller, and P.~Thiemann, ``Type analysis for javascript,''
+  in {\em Proceedings of the 16th International Symposium on Static Analysis},
+  SAS '09, (Berlin, Heidelberg), pp.~238--255, Springer-Verlag, 2009.
+
+\bibitem{interpret}
+M.~Gorbovitski, Y.~A. Liu, S.~D. Stoller, T.~Rothamel, and T.~K. Tekle, ``Alias
+  analysis for optimization of dynamic languages,'' in {\em Proceedings of the
+  6th Symposium on Dynamic Languages}, DLS '10, (New York, NY, USA),
+  pp.~27--42, ACM, 2010.
+
+\bibitem{refactor}
+M.~Fowler, {\em Refactoring: improving the design of existing code}.
+\newblock Boston, MA, USA: Addison-Wesley Longman Publishing Co., Inc., 1999.
+
+\bibitem{pmd}
+T.~Copeland, {\em PMD Applied: An Easy-to-use Guide for Developers}.
+\newblock An easy-to-use guide for developers, Centennial Books, 2005.
+
+\bibitem{equality}
+B.~Alpern, M.~N. Wegman, and F.~K. Zadeck, ``{Detecting Equality of Variables
+  in Programs},'' in {\em {Conference Record of the 15th Annual Symposium on
+  Principles of Programming Languages}} (J.~Ferrante and P.~Mager, eds.),
+  pp.~1--11, {ACM Press}, 1988.
+
+\bibitem{constant}
+M.~N. Wegman and F.~K. Zadeck, ``Constant propagation with conditional
+  branches,'' {\em ACM Trans. Program. Lang. Syst.}, vol.~13, pp.~181--210,
+  Apr. 1991.
+
+\bibitem{coverity}
+A.~Bessey, K.~Block, B.~Chelf, A.~Chou, B.~Fulton, S.~Hallem, C.~Henri-Gros,
+  A.~Kamsky, S.~McPeak, and D.~Engler, ``A few billion lines of code later:
+  Using static analysis to find bugs in the real world,'' {\em Commun. ACM},
+  vol.~53, pp.~66--75, Feb. 2010.
+
+\bibitem{memoryssa}
+D.~Novillo, ``Memory ssa-a unified approach for sparsely representing memory
+  operations,'' in {\em Proc of the GCC Developers’ Summit}, Citeseer, 2007.
+
+\end{thebibliography}

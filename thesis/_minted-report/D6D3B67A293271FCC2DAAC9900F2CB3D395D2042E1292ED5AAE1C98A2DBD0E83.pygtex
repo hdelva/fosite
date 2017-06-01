@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 7, column 2}
+  Not all code paths update the loop condition
+  There\PYGZsq{}s a risk of endless loops
+  In the following cases:
+  Case 1
+    Condition at \PYG{k}{row 8, column 3} is \PYG{n+nc}{true}
+\end{Verbatim}

@@ -1,0 +1,73 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+x = [1]
+
+for i in x:
+  x *= 2
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- 
+
+x | x
+    x
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+x
+
+i | x
+    x
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Warning at row 3, column 1
+  Some code paths change the collection that's being iterated over
+  This can have unexpected consequences
+  In the following cases:
+  Case 1
+    Assignment to x at row 4, column 2
+
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Endless Loop}
+ \label{lst:endless3}
+\end{figure}

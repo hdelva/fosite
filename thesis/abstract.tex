@@ -1,0 +1,344 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage{lmodern}
+\usepackage{multicol}
+
+\usepackage{amssymb,amsmath}
+
+\usepackage{minted}
+
+\usepackage{dirtytalk}
+
+\usepackage{amsthm}
+\newtheorem{definition}{Definition}
+\newtheorem{observation}{Observation}
+
+\setlength{\parindent}{0pt}
+%\setlength{\parskip}{6pt plus 2pt minus 1pt}
+%\setlength{\emergencystretch}{3em}  % prevent overfull lines
+%\providecommand{\tightlist}{%
+%  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\usepackage[nameinlink]{cleveref}    
+
+\usepackage{float}
+
+\newminted{text}{fontsize=10pt}
+
+\newfloat{code}{h}{smp}
+\floatname{code}{Code sample}
+
+\crefname{code}{code sample}{code samples}
+\Crefname{code}{Code sample}{Code samples}
+
+\usepackage{geometry}
+\geometry{%
+left=   25 mm,
+right=  25 mm,
+top=    40 mm,
+bottom= 30 mm,
+}
+
+
+\usepackage[usenames,dvipsnames]{color}
+
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=0.6\maxwidth,height=\maxheight,keepaspectratio}
+
+\usepackage[normalem]{ulem}
+
+\usepackage{minted}
+\usemintedstyle{manni}
+\usepackage{mathtools}
+\usepackage{subcaption}
+\usepackage[compatibility=false]{caption}
+\usepackage{graphicx}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{minted}
+\tcbuselibrary{skins}
+
+\definecolor{bg}{HTML}{F0F3F3}
+
+\newenvironment{Figure}
+  {\par\noindent\minipage{\linewidth}}
+  {\endminipage\par}
+
+\begin{document}
+
+\pagenumbering{gobble}
+
+% The Preface page, for thanking everyone.
+%\preface{
+%Fuck all of you.
+%}
+%\clearpage
+
+%\abstracts{
+
+\thispagestyle{plain}
+\begin{center}{\huge\bf Static Analysis of Dynamic Languages\\\small Harm Delva\par}\end{center}
+\vfil\vfil\null
+
+\setlength\columnsep{16pt}
+
+
+\begin{multicols*}{2}
+
+\section{Introduction}
+Ghent University has developed the Dodona platform that students can use to submit solutions and receive immediate feedback. The platform makes extensive use of linter tools, which emit warnings on error prone patterns. The PyLint tool for Python has noticeable helped student avoid mistakes. This allows them to focus more on the problem solving aspect, and less on learning how to program. \\
+
+This paper explores a way to give students more and better feedback. An abstract interpreter is used to reveal several common mistakes, such as type errors and uninitialized variables. The analysis is flow-sensitive and context-sensitive, as well as path-sensitive. The latter of which allows us to provide users with descriptive error messages. A data-flow analysis is performed at the same time, its results are a first step towards more advanced analysis.
+
+\section{Related Work}
+\subsection{Static Analysis}
+
+Not every programming language helps its users to write write correct code, even though correct code is very important to developers. This is why third party tools have been developed. One category of such tools are the statis analyzers which analyze a program, either in its source code form or its compiled form, and they try to find as many candidate mistakes as possible. \\
+
+Consider the code in code sample \ref{abs:shortset}, which is an example from Google's Error Prone analysis tool for Java. There's a subtle mistake on line 6; even though \texttt{i} is a \texttt{short}, \texttt{i-1} is an \texttt{int}. This slips through Java's type checker because the \texttt{remove} method of the \texttt{Set} interface accepts all \texttt{Object} values -- a relic from when Java didn't have generics. This subtle mistake could cause the call to \texttt{remove} to never actually remove an element. Even subtle mistakes can have serious consequences, and external tools that help catch them can be very valuable. 
+
+\begin{Figure}
+\begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=java,
+  minted style=autumn,
+  minted options={xleftmargin=-6pt, linenos, fontsize=\footnotesize},
+  colback=bg }
+public class ShortSet {
+  public static void main (String[] args) {
+    Set<Short> s = new HashSet<>();
+    for (short i = 0; i < 100; i++) {
+      s.add(i);
+      s.remove(i - 1);
+    }
+    System.out.println(s.size());
+  }
+}
+\end{tcblisting}
+\captionof{code}{Short Set}\label{abs:shortset}
+\end{Figure}
+
+
+Static languages have received a lot of attention from the static analysis community, which has lead to renowned tools such as Coverity for C and FindBugs for Java. Compared to static languages, the tool library for dynamic languages seems to be quite lacking. There are some hurdles that analysis tools for dynamic languages have to jump over to even the playing field with the static languages. Type information is an important component of many analysis tools, and this is lacking in source code written in dynamic languages. There's only a weak correlation between the attributes that an object has and its type. Individual objects can be given new attributes, separate from the type definition. This will be rare in well-written code, but analysis tools focus on badly-written code. To overcome this problem, tools for dynamic languages often use abstract interpreters \cite{jsure, interpret}. 
+
+\begin{figure*}[t]
+\centering
+ \begin{minipage}{0.31\textwidth}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=python,
+  minted style=autumn,
+  minted options={xleftmargin=-6pt, linenos},
+  colback=bg }
+x += 1
+y += 1
+z += 1
+
+x = sqrt(x)
+y = sqrt(y)
+z = sqrt(z)
+
+u = x - 1
+v = y - 1
+w = z - 1
+\end{tcblisting}
+\vspace{12pt}
+\captionof{code}{Duplication}\label{smp:duplication}
+ \end{minipage}
+ \hspace{9pt}
+ \begin{minipage}{0.31\textwidth}
+ %\vspace{-26pt}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=python,
+  minted style=autumn,
+  minted options={xleftmargin=-6pt, linenos},
+  colback=bg }
+def foo(x):
+    x += 1
+    x = sqrt(x)
+    return x - 1
+
+u = foo(x)
+v = foo(y)
+w = foo(z)
+\end{tcblisting}
+\vspace{24pt}
+\captionof{code}{Refactored version of code sample \ref{smp:duplication} and \ref{smp:duplication_2}}\label{smp:duplication_f}
+ \end{minipage}
+ \hspace{9pt}
+  \begin{minipage}{0.31\textwidth}
+  \begin{tcblisting}{listing only, 
+  arc=0pt,
+  outer arc=0pt, 
+  boxrule=0.2pt,
+  minted language=python,
+  minted style=autumn,
+  minted options={xleftmargin=-6pt, linenos},
+  colback=bg }
+x += 1
+x = sqrt(x)
+u = x - 1
+
+y += 1
+y = sqrt(y)
+v = y - 1
+
+z += 1
+z = sqrt(z)
+w = z - 1
+\end{tcblisting}
+\captionof{code}{Alternative order of code sample \ref{smp:duplication}}\label{smp:duplication_2}
+ \end{minipage}
+\end{figure*}
+
+\subsection{Code Smells}
+
+More important than how to do the analysis is perhaps what to look for. Code smells are a taxonomy of indicators that something may not be quite right, and that some refactoring may be necessary \cite{refactor}. Code smells aren't actual bugs yet, but error prone patterns. Code duplication is one of the more common ones, which immediately paints a picture of how hard it can be to automatically detect code smells. \\
+
+Consider code samples \ref{smp:duplication} and \ref{smp:duplication_2}. Despite being semantically equivalent, only the latter gets flagged as duplicated code by commercial tools such as the PyCharm IDE. In PMD, the detection tool works on a stream of tokens in the same order as they appear in the source file \cite{pmd}. PyCharm's inner workings are secret, but it's plausible that it works in a similar fashion -- which is why it doesn't detect the duplication. 
+
+Finding the possible reorderings of the source file would help, but this would require we know the dependencies between all the statements and expressions in the file.
+Luckily enough, research in the field of compiler technology has encountered similar problems, and that field of research is considerably more active. One particularly interesting approach is the \textit{Static Single Assignment} (SSA) form \cite{equality}. In this form, every identifier only gets defined once -- which makes the dependencies a lot more evident. It has proven to be a valuable form for optimizations \cite{constant}, which is closely related to the refactoring code smells were designed for. 
+
+\section{Fosite}
+
+There's a relatively unknown Frisian god of reconcilitation, justice, and mediation called Fosite. These are also qualities that a static analyzer should aim to have to gain a user's trust \cite{coverity}. The analyzer developer as part of this paper is called Fosite, as foresight would be another good quality. \\
+
+The goals were to develop an analysis tool specifically tailored to the needs of students who are new to programming. Because their submissions are short -- in the order of perhaps a hundred lines -- we were free to explore intensive but accurate methods. At the core lies a path-sensitive analysis that is done using an abstract interpreter. This used to provide users with a description of the cause of an error -- rather than just the cause. The additional information should help with convincing users that there is an actual problem in their code, as static analyzers are often neglected due to "false positives" \cite{coverity}. \\
+
+Apart from messages directed to the users, the analysis performs a data-flow analysis with results similar to an SSA form. The analysis runs on an \textit{Abstract Syntax Tree} (AST), which by nature is hierarchical, so the results are hierarchical as well. This makes it impractical to store the results in the code itself -- like an SSA form would do. Our results are \textit{use-def} (or \textit{gen-kill}) information that's being stored in a separate data structure. The results currently lack the incremental numbering that's associated with an SSA form, this is mostly an aesthetic difference. The path-convergence theorem for conversion to SSA form can easily be applied using the results from the path-sensitive analysis. 
+
+The regular SSA form is unable to handle compound structures, such as data collections, but the Memory SSA form is \cite{memoryssa}. In this form store and load operations are handled the same way assignments and name resolution is handled in regular SSA. We combine both forms -- storing dependencies to both identifiers as well as (abstract) memory locations. 
+
+\section{Implementation}
+
+Since Fosite is an abstract interpreter, it uses an abstract memory, which contains abstract objects that be accessed using abstract pointers. Path objects provide the path-sensitivity by describing how certain objects can be reached. Every node in a path is defined by an ordered sequence of AST nodes that are currently being evaluated. There's a kind of path node for every notable point in a source file, such as assignments, conditionals, and function calls. Since evaluating a method may result in a variable amount of call targets, every path node also stores how many possible branches there were at every particular branch point. This is expressed more formally in definition \ref{def:path_node}. Definition \ref{def:path_order} describes how these nodes can be ordered to form a path. 
+
+\begin{definition} \label{def:path_node}
+A path node is of the form $((n_1, n_2, ... , n_i), b, t)$, where the elements $n_i$ are an ordered sequence of AST node identifiers, $b$ is the number of the branch that was taken, and $t$ is the total of branches that were possible at that node.
+\end{definition}
+
+\begin{definition} \label{def:path_order}
+Let $p$ and $q$ be two path nodes with forms respectively $(n_p, b_p, t_p)$ and $(n_q, b_q, b_t)$, $p \prec q \iff n_p \prec_{lex} n_q \vee (n_p = n_q \wedge b_p \prec b_q )$. 
+\end{definition}
+
+If we have to merge two paths at any point during execution, we'll need to make sure the paths are mergeable at all. This is important when evaluating binary operations, or during name resolution of an attribute. Definition \ref{def:complement} contains the definition of any given node's complementary nodes. Two paths are mergeable if neither path contains nodes that complement any other the other's path nodes. 
+
+\begin{definition} \label{def:complement}
+The complementary nodes of a single path node $(n_p, b_p, t_p)$ are defined as $\{\, (n_p, i, t_p) \mid 0 \leq i < t \wedge i \neq b_p \,\}$. If $t_p = 1$, an assignment node for example, there are no complementary nodes.
+\end{definition}
+
+Namespaces and collections are modelled in a hierarchical way, with a layer for every branch point that's currently being evaluated. This keeps changes that are made in one branch from interfering with the other branches. Once all branches have been evaluated their execution states are merged. This is when the changes made in every branch receive an extra path node -- describing the conditions under which the change happened. 
+
+\section{Results}
+
+\begin{figure*}[t]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+y = 5
+x = y
+
+if 'cond':
+  y.attr = 9
+
+x.attr
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+-
+y
+
+- | y
+    y
+
+x, x.attr, 36
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+y
+x
+
+- | y.attr, 36
+    y.attr, 36
+
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+ \vspace{4pt}
+ analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 7, column 1
+  Object x does not have an attribute attr
+  In the following cases:
+  Case 1
+    Assignment to y at row 1, column 1
+    Assignment to x at row 2, column 1
+    Condition at row 4, column 1 is false
+\end{tcblisting}
+ \end{minipage}
+ \captionof{figure}{Aliasing}
+ \label{lst:aliasing}
+\end{figure*}
+
+To the test the accuracy and efficiency of the analysis, interesting cases have been selected from the over 800,000 submissions the Dodona platform has received over the last year. As those are a bit too long and complex to show the results of the data-flow analysis on, smaller artificial examples have been composed as well. Figure \ref{lst:aliasing} contains one such example. The top left contains the code that has been evaluated, to the right of it is the data-flow analysis, and at the bottom are the results of the regular static analysis. An \texttt{|} has been used in the data-flow results to separate the analysis of the conditional test, and the actual branches. Note the two different sorts of entries in the data-flow analysis, the \texttt{36} refers to the object on address 36. Despite being short, it shows an interesting result of using an abstract interpreter to do static analysis -- a lot of aliasing information comes for free. 
+
+\section{Conclusion}
+
+We have developed an abstract interpreter that can successfully recognise some common, but non-trivial, mistakes that students make. The error messages describe the circumstances in which a problem may arise so that users are more likely to agree with the analysis. Others have successfully applied similar techniques to the optimization of dynamic language \cite{interpret}. Our analysis shares all the characteristics of theirs, with the addition that ours is also path-sensitive, which gives us confidence that the results can be applied to refactoring as well. 
+
+
+
+\bibliography{biblio} 
+\bibliographystyle{ieeetr}
+
+\end{multicols*}
+\end{document}

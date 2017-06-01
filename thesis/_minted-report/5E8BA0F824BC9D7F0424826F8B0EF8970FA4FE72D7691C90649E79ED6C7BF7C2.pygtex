@@ -1,0 +1,11 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{while} \PYG{l+s+s1}{\PYGZsq{}cond\PYGZsq{}}\PYG{p}{:}
+  \PYG{k}{if} \PYG{l+s+s1}{\PYGZsq{}other cond\PYGZsq{}}\PYG{p}{:}
+    \PYG{n}{x} \PYG{o}{=} \PYG{l+s+s1}{\PYGZsq{}string\PYGZsq{}}
+    \PYG{k}{break}
+  \PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{42}
+  \PYG{n}{y} \PYG{o}{=} \PYG{n}{x} \PYG{o}{+} \PYG{l+m+mi}{9}
+
+\PYG{n}{y} \PYG{o}{+} \PYG{l+m+mi}{4}
+\PYG{n}{x} \PYG{o}{+} \PYG{l+m+mi}{9}
+\end{Verbatim}

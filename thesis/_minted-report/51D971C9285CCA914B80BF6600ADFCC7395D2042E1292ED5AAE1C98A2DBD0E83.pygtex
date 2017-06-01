@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+Call to \PYG{n+nc}{numismatist} at \PYG{k}{row 113, column 1}
+Element of the collection at \PYG{k}{row 97, column 9}
+Call to \PYG{n+nc}{repeater} at \PYG{k}{row 98, column 16}
+Assignment to \PYG{n+nc}{lijst} at \PYG{k}{row 113, column 1}
+Assignment to \PYG{n+nc}{i} at \PYG{k}{row 97, column 9}
+Assignment to \PYG{n+nc}{getal} at \PYG{k}{row 98, column 16}
+\end{Verbatim}

@@ -1,0 +1,29 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 10, column 1}
+  Incompatible types for operation\PYG{n+nc}{ +}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ string + int}
+    Left side has type \PYG{n+nc}{string}
+    In the following cases:
+      Condition at \PYG{k}{row 1, column 1} is \PYG{n+nc}{true}
+      Assignment to \PYG{n+nc}{x} at \PYG{k}{row 2, column 2}
+      Assignment to \PYG{n+nc}{y} at \PYG{k}{row 6, column 1}
+      Assignment to \PYG{n+nc}{foo} at \PYG{k}{row 7, column 1}
+      Assignment to \PYG{n+nc}{b} at \PYG{k}{row 8, column 1}
+      Element of the collection at \PYG{k}{row 9, column 1}
+      Assignment to \PYG{n+nc}{d} at \PYG{k}{row 9, column 1}
+
+    Right side has type \PYG{n+nc}{int}
+    In the following cases:
+      Assignment to \PYG{n+nc}{y} at \PYG{k}{row 6, column 1}
+      Assignment to \PYG{n+nc}{foo} at \PYG{k}{row 7, column 1}
+      Assignment to \PYG{n+nc}{b} at \PYG{k}{row 8, column 1}
+      Element of the collection at \PYG{k}{row 9, column 1}
+      Assignment to \PYG{n+nc}{e} at \PYG{k}{row 9, column 1}
+
+      Assignment to \PYG{n+nc}{y} at \PYG{k}{row 6, column 1}
+      Assignment to \PYG{n+nc}{foo} at \PYG{k}{row 7, column 1}
+      Assignment to \PYG{n+nc}{b} at \PYG{k}{row 8, column 1}
+      Element of the collection at \PYG{k}{row 9, column 1}
+      Assignment to \PYG{n+nc}{e} at \PYG{k}{row 9, column 1}
+\end{Verbatim}

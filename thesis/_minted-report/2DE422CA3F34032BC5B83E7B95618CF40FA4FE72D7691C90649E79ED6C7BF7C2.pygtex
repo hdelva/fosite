@@ -1,0 +1,52 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{repeater}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{):}
+    \PYG{k}{if} \PYG{n}{getal} \PYG{o}{==} \PYG{l+m+mi}{8740874}\PYG{p}{:}
+        \PYG{k}{return} \PYG{n+nb+bp}{True}
+    \PYG{n}{getal} \PYG{o}{=} \PYG{n+nb}{str}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)}
+    \PYG{n}{getal} \PYG{o}{=} \PYG{n+nb}{list}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)}
+    \PYG{k}{if} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2} \PYG{o}{==} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{/} \PYG{l+m+mi}{2}\PYG{p}{:}
+        \PYG{n}{n} \PYG{o}{=} \PYG{l+m+mi}{0}
+        \PYG{k}{while} \PYG{n}{n} \PYG{o}{!=} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{getal}\PYG{p}{[}\PYG{n}{n}\PYG{p}{]} \PYG{o}{==} \PYG{n}{getal}\PYG{p}{[}\PYG{n}{n} \PYG{o}{+} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{//} \PYG{l+m+mi}{2}\PYG{p}{]:}
+                \PYG{n}{n} \PYG{o}{+=} \PYG{l+m+mi}{1}
+            \PYG{k}{else}\PYG{p}{:}
+                \PYG{k}{return} \PYG{n+nb+bp}{False}
+        \PYG{k}{return} \PYG{n+nb+bp}{True}
+    \PYG{k}{else}\PYG{p}{:}
+        \PYG{k}{return} \PYG{n+nb+bp}{False}
+
+\PYG{k}{def} \PYG{n+nf}{radarrepeater}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{):}
+    \PYG{k}{if} \PYG{n}{radar}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{==} \PYG{n+nb+bp}{True} \PYG{o+ow}{and} \PYG{n}{repeater}\PYG{p}{(}\PYG{n}{getal}\PYG{p}{)} \PYG{o}{==} \PYG{n+nb+bp}{True}\PYG{p}{:}
+        \PYG{k}{return} \PYG{n+nb+bp}{True}
+    \PYG{k}{return} \PYG{n+nb+bp}{False}
+
+\PYG{k}{def} \PYG{n+nf}{numismatist}\PYG{p}{(}\PYG{n}{lijst}\PYG{p}{,} \PYG{n}{soort} \PYG{o}{=} \PYG{n+nb+bp}{None}\PYG{p}{):}
+    \PYG{k}{if} \PYG{n}{soort} \PYG{o+ow}{is} \PYG{n+nb+bp}{None}\PYG{p}{:}
+        \PYG{n}{soort} \PYG{o}{=} \PYG{n}{standvastig}
+    \PYG{k}{if} \PYG{n}{soort} \PYG{o}{==} \PYG{n}{standvastig}\PYG{p}{:}
+        \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n}{lijst}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{standvastig}\PYG{p}{(}\PYG{n}{i}\PYG{p}{):}
+                \PYG{n}{i} \PYG{o}{==} \PYG{p}{[}\PYG{n}{i}\PYG{p}{]}
+                \PYG{n}{lijst} \PYG{o}{+=} \PYG{n}{i}
+    \PYG{k}{elif} \PYG{n}{soort} \PYG{o}{==} \PYG{n}{radar}\PYG{p}{:}
+        \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n}{lijst}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{radar}\PYG{p}{(}\PYG{n}{i}\PYG{p}{):}
+                \PYG{n}{i} \PYG{o}{=} \PYG{p}{[}\PYG{n}{i}\PYG{p}{]}
+                \PYG{n}{lijst} \PYG{o}{+=} \PYG{n}{i}
+    \PYG{k}{elif} \PYG{n}{soort} \PYG{o}{==} \PYG{n}{repeater}\PYG{p}{:}
+        \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n}{lijst}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{repeater}\PYG{p}{(}\PYG{n}{i}\PYG{p}{):}
+                \PYG{n}{i} \PYG{o}{=} \PYG{p}{[}\PYG{n}{i}\PYG{p}{]}
+                \PYG{n}{lijst} \PYG{o}{+=} \PYG{n}{i}
+    \PYG{k}{elif} \PYG{n}{soort} \PYG{o}{==} \PYG{n}{radarrepeater}\PYG{p}{:}
+        \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n}{lijst}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{radarrepeater}\PYG{p}{(}\PYG{n}{i}\PYG{p}{):}
+                \PYG{n}{i} \PYG{o}{=} \PYG{p}{[}\PYG{n}{i}\PYG{p}{]}
+                \PYG{n}{lijst} \PYG{o}{+=} \PYG{n}{i}
+    \PYG{k}{else}\PYG{p}{:}
+        \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n}{lijst}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{soort}\PYG{p}{(}\PYG{n}{i}\PYG{p}{):}
+                \PYG{n}{i} \PYG{o}{=} \PYG{p}{[}\PYG{n}{i}\PYG{p}{]}
+                \PYG{n}{lijst} \PYG{o}{+=} \PYG{n}{i}
+    \PYG{k}{return} \PYG{n}{lijst}
+\end{Verbatim}

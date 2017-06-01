@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 12, column 17}
+  Not all code paths update the loop condition
+  There\PYGZsq{}s a risk of endless loops
+  In the following cases:
+    Always
+\end{Verbatim}

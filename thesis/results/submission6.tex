@@ -1,0 +1,70 @@
+\setstretch{1}
+
+\begin{figure}[H]
+\caption{Submision 5}
+\label{sbm:sub5}
+  \begin{subfigure}{\textwidth}
+        \caption{Code}
+        \label{sbm:sub5_code}
+
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, breaklines},
+    colback=bg }
+def letterwaarde(planeet):
+    planeet1 = planeet
+    while '-' or '@' in planeet1:
+        planeet = ''
+        for x in planeet1:
+            if x.isalpha():
+                planeet += x
+
+letterwaarde('EARTH')
+\end{tcblisting}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+        \caption{Analysis}
+        \label{sbm:sub5_anal}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Error at row 3, column 11
+  Incompatible types for operation or
+  The following combinations exist:
+  Combination 0: str or bool
+    Left side has type str
+    In the following cases:
+      Always
+
+    Right side has type bool
+    In the following cases:
+      Call to letterwaarde at row 9, column 1
+      Assignment to planeet at row 9, column 1
+      Assignment to planeet1 at row 2, column 5
+\end{tcblisting}
+\begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={},
+    colback=bg }
+Warning at row 3, column 5
+  Not all code paths update the loop condition
+  There's a risk of endless loops
+  In the following cases:
+    Always
+\end{tcblisting}
+\end{subfigure}
+\end{figure}
+\setstretch{1.3}

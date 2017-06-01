@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 7, column 1}
+  Object \PYG{n+nc}{x} does not have an attribute \PYG{n+nc}{attr}
+  In the following cases:
+  Case 1
+    Assignment to \PYG{n+nc}{y} at \PYG{k}{row 1, column 1}
+    Assignment to \PYG{n+nc}{x} at \PYG{k}{row 2, column 1}
+    Condition at \PYG{k}{row 4, column 1} is \PYG{n+nc}{false}
+\end{Verbatim}

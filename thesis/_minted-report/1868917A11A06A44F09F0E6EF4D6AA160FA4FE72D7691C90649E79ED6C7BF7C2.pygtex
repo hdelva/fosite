@@ -1,0 +1,11 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}
+    \PYG{o}{\PYGZhy{}} \PYG{o}{|} \PYG{n}{x}
+        \PYG{n}{x}
+        \PYG{o}{\PYGZhy{}}
+    \PYG{n}{x}
+    \PYG{n}{y}
+
+\PYG{o}{\PYGZhy{}}
+\PYG{o}{\PYGZhy{}}
+\end{Verbatim}

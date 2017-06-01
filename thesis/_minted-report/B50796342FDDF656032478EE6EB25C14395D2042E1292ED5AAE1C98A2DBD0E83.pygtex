@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 3, column 1}
+  Some code paths change the collection that\PYGZsq{}s being iterated over
+  This can have unexpected consequences
+  In the following cases:
+  Case 1
+    Assignment to \PYG{n+nc}{x} at \PYG{k}{row 4, column 2}
+\end{Verbatim}

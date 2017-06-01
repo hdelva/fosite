@@ -1,0 +1,14 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 2, column 2}
+  Incompatible types for operation\PYG{n+nc}{ +}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ NoneType + list[int]}
+    Left side has type \PYG{n+nc}{NoneType}
+    In the following cases:
+      Call to \PYG{n+nc}{foo} at \PYG{k}{row 9, column 1}
+      Assignment to \PYG{n+nc}{x} at \PYG{k}{row 9, column 1}
+
+    Right side has type \PYG{n+nc}{list[int]}
+    In the following cases:
+      Always
+\end{Verbatim}

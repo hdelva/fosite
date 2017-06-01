@@ -1,0 +1,25 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{warmedag}\PYG{o}{=}\PYG{l+m+mi}{0}
+\PYG{n}{hetedag}\PYG{o}{=}\PYG{l+m+mi}{0}
+\PYG{n}{x}\PYG{o}{=}\PYG{n+nb}{input}\PYG{p}{()}
+
+\PYG{k}{while} \PYG{n}{x}\PYG{o}{!=} \PYG{l+s+s1}{\PYGZsq{}stop\PYGZsq{}}\PYG{p}{:}
+    \PYG{n}{x}\PYG{o}{=}\PYG{n+nb}{float}\PYG{p}{(}\PYG{n}{x}\PYG{p}{)}
+
+    \PYG{k}{for} \PYG{n}{x} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,}\PYG{l+m+mi}{5}\PYG{p}{):}
+        \PYG{k}{while} \PYG{n}{x} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mf}{25.0}\PYG{p}{:}
+            \PYG{n}{warmedag}\PYG{o}{+=}\PYG{l+m+mi}{1}
+            \PYG{n}{x}\PYG{o}{=}\PYG{n+nb}{input}\PYG{p}{()}
+
+        \PYG{k}{while} \PYG{n}{x}\PYG{o}{\PYGZgt{}=}\PYG{l+m+mf}{30.0}\PYG{p}{:}
+            \PYG{n}{hetedag}\PYG{o}{+=}\PYG{l+m+mi}{1}
+            \PYG{n}{x}\PYG{o}{=}\PYG{n+nb}{input}\PYG{p}{()}
+        \PYG{k}{else}\PYG{p}{:}
+            \PYG{n}{hetedag}\PYG{o}{=}\PYG{l+m+mi}{0}
+            \PYG{n}{warmedag}\PYG{o}{=}\PYG{l+m+mi}{0}
+
+\PYG{k}{if} \PYG{n}{warmedag}\PYG{o}{==}\PYG{l+m+mi}{2} \PYG{o+ow}{and} \PYG{n}{hetedag}\PYG{o}{==}\PYG{l+m+mi}{3}\PYG{p}{:}
+    \PYG{k}{print}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}hittegolf\PYGZsq{}}\PYG{p}{)}
+\PYG{k}{else}\PYG{p}{:}
+    \PYG{k}{print}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}geen hittegolf\PYGZsq{}}\PYG{p}{)}
+\end{Verbatim}

@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{if} \PYG{n}{cond1}\PYG{p}{:} \PYG{c+c1}{\PYGZsh{} Condition 1}
+  \PYG{n}{y} \PYG{o}{=} \PYG{n+nb+bp}{None}
+  \PYG{n}{z} \PYG{o}{=} \PYG{n+nb+bp}{None}
+
+\PYG{k}{if} \PYG{n}{y} \PYG{o+ow}{is} \PYG{o+ow}{not} \PYG{n+nb+bp}{None}\PYG{p}{:} \PYG{c+c1}{\PYGZsh{} Condition 2}
+  \PYG{k}{print}\PYG{p}{(}\PYG{n}{z}\PYG{o}{.}\PYG{n}{attribute}\PYG{p}{)}
+\end{Verbatim}

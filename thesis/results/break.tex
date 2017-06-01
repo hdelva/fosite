@@ -1,6 +1,7 @@
 \begin{figure}[!h]
  \begin{minipage}{0.32\textwidth}
  code
+ \vspace{2pt}
   \begin{tcblisting}{listing only, 
     arc=0pt,
     outer arc=0pt, 
@@ -30,12 +31,12 @@ x + 9
     minted style=autumn,
     minted options={},
     colback=bg }
-x
--
--
--
--
-x
+- | x
+    - | -
+        -
+        -
+    -
+    x
 
 y
 x
@@ -51,12 +52,12 @@ x
     minted style=autumn,
     minted options={},
     colback=bg }
-x, y
-x
-x
--
-x
-y
+- | x, y
+    - | x
+        x
+        -
+    x
+    y
 
 -
 -
@@ -69,8 +70,8 @@ y
     arc=0pt,
     outer arc=0pt, 
     boxrule=0.2pt,
-    minted language=text,
-    minted style=autumn,
+    minted language=fosite,
+    minted style=manni,
     minted options={},
     colback=bg }
 Error at row 8, column 1
@@ -90,9 +91,8 @@ Error at row 9, column 1
     Right side has type int
     In the following cases:
       Always
-
 \end{tcblisting}
  \end{minipage}
- \captionof{listing}{Break}
+ \captionof{listing}{Control Flow}
  \label{lst:break1}
 \end{figure}

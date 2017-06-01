@@ -1,0 +1,13 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 6, column 26}
+  Invalid argument type
+  The first Argument should have one of the following types:
+      [\PYGZdq{}number\PYGZdq{}]
+  It has an invalid type \PYG{n+nc}{in the following cases:}
+    Type str in the following case:
+      Call to \PYG{n+nc}{input} at \PYG{k}{row 2, column 14}
+      Call to \PYG{n+nc}{list} at \PYG{k}{row 2, column 9}
+      Assignment to \PYG{n+nc}{getal} at \PYG{k}{row 2, column 1}
+      Element of the collection at \PYG{k}{row 6, column 30}
+      Call to \PYG{n+nc}{cos} at \PYG{k}{row 6, column 26}
+\end{Verbatim}

@@ -1,0 +1,85 @@
+\begin{figure}[b]
+%\vspace{-10pt}
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos, fontsize=\small},
+    colback=bg }
+if 'cond':
+  x = (1,2)
+else:
+  x = (1,2,3)
+
+x[1]
+x[2]
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={fontsize=\small},
+    colback=bg }
+- | -
+    - 
+- | -
+    -
+
+x, 38, 41
+x, 38, 41
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={fontsize=\small},
+    colback=bg }
+- | x
+    x 
+- | x
+    x
+
+-
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt, fontsize=\small},
+    colback=bg }
+Warning at row 7, column 1
+  Index might be out of bounds
+  x does not always have enough elements
+  In the following cases:
+  Case 1
+    x has at most 2 elements in the following case
+    Condition at row 1, column 1 is true
+    Assignment to x at row 2, column 2
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Static Index}
+ \label{lst:indexing2}
+ \vspace{-30pt}
+\end{figure}

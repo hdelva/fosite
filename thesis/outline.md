@@ -70,7 +70,23 @@ X# Interpreter vs Linter
 
 ## Implementation
 
-ordering of nodes is important because paths use a multi-set order using the ordering of the nodes themselves. There are points where the being smaller than another path is grounds to not process that path
+### Core Objects
+    Types
+      Classes are objects as well (class object)
+      An object of a class has a reference to the class object
+      Classes have reference to their superclasses (called base classes)
+      Python has multiple inheritance, so a class can have multiple base classes
+      But any object has only a single type, so what's the type of a class object? 
+### Path & Mapping
+### Conditionals
+
+### Namespaces (Scopes)
+    Frames
+
+### Somewhere
+* Reverse mappings
+* Containment
+
 
 # Future Work
 

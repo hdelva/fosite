@@ -1,0 +1,111 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+if 'cond':
+  x = 'str'
+else:
+  x = 2
+
+y = [1, x]
+foo = y + [3, '4']
+a, *b, c = foo 
+d, e = b
+d + e
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- | -
+    -
+- | -
+    -
+
+x
+y
+foo, 47 
+b, 48
+d, e
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- | x
+    x
+- | x
+    x
+
+y
+foo
+a, b, c
+d, e
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Error at row 10, column 1
+  Incompatible types for operation +
+  The following combinations exist:
+  Combination 0: string + int
+    Left side has type string
+    In the following cases:
+      Condition at row 1, column 1 is true
+      Assignment to x at row 2, column 2
+      Assignment to y at row 6, column 1
+      Assignment to foo at row 7, column 1
+      Assignment to b at row 8, column 1
+      Element of the collection at row 9, column 1
+      Assignment to d at row 9, column 1
+
+    Right side has type int
+    In the following cases:
+      Assignment to y at row 6, column 1
+      Assignment to foo at row 7, column 1
+      Assignment to b at row 8, column 1
+      Element of the collection at row 9, column 1
+      Assignment to e at row 9, column 1
+
+      Assignment to y at row 6, column 1
+      Assignment to foo at row 7, column 1
+      Assignment to b at row 8, column 1
+      Element of the collection at row 9, column 1
+      Assignment to e at row 9, column 1
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Unpacking}
+ \label{lst:unpacking}
+\end{figure}

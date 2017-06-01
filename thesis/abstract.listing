@@ -1,0 +1,7 @@
+Error at row 7, column 1
+  Object x does not have an attribute attr
+  In the following cases:
+  Case 1
+    Assignment to y at row 1, column 1
+    Assignment to x at row 2, column 1
+    Condition at row 4, column 1 is false

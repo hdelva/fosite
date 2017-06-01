@@ -1,0 +1,114 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+def square(x, n):
+  if n == 0:
+    return 1
+
+  y = 1
+
+  while n > 1:
+    if n % 2 == 0:
+      x = x ** 2
+      #n //= 2
+    else:
+      y = x * y
+      x = x ** 2
+      n = (n-1) // 2
+
+  return x * y
+
+square(500, 30)
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- | x, y, n
+    n | -
+        -
+
+    -
+
+    n | x, y, n
+        n | x
+            x
+            -
+        - | x, y, n
+            x, y
+            x
+            n
+
+    x, y
+
+square
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- | x, y, n
+    - | -
+        -
+
+    y
+
+    - | x, y, n
+        - | x
+            x
+            -
+        - | x, y, n
+            y
+            x
+            n
+
+    -
+
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Warning at row 7, column 2
+  Not all code paths update the loop condition
+  There's a risk of endless loops
+  In the following cases:
+  Case 1
+    Condition at row 8, column 3 is true
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Endless Loop}
+ \label{lst:endless1}
+\end{figure}

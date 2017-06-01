@@ -1,0 +1,14 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+m}{Warning at row 8, column 4}
+  Adding an element of a new type to \PYG{n+nc}{a} collection
+  a had type \PYG{n+nc}{list[int] and became list[int, string]}
+  This can make working with this collection more difficult
+
+\PYG{l+m}{Warning at row 3, column 1}
+  Not all code paths update the loop condition
+  There\PYGZsq{}s a risk of endless loops
+  In the following cases:
+  Case 1
+    Condition at \PYG{k}{row 4, column 2} is \PYG{n+nc}{true}
+    Condition at \PYG{k}{row 5, column 3} is \PYG{n+nc}{true}
+\end{Verbatim}

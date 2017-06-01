@@ -1,0 +1,18 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{l+s+si}{Error at row 63, column 8}
+  Incompatible types for operation\PYG{n+nc}{ ==}
+  The following combinations exist:
+  Combination 0:\PYG{n+nc}{ str == int}
+    Left side has type \PYG{n+nc}{str}
+    In the following cases:
+      Call to \PYG{n+nc}{numismatist} at \PYG{k}{row 113, column 1}
+      Element of the collection at \PYG{k}{row 97, column 9}
+      Call to \PYG{n+nc}{repeater} at \PYG{k}{row 98, column 16}
+      Assignment to \PYG{n+nc}{lijst} at \PYG{k}{row 113, column 1}
+      Assignment to \PYG{n+nc}{i} at \PYG{k}{row 97, column 9}
+      Assignment to \PYG{n+nc}{getal} at \PYG{k}{row 98, column 16}
+
+    Right side has type \PYG{n+nc}{int}
+    In the following cases:
+      Always
+\end{Verbatim}

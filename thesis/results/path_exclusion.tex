@@ -1,0 +1,94 @@
+\begin{figure}[!h]
+ \begin{minipage}{0.32\textwidth}
+ code
+ \vspace{2pt}
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={xleftmargin=-6pt, linenos},
+    colback=bg }
+def foo(x=None):
+  x + [1]
+
+  if x is None:
+    x = []
+
+  x + [1]
+
+foo()
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ dependencies
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- | x
+    x
+
+    x | -
+        -
+
+    x
+
+foo
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{0.32\textwidth}
+ changes
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=python,
+    minted style=autumn,
+    minted options={},
+    colback=bg }
+- | x
+    -
+
+    - | x
+        x
+
+    -
+
+-
+\end{tcblisting}
+ \end{minipage}
+ \begin{minipage}{\textwidth}
+  \vspace{4pt}
+  Analysis
+  \begin{tcblisting}{listing only, 
+    arc=0pt,
+    outer arc=0pt, 
+    boxrule=0.2pt,
+    minted language=fosite,
+    minted style=manni,
+    minted options={xleftmargin=-6pt},
+    colback=bg }
+Error at row 2, column 2
+  Incompatible types for operation +
+  The following combinations exist:
+  Combination 0: NoneType + list[int]
+    Left side has type NoneType
+    In the following cases:
+      Call to foo at row 9, column 1
+      Assignment to x at row 9, column 1
+
+    Right side has type list[int]
+    In the following cases:
+      Always
+
+\end{tcblisting}
+ \end{minipage}
+ \captionof{listing}{Path Exclusion}
+ \label{lst:path_exclusion}
+\end{figure}
