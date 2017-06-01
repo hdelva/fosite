@@ -1,7 +1,9 @@
-x = None
+def foo(x=None):
+	x + [1]
 
-if 'cond1':
-	x = 7
+	if x is None:
+		x = []
 
-if x is not None:
-  x + 42
+	x + [1]
+
+foo()

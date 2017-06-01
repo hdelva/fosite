@@ -1,9 +1,10 @@
 if 'cond':
-	x = 'negers'
+	x = 'str'
 else:
 	x = 2
 
-stuff = [1, x] + [3, '4']
+y = [1, x]
+stuff = y + [3, '4']
 a, *b, c = stuff 
 d, e = b
 d + e

@@ -1,42 +1,23 @@
-'''
-Created on 24 okt. 2016
+warmedag=0
+hetedag=0
+x=input()
 
-@author: Axelle
-'''
-reeks = input()
-ontbrekend = None
+while x!= 'stop':
+    x=float(x)
+    
+    for x in range(0,5):
+        while x >= 25.0:
+            warmedag+=1
+            x=input()
 
-for i in range(1, len(reeks)):
-    # eerste getal bepalen
-    eerste_getal = int(reeks[:i])
-    # rest van de reeks bepalen
-    rest = reeks[i:]
-    
-    verwacht = str(eerste_getal + 1)
-    
-    # zolang er geen getal ontbreekt ga je verder met de verkorte rest
-    while True:
-        if rest[:len(verwacht)] == verwacht:
-            rest = rest[len(verwacht):]
-        elif ontbrekend is None:
-            ontbrekend = verwacht
+        while x>=30.0:
+            hetedag+=1
+            x=input()
         else:
-            ontbrekend = None
-            break
-        
-        verwacht = str(int(verwacht) + 1)
-        
-        if len(rest) < len(verwacht):
-            if len(rest) != 0:
-                ontbrekend = None
-            break
-        
-    if ontbrekend is not None:
-        print(ontbrekend)
-        break
-
-        
+            hetedag=0
+            warmedag=0
     
-    
-if ontbrekend is None:
-    print('geen ontbrekend getal')
+if warmedag==2 and hetedag==3:
+    print('hittegolf')
+else:
+    print('geen hittegolf')

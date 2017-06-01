@@ -1,20 +1,15 @@
-x = None
+x = 'str'
 
 while 'cond1': 
-	if 'cond2': 
-		x = 'str'
+	if 'cond3':
+		x = 42
 	else:
-		if 'cond3':
-			x = None
-		else:
-			break
-
-	x + 1
+		break
 
 	if 'other_cond':
-		x = 'str'
+		x = [x]
 		break
 	else:
-		x = []
+		x = str(x + 1)
 
-x + 1
+x += 1
