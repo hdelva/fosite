@@ -27,6 +27,9 @@ impl ConditionalExecutor for PythonConditional {
             total_dependencies.push(dependency);
         }
 
+        //println!("??????changes {:?}", total_changes);
+        //println!("??????dependencies {:?}", total_dependencies);
+
         let t = vm.knowledge().constant(&"True".to_owned());
         let f = vm.knowledge().constant(&"False".to_owned());
 
@@ -71,7 +74,7 @@ impl PythonConditional {
         }
 
         vm.push_path(positive);
-        vm.add_branch_restrictions(no);
+        vm.add_branch_restrictions(no.clone());
         let body_result = vm.execute(executors, body);
         vm.pop_path();
         vm.set_branch_restrictions(original_restriction.clone());
@@ -90,7 +93,7 @@ impl PythonConditional {
         vm.next_branch(&total_changes);
 
         vm.push_path(negative);
-        vm.add_branch_restrictions(yes);
+        vm.add_branch_restrictions(yes.clone());
         let else_result = vm.execute(executors, or_else);
         vm.pop_path();
         vm.set_branch_restrictions(original_restriction.clone());
@@ -158,7 +161,7 @@ impl PythonConditional {
             },
         }
 
-        vm.merge_branches(&total_changes, hide_as_loop);
+        vm.merge_branches(&total_changes, hide_as_loop, vec!(no, yes));
 
         return ExecutionResult {
             changes: total_changes,

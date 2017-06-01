@@ -32,10 +32,11 @@ impl WhileLoopChange {
 }
 
 impl MessageContent for WhileLoopChange {
-    fn hash(&self, _: &PathID) -> u64 {
+    fn hash(&self, node: &PathID) -> u64 {
         let mut s = DefaultHasher::new();
         WHILE_LOOP_CHANGE.hash(&mut s);
         self.paths.hash(&mut s);
+        node.hash(&mut s);
         s.finish()
     }
 

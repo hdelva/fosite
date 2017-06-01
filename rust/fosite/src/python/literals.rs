@@ -142,7 +142,7 @@ pub struct PythonString { }
 impl StringExecutor for PythonString {
     fn execute(&self, env: Environment) -> ExecutionResult {
         let Environment { mut vm, .. } = env;
-        let type_name = "string".to_owned();
+        let type_name = "str".to_owned();
 
         let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
 

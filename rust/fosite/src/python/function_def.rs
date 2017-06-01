@@ -1,5 +1,6 @@
 use core::*;
 use std::sync::Mutex;
+use std::collections::BTreeSet;
 
 lazy_static! {
     static ref ARGS: Mutex<Vec<Vec<(String, Mapping)>>> = Mutex::new(Vec::new());
@@ -79,8 +80,8 @@ impl FunctionDefExecutor for PythonFunction {
                         &args, &kw_args,
                         &VARARG.lock().unwrap()[index], &KW_VARARG.lock().unwrap()[index]);
 
-            let body_result = vm.execute(executors, &BODY.lock().unwrap()[index]);
-
+            let body = &BODY.lock().unwrap()[index].clone();
+            let body_result = vm.execute(executors, &body);
             
             let execution_result = ExecutionResult {
                 flow: FlowControl::Continue,
@@ -110,8 +111,8 @@ impl FunctionDefExecutor for PythonFunction {
 
 fn assign_positional(vm: &mut VirtualMachine,
                         executors: &Executors,
-                        rpos: &[(String, Mapping)],
-                        rkw: &[(String, Mapping)],
+                        arg: &[(String, Mapping)],
+                        kwonly: &[(String, Mapping)],
                         gpos: &[Mapping],
                         gkw: &[(String, Mapping)],
                         vararg: &Option<String>,
@@ -122,17 +123,17 @@ fn assign_positional(vm: &mut VirtualMachine,
     let mut changes = vec!();
 
     // todo, use the default value before moving to varargs
-    if rpos.len() > 0 && gpos.len() > 0 {
-        let &(ref name, _) = &rpos[0];
+    if arg.len() > 0 && gpos.len() > 0 {
+        let &(ref name, _) = &arg[0];
         let mapping = gpos[0].clone();
         let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
         dependencies.append(&mut aresult.dependencies);
         changes.append(&mut aresult.changes);
-        let mut intermediate = assign_positional(vm, executors, &rpos[1..], rkw, &gpos[1..], gkw, vararg, kw_vararg);
+        let mut intermediate = assign_positional(vm, executors, &arg[1..], kwonly, &gpos[1..], gkw, vararg, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
     } else {
-        let mut intermediate = assign_vararg(vm, executors, rkw, gpos, gkw, vararg, kw_vararg);
+        let mut intermediate = assign_vararg(vm, executors, arg, kwonly, gpos, gkw, vararg, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
     }
@@ -147,7 +148,8 @@ fn assign_positional(vm: &mut VirtualMachine,
 
 fn assign_vararg(vm: &mut VirtualMachine,
                         executors: &Executors,
-                        rkw: &[(String, Mapping)],
+                        arg: &[(String, Mapping)],
+                        kwonly: &[(String, Mapping)],
                         gpos: &[Mapping],
                         gkw: &[(String, Mapping)],
                         vararg: &Option<String>,
@@ -183,51 +185,13 @@ fn assign_vararg(vm: &mut VirtualMachine,
         let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
         dependencies.append(&mut aresult.dependencies);
         changes.append(&mut aresult.changes);
+    } 
 
-        //todo assign rest of gpos
-        let mut intermediate = assign_kw_positional(vm, executors, rkw, &[], gkw, kw_vararg);
-        dependencies.append(&mut intermediate.dependencies);
-        changes.append(&mut intermediate.changes);
-    } else {
-        let mut intermediate = assign_kw_positional(vm, executors, rkw, gpos, gkw, kw_vararg);
-        dependencies.append(&mut intermediate.dependencies);
-        changes.append(&mut intermediate.changes);
-    }
+    //todo assign rest of gpos
+    let mut intermediate = assign_kw(vm, executors, &[arg, kwonly].concat(), gkw, kw_vararg);
+    dependencies.append(&mut intermediate.dependencies);
+    changes.append(&mut intermediate.changes);
 
-    return ExecutionResult {
-        flow: FlowControl::Continue,
-        dependencies: dependencies,
-        changes: changes,
-        result: Mapping::new(),
-    }
-}
-
-fn assign_kw_positional(vm: &mut VirtualMachine,
-                        executors: &Executors,
-                        rkw: &[(String, Mapping)],
-                        gpos: &[Mapping],
-                        gkw: &[(String, Mapping)],
-                        kw_vararg: &Option<String>) 
-                        -> ExecutionResult {
-
-    let mut dependencies = vec!();
-    let mut changes = vec!();
-
-    if rkw.len() > 0 && gpos.len() > 0 {
-        let &(ref name, _) = &rkw[0];
-        let mapping = gpos[0].clone();
-        let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
-        dependencies.append(&mut aresult.dependencies);
-        changes.append(&mut aresult.changes);
-
-        let mut intermediate = assign_kw_positional(vm, executors, &rkw[1..], &gpos[1..], gkw, kw_vararg);
-        dependencies.append(&mut intermediate.dependencies);
-        changes.append(&mut intermediate.changes);
-    } else {
-        let mut intermediate = assign_kw(vm, executors, rkw, gkw, kw_vararg);
-        dependencies.append(&mut intermediate.dependencies);
-        changes.append(&mut intermediate.changes);
-    }
 
     return ExecutionResult {
         flow: FlowControl::Continue,
@@ -239,7 +203,7 @@ fn assign_kw_positional(vm: &mut VirtualMachine,
 
 fn assign_kw(vm: &mut VirtualMachine,
                         executors: &Executors,
-                        rkw: &[(String, Mapping)],
+                        arg: &[(String, Mapping)],
                         gkw: &[(String, Mapping)],
                         kw_vararg: &Option<String>) 
                         -> ExecutionResult {
@@ -247,29 +211,29 @@ fn assign_kw(vm: &mut VirtualMachine,
     let mut dependencies = vec!();
     let mut changes = vec!();
 
-    if rkw.len() > 0 {
-        let &(ref name, ref default) = &rkw[0];
+    let mut s1 = BTreeSet::new();
+    for &(ref name, _) in arg.iter() {
+        s1.insert(name);
+    }
 
-        let mut mapping = default.clone();
+    if gkw.len() > 0 && s1.len() > 0 {
         let mut next = Vec::new();
 
-        for &(ref given_name, ref given_mapping) in gkw.iter() {
-            if name == given_name {
-                mapping = given_mapping.clone();
+        for &(ref name, ref mapping) in gkw.iter() {
+            if s1.contains(name) {
+                let mut aresult = vm.assign_direct(executors, name.clone(), mapping.clone());
+                dependencies.append(&mut aresult.dependencies);
+                changes.append(&mut aresult.changes);
             } else {
-                next.push((given_name.clone(), given_mapping.clone()));
+                next.push((name.clone(), mapping.clone()));
             }
         }
 
-        let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
-        dependencies.append(&mut aresult.dependencies);
-        changes.append(&mut aresult.changes);
-
-        let mut intermediate = assign_kw(vm, executors, &rkw[1..], &next, kw_vararg);
+        let mut intermediate = assign_kw_vararg(vm, executors, &next, gkw, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
     } else {
-        let mut intermediate = assign_kw_vararg(vm, executors, gkw, kw_vararg);
+        let mut intermediate = assign_kw_vararg(vm, executors, arg, gkw, kw_vararg);
         dependencies.append(&mut intermediate.dependencies);
         changes.append(&mut intermediate.changes);
     }
@@ -284,6 +248,7 @@ fn assign_kw(vm: &mut VirtualMachine,
 
 fn assign_kw_vararg(vm: &mut VirtualMachine,
                         executors: &Executors,
+                        arg: &[(String, Mapping)],
                         gkw: &[(String, Mapping)],
                         kw_vararg: &Option<String>) 
                         -> ExecutionResult {
@@ -292,7 +257,7 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
     let mut changes = vec!();
 
     if let &Some(ref target) = kw_vararg {
-        let str_type = "string".to_owned();
+        let str_type = "str".to_owned();
         let str_ptr = vm.object_of_type(&str_type);
 
         let dict_type = "dict".to_owned();
@@ -349,6 +314,10 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
         changes.append(&mut aresult.changes);
     }
 
+    let mut aresult = assign_defaults(vm, executors, arg); 
+    dependencies.append(&mut aresult.dependencies);
+    changes.append(&mut aresult.changes);
+
     return ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
@@ -356,3 +325,26 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
         result: Mapping::new(),
     }
 }                 
+
+
+fn assign_defaults(vm: &mut VirtualMachine,
+                        executors: &Executors,
+                        arg: &[(String, Mapping)]) 
+                        -> ExecutionResult {
+
+    let mut dependencies = vec!();
+    let mut changes = vec!();
+
+    for &(ref name, ref mapping) in arg.iter() {
+        let mut aresult = vm.assign_direct(executors, name.clone(), mapping.clone());
+        dependencies.append(&mut aresult.dependencies);
+        changes.append(&mut aresult.changes);
+    }
+
+    return ExecutionResult {
+        flow: FlowControl::Continue,
+        dependencies: dependencies,
+        changes: changes,
+        result: Mapping::new(),
+    }
+}

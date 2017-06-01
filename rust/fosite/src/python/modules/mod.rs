@@ -1,10 +1,14 @@
 mod math;
+mod cmath;
 mod builtin;
 mod string;
+mod list;
 
 pub use self::math::*;
 pub use self::builtin::*;
 pub use self::string::*;
+pub use self::cmath::*;
+pub use self::list::*;
 
 use core::VirtualMachine;
 use core::Mapping;

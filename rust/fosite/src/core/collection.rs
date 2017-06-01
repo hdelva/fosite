@@ -170,9 +170,13 @@ impl CollectionBranch {
 
     pub fn get_any_element(&self) -> Mapping {
         let mut result = Mapping::new();
+        let mut types = BTreeSet::new();
         for chunk in self.content.iter() {
             for (path, repr) in chunk.iter() {
-                result.add_mapping(path.clone(), repr.object.clone());
+                if !types.contains(&repr.kind) {
+                    result.add_mapping(path.clone(), repr.object.clone());
+                    types.insert(repr.kind.clone());
+                }  
             }
         }
         return result;
@@ -337,8 +341,8 @@ impl CollectionBranch {
 
 #[derive(Debug, Clone)]
 pub struct CollectionMapping {
-    path: Path,
-    branch: CollectionBranch,
+    pub path: Path,
+    pub branch: CollectionBranch,
 }
 
 impl CollectionMapping {
@@ -725,6 +729,14 @@ impl Collection {
 
         if let Some(frame) = self.current_frame_mut(Path::empty()) {
             frame.set_content(mappings);
+        }
+    }
+
+    pub fn get_content(&self) -> &Vec<CollectionMapping> {
+        if let Some(frame) = self.frames.last() {
+            return frame.get_content()
+        }  else {
+            panic!("No frames in this collection")
         }
     }
 

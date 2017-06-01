@@ -45,7 +45,56 @@ impl Ord for PathNode {
             },
             (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1).cmp( &(l2, i2) )
+            },/*
+            (&PathNode::Frame(ref l1, _, ref i1, _), &PathNode::Frame(ref l2, _, ref i2, _)) => {
+                if l1.len() > l2.len() && l2.len() > 1{
+                    if l1[..l2.len()] == l2[..] {
+                        return Ordering::Less;
+                    }
+                    return Ordering::Greater;
+                }
+                else if l2.len() > l1.len() && l1.len() > 1 {
+                    if l2[..l1.len()] == l1[..] {
+                        return Ordering::Greater;
+                    }
+                    return Ordering::Less;
+                }
+                return (l1, i1).cmp( &(l2, i2) );
             },
+            (&PathNode::Frame(ref l1, _, _, _), _) => {
+                let l2 = other.get_location();
+
+                if l1.len() > l2.len() {
+                    if l1[..l2.len()] == l2[..] {
+                        return Ordering::Less;
+                    }
+                    return Ordering::Greater;
+                }
+                else if l2.len() > l1.len() && l1.len() > 1 {
+                    if l2[..l1.len()] == l1[..] {
+                        return Ordering::Greater;
+                    }
+                    return Ordering::Less;
+                }
+                return l1.cmp(l2);
+            },
+            (_, &PathNode::Frame(ref l2, _, _, _)) => {
+                let l1 = self.get_location();
+
+                if l2.len() > l1.len() {
+                    if l2[..l1.len()] == l1[..] {
+                        return Ordering::Greater;
+                    }
+                    return Ordering::Less;
+                }
+                else if l1.len() > l2.len() && l2.len() > 1 {
+                    if l1[..l2.len()] == l2[..] {
+                        return Ordering::Less;
+                    }
+                    return Ordering::Greater;
+                }
+                return l1.cmp(l2);
+            },*/
             _ => self.get_location().cmp(&other.get_location()),
         }
     }
@@ -222,7 +271,9 @@ impl Path {
                     return false;
                 } 
             } else {
-                return false;
+                if node.is_branch() {
+                    return false;
+                }
             }
         }
 

@@ -1,7 +1,6 @@
 use core::*;
 
-use std::collections::btree_map::Entry;
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 pub struct PythonFor { }
 
@@ -23,7 +22,7 @@ impl ForEachExecutor for PythonFor {
         total_changes.append(&mut gen_result.changes);
         total_dependencies.append(&mut gen_result.dependencies);
 
-        let mut result = self.branch(vm, executors, body);
+        let mut result = self.branch(vm, executors, body, &gen_result.result);
 
         total_changes.append(&mut result.changes);
         total_dependencies.append(&mut result.dependencies);
@@ -41,7 +40,8 @@ impl PythonFor {
     fn branch(&self,
               vm: &mut VirtualMachine,
               executors: &Executors,
-              body: &GastNode) -> ExecutionResult {
+              body: &GastNode,
+              gen: &Mapping) -> ExecutionResult {
         //let restrictions = vm.get_loop_restrictions().clone();
                           
         let mut total_changes = Vec::new();
@@ -61,7 +61,7 @@ impl PythonFor {
 
         vm.pop_path();
 
-        self.check_changes(vm);
+        self.check_changes(vm, gen);
 
         vm.merge_loop(&total_changes);
 
@@ -73,20 +73,33 @@ impl PythonFor {
         };
     }
 
-    fn check_changes(&self, vm: &mut VirtualMachine) {
+    fn check_changes(&self, vm: &mut VirtualMachine, gen: &Mapping) {
         let mut watch = vm.pop_watch();
+        let mut actual = BTreeSet::new();
+
+        for &(_, ref address) in gen.iter() {
+            actual.insert(address.clone());
+        }
 
         let mut problems = vec!();
 
         for (identifier, addresses) in watch.identifiers_before.into_iter() {
-            for address in addresses {
-                if let Some(object_paths) = watch.objects_changed.get_mut(&address) {
+            for address in addresses.iter() {
+                if !actual.contains(address){
+                    continue;
+                }
+
+                if let Some(object_paths) = watch.objects_changed.get_mut(address) {
                     problems.append(object_paths);
                 }
             }
 
             if let Some(mapping) = watch.identifiers_changed.get(&identifier) {
-                for &(ref path, _) in mapping.iter() {
+                for &(ref path, ref address) in mapping.iter() {
+                    if !addresses.contains(&address){
+                        continue;
+                    }
+
                     problems.push(path.clone());
                 }
             }
@@ -100,51 +113,5 @@ impl PythonFor {
             };
             &CHANNEL.publish(message);
         }   
-    }
-
-    fn check_types(&self,
-             vm: &mut VirtualMachine,
-             executors: &Executors,
-             changes: &Vec<AnalysisItem>) {
-        for change in changes {
-            if !change.is_object() {
-                let mut all_types = BTreeMap::new();
-
-                let execution_result = match change {
-                    &AnalysisItem::Identifier (ref name) => vm.load_identifier(executors, name),
-                    &AnalysisItem::Attribute (ref parent, ref name) => {
-                        vm.load_attribute(executors, &parent.as_node(), name)
-                    }
-                    _ => {
-                        unreachable!("AnalysisItem is an object when a previous check should've \
-                                      excluded this")
-                    }
-                };
-
-                let result = execution_result.result;
-                for &(ref path, ref address) in result.iter() {
-                    let object = vm.get_object(address);
-                    let type_name = object.get_type_name(vm.knowledge());
-
-                    match all_types.entry(type_name.clone()) {
-                        Entry::Vacant(v) => {
-                            v.insert(vec![path.clone()]);
-                        }
-                        Entry::Occupied(mut o) => {
-                            o.get_mut().push(path.clone());
-                        }
-                    };
-                }
-
-                if all_types.len() > 1 {
-                    let content = TypeUnsafe::new(change.to_string(), all_types);
-                    let message = Message::Output { 
-                        source: vm.current_node().clone(),
-                        content: Box::new(content),
-                    };
-                    &CHANNEL.publish(message);
-                }
-            }
-        }
     }
 }

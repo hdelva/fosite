@@ -323,17 +323,21 @@ impl Scope {
     pub fn set_mapping(&mut self, name: String, path: Path, mapping: Mapping) {
         let mut new_mapping = OptionalMapping::new();
 
-        for (path, address) in mapping.into_iter() {
-            new_mapping.add_mapping(path, Some(address));
+        for (m_path, address) in mapping.into_iter() {
+            new_mapping.add_mapping(m_path, Some(address));
         }
 
         self.set_optional_mapping(name, path, new_mapping);
     }
 
-    pub fn set_optional_mapping(&mut self, name: String, path: Path, mapping: OptionalMapping) {
+    pub fn set_optional_mapping(&mut self, name: String, mut path: Path, mapping: OptionalMapping) {
         if self.constants.contains(&name) {
             // todo, throw error
             return;
+        }
+
+        if path.len() == 0 {
+            path.add_node(PathNode::Frame(vec!(0), None, 0, 1));
         }
 
         let len = self.frames.len();
@@ -345,11 +349,7 @@ impl Scope {
         // there should always be one
         if let Some(frame) = self.frames.last_mut() {
             frame.set_optional_mapping(name, mapping);
-        }
-    }
-
-    pub fn set_result(&mut self, path: Path, mapping: Mapping) {
-        self.set_mapping("___result".to_owned(), path, mapping);
+        } 
     }
 
     pub fn set_constant(&mut self, name: String, path: Path, mapping: Mapping) {
@@ -373,12 +373,12 @@ impl Scope {
         self.frames.pop();
     }
 
-    pub fn merge_branches(&mut self, hide_as_loop: Vec<Option<bool>>) {
+    pub fn merge_branches(&mut self, hide_as_loop: Vec<Option<bool>>, restrictions: &Vec<Vec<Path>>) {
         if self.frames.len() < 2 {
             return;
         }
 
-        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(hide_as_loop);
+        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(hide_as_loop, restrictions);
 
         // remember all the old hides
         if let Some(old_frame) = self.frames.pop() {
@@ -415,7 +415,7 @@ impl Scope {
             return;
         }
 
-        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!());
+        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!(), &vec!());
 
         if let Some(old_frame) = self.frames.pop() {
             for subframe in old_frame.branches.into_iter() {
@@ -450,7 +450,7 @@ impl Scope {
             return;
         }
 
-        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!());
+        let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!(), &vec!());
 
         if let Some(old_frame) = self.frames.pop() {
             for subframe in old_frame.branches.into_iter() {
@@ -480,7 +480,7 @@ impl Scope {
         } 
     }
 
-    fn prepare_merge(&mut self, hide_as_loop: Vec<Option<bool>>) 
+    fn prepare_merge(&mut self, hide_as_loop: Vec<Option<bool>>, restrictions: &Vec<Vec<Path>>) 
         -> (Branch, StatisChamber, StatisChamber) {
             
         let cause;
@@ -537,7 +537,10 @@ impl Scope {
             let iter = merge_identifiers.iter();
 
             for name in iter {
-                let old_mapping = self.resolve_optional_identifier(name).clone();
+                let mut old_mapping = self.resolve_optional_identifier(name).clone();
+                if let Some(r) = restrictions.get(i as usize) {
+                    old_mapping = filter(old_mapping, r);
+                }
                 let new_mapping = old_mapping.augment(new_node.clone());
 
                 let entry;
@@ -573,4 +576,18 @@ impl Scope {
 
         return (new_content, new_loop_freeze, new_function_freeze);
     } 
+}
+
+fn filter(mapping: OptionalMapping, restrictions: &Vec<Path>) -> OptionalMapping {
+    let mut new_mapping = OptionalMapping::new();
+    'outer:
+    for (path, address) in mapping.into_iter() {
+        for r in restrictions.iter() {
+            if path.contains(r) {
+                continue 'outer;
+            }
+        }
+        new_mapping.add_mapping(path, address);
+    }
+    return new_mapping;
 }

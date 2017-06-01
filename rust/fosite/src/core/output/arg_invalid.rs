@@ -56,7 +56,8 @@ impl MessageContent for ArgInvalid {
             println!("    Type {} in the following case:",
                 Bold.paint(&t));
 
-            self.print_path(sources, &path, "    ");
+            self.print_path(sources, &path, "      ");
+            println!("");
         }
     }
 }

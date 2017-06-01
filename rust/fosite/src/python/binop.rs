@@ -58,7 +58,7 @@ impl BinOpExecutor for PythonBinOp {
                 // multiplying sequences with an integer is an annoying special case
                 let tuple_type = vm.knowledge().get_type(&"tuple".to_owned()).unwrap().clone();  
                 let list_type = vm.knowledge().get_type(&"list".to_owned()).unwrap().clone();  
-                let string_type = vm.knowledge().get_type(&"string".to_owned()).unwrap().clone();  
+                let string_type = vm.knowledge().get_type(&"str".to_owned()).unwrap().clone();  
                 let int_type = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();    
 
                 let left_ancestors = vm.ancestors(left_address);
@@ -80,14 +80,17 @@ impl BinOpExecutor for PythonBinOp {
                         _ => ancestor_name,
                     };
 
-                    let new_ptr = vm.object_of_type(&new_type);
+                    let mut new_ptr = vm.object_of_type(&new_type);
 
-                    result.add_mapping(new_path, new_ptr);
+                    
 
                     // + for concatenation
                     // sets use - for difference, just model it as a concatenation for now
                     if (op == &"+".to_owned() || op == &"-".to_owned()) 
                         && vm.is_subtype(&new_type, &"collection".to_owned()) {
+                        // todo, dirty workaround for augmented assign
+                        new_ptr = left_address.clone();
+
                         let new_col;
                         {
                             let left_obj = vm.get_object(left_address);
@@ -99,7 +102,9 @@ impl BinOpExecutor for PythonBinOp {
 
                         let mut new_object = vm.get_object_mut(&new_ptr);
                         new_object.set_elements(new_col);
-                    }                 
+                    }   
+
+                    result.add_mapping(new_path, new_ptr);              
                 } else if op == &"*" && b1 && b3 {
                     let old_type;
                     let collection;

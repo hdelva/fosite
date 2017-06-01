@@ -96,7 +96,13 @@ impl AttributeExecutor for PythonAttribute {
                                 // update watches in the VM 
                                 vm.store_object_dependency(parent_address.clone());
 
-                                mapping.add_mapping(new_path, address);
+                                // make a method object is necessary
+                                if vm.is_instance(&address, &"function".to_owned()) {
+                                    let method = vm.make_method_object(executors, parent_address, &address);
+                                    mapping.add_mapping(new_path, method.clone());
+                                } else {
+                                    mapping.add_mapping(new_path, address.clone());
+                                }
                             } else {
                                 error.insert(new_path);
                             }

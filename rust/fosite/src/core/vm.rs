@@ -115,6 +115,10 @@ impl VirtualMachine {
         
     }
 
+    pub fn new_result(&mut self) {
+        self.results.push(Vec::new());
+    }
+
     pub fn call(&mut self, 
                 executors: &Executors, 
                 address: &Pointer, 
@@ -123,8 +127,6 @@ impl VirtualMachine {
                 -> Option<ExecutionResult> {
 
         let b = self.scopes.len() > 2;
-
-        self.results.push(Vec::new());
 
         // move the current function scope to the shadows
         if b {
@@ -819,7 +821,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>, hide_as_loop: Vec<Option<bool>>) {
+    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>, hide_as_loop: Vec<Option<bool>>, restrictions: Vec<Vec<Path>>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
@@ -828,14 +830,14 @@ impl VirtualMachine {
         for change in changes {
             if let &AnalysisItem::Object (ref address) = change {
                 let mut object = self.memory.get_object_mut(address);
-                object.merge_branches(hide_as_loop.clone());
+                object.merge_branches(hide_as_loop.clone(), &restrictions);
             } else if let &AnalysisItem::Identifier ( _ ) = change {
                 identifier_changed = true;
             }
         }
 
         if identifier_changed {
-            self.scopes.last_mut().unwrap().merge_branches(hide_as_loop.clone());
+            self.scopes.last_mut().unwrap().merge_branches(hide_as_loop.clone(), &restrictions);
         }
     }
 
@@ -1012,6 +1014,14 @@ impl VirtualMachine {
 
     pub fn current_node(&self) -> &PathID {
         self.nodes.last().unwrap_or(&self.default)
+    }
+
+    pub fn add_node(&mut self, node: PathID) {
+        self.nodes.push(node);
+    }
+
+    pub fn pop_node(&mut self) {
+        self.nodes.pop();
     }
 
     pub fn knowledge(&self) -> &KnowledgeBase {

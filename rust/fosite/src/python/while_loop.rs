@@ -168,11 +168,20 @@ impl PythonWhile {
 }
 
 fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> BTreeMap<Pointer, BTreeSet<Path>> {
-    let mut all_reversals = BTreeMap::new();
+    let mut relevant_reversals = BTreeMap::new();
     let mut all_changes = BTreeSet::new();
+    let mut all_reversals = BTreeSet::new();
 
     for &(ref path, _) in changes.iter() {
         all_changes.insert(path.clone());
+    }
+
+    for &(ref path, _) in changes.iter(){
+        let change_reversals = path.reverse();
+
+        for reversal in change_reversals.into_iter().rev() {
+            all_reversals.insert(reversal);
+        }
     }
 
     for &(ref path, ref address) in changes.iter(){
@@ -182,27 +191,35 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
             change_reversals.push(path.clone());
         }
 
-        for reversal in change_reversals.iter().rev() {
-            for change in &all_changes {
-                if reversal.contains(change) {
-                    break;
-                }
+        'outer:
+        for reversal in change_reversals.into_iter().rev() {
+            for existing in all_reversals.iter() {
+                if existing.contains(&reversal) && !reversal.contains(existing) {
+                    continue 'outer;
+                } 
             }
 
-            match all_reversals.entry(*address) {
+            for change in &all_changes {
+                if reversal.contains(change) {
+                    continue 'outer;
+                } 
+            }
+
+            match relevant_reversals.entry(*address) {
                 Entry::Vacant(v) => {
                     let mut acc = BTreeSet::new();
                     acc.insert(reversal.clone());
                     v.insert(acc);
                 }
                 Entry::Occupied(mut o) => {
+                    
                     o.get_mut().insert(reversal.clone());
                 }
-            };
+            };    
         }
     }
 
-    return all_reversals;
+    return relevant_reversals;
 }
 
 fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeSet<Path> {
@@ -218,18 +235,23 @@ fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeS
     }
 
     let mut possibilities = BTreeSet::new();
-    for reversal in all_reversals.into_iter() {
-        let mut legit = true;
+    'outer:
+    for reversal in all_reversals.iter() {
         for change in changes {
             if reversal.contains(change) {
-                legit = false;
-                break;
+                continue 'outer;
             }
         }
 
-        if legit && parent_path.mergeable(&reversal) {
+        for existing in all_reversals.iter() {
+            if existing.contains(reversal) && !reversal.contains(existing) {
+                continue 'outer;
+            } 
+        }
+
+        if parent_path.mergeable(reversal) {
             let mut new_path = parent_path.clone();
-            new_path.merge_into(reversal);
+            new_path.merge_into(reversal.clone());
             possibilities.insert(new_path);
         }
     }

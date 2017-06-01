@@ -84,13 +84,13 @@ impl Object {
         } 
     }
 
-    pub fn merge_branches(&mut self, hide_as_loop: Vec<Option<bool>> ) {
+    pub fn merge_branches(&mut self, hide_as_loop: Vec<Option<bool>>, restrictions: &Vec<Vec<Path>>) {
         if self.attributes.num_frames() <= self.elements.num_frames() {
             self.elements.merge_branches()
         } 
         
         if self.elements.num_frames() <= self.attributes.num_frames() {
-            self.attributes.merge_branches(hide_as_loop)
+            self.attributes.merge_branches(hide_as_loop, restrictions)
         } 
     }
 
@@ -126,7 +126,7 @@ impl Object {
 
         // strings are technically collections
         // but give them special treatment
-        if type_name == "string".to_owned() {
+        if type_name == "str".to_owned() {
             return type_name;
         }
 
@@ -158,6 +158,10 @@ impl Object {
 
     pub fn get_scope_mut(&mut self) -> &mut Scope {
         return &mut self.attributes;
+    }
+
+    pub fn get_scope(&self) -> &Scope {
+        return &self.attributes;
     }
 
     // elements

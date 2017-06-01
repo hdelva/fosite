@@ -236,6 +236,12 @@ impl PythonAssign {
         let mut dependencies = Vec::new();
         let mut changes = Vec::new();
 
+        for &(_, ref opt_address) in mapping.iter() {
+            if let &Some(ref address) = opt_address {
+                dependencies.push(AnalysisItem::Object(*address));
+            }
+        }
+
         let current_node = vm.current_node().clone();
 
         let num = content.len();
@@ -596,10 +602,6 @@ impl PythonAssign {
                             mapping: &OptionalMapping)
                             -> ExecutionResult {
         let changes = vec![AnalysisItem::Identifier (target.clone())];
-
-        if target == "z" {
-            println!("{:?}", vm.current_path());
-        }
 
         // todo get rid of clone
         let mapping = mapping.clone()

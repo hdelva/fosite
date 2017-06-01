@@ -8,6 +8,8 @@ pub fn new_builtin_module() -> Module {
     define_int_cast(&mut builtin);
     define_float_cast(&mut builtin);
     define_str_cast(&mut builtin);
+    define_list_cast(&mut builtin);
+    define_tuple_cast(&mut builtin);
     
     define_input(&mut builtin);
     define_print(&mut builtin);
@@ -33,7 +35,7 @@ fn define_int_cast(module: &mut Module) {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
-                check_arg(vm, &args[0], "first", vec!("number", "string"));
+                check_arg(vm, &args[0], "first", vec!("number", "str"));
             }
             
             let type_name = "int".to_owned();
@@ -63,7 +65,7 @@ fn define_int_cast(module: &mut Module) {
 
 fn define_str_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.object_of_type(&"method".to_owned());
+        let pointer = vm.knowledge().get_type(&"str".to_owned()).unwrap().clone();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -75,7 +77,7 @@ fn define_str_cast(module: &mut Module) {
                 check_arg(vm, &args[0], "first", vec!("object"));
             }
 
-            let type_name = "string".to_owned();
+            let type_name = "str".to_owned();
 
             let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
 
@@ -121,6 +123,132 @@ fn define_str_cast(module: &mut Module) {
     module.add_part("str".to_owned(), Box::new(outer));
 }
 
+fn define_list_cast(module: &mut Module) {
+    let outer = |vm: &mut VirtualMachine| {
+        let pointer = vm.knowledge().get_type(&"list".to_owned()).unwrap().clone();
+
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
+            let total_changes = Vec::new();
+            let total_dependencies = Vec::new();
+
+            let Environment { vm, .. } = env;
+
+            if args.len() > 0 {
+                check_arg(vm, &args[0], "first", vec!("collection"));
+            }
+
+            let type_name = "list".to_owned();
+            let list_ptr = vm.object_of_type(&type_name);
+
+            let mut content = Vec::new();
+
+            for mapping in args.iter() {
+                for &(ref path, ref address) in mapping.iter() {
+                    let old_object = vm.get_object(address);
+                    let elements = old_object.get_elements().get_content();
+                    for collection_mapping in elements.iter() {
+                        let mut new_path = collection_mapping.path.clone();
+                        new_path.merge_into(path.clone());
+                        content.push((new_path, collection_mapping.branch.clone()));
+                    }
+                }
+            }
+            
+
+            let mut collection = Collection::new();
+            collection.set_content(content);
+
+            {
+                let mut list_object = vm.get_object_mut(&list_ptr);
+                list_object.set_elements(collection);
+            }
+
+            let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
+
+            let path = vm.current_path().clone();
+            vm.add_result(path, mapping);
+
+            let execution_result = ExecutionResult {
+                flow: FlowControl::Continue,
+                dependencies: total_dependencies,
+                changes: total_changes,
+                result: Mapping::new(),
+            };
+
+            execution_result
+        };
+
+        vm.set_callable(pointer.clone(), inner);
+
+        pointer
+    };
+    
+    module.add_part("list".to_owned(), Box::new(outer));
+}
+
+fn define_tuple_cast(module: &mut Module) {
+    let outer = |vm: &mut VirtualMachine| {
+        let pointer = vm.knowledge().get_type(&"tuple".to_owned()).unwrap().clone();
+
+        let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
+            let total_changes = Vec::new();
+            let total_dependencies = Vec::new();
+
+            let Environment { vm, .. } = env;
+
+            if args.len() > 0 {
+                check_arg(vm, &args[0], "first", vec!("collection"));
+            }
+
+            let type_name = "tuple".to_owned();
+            let list_ptr = vm.object_of_type(&type_name);
+
+            let mut content = Vec::new();
+
+            for mapping in args.iter() {
+                for &(ref path, ref address) in mapping.iter() {
+                    let old_object = vm.get_object(address);
+                    let elements = old_object.get_elements().get_content();
+                    for collection_mapping in elements.iter() {
+                        let mut new_path = collection_mapping.path.clone();
+                        new_path.merge_into(path.clone());
+                        content.push((new_path, collection_mapping.branch.clone()));
+                    }
+                }
+            }
+            
+
+            let mut collection = Collection::new();
+            collection.set_content(content);
+
+            {
+                let mut list_object = vm.get_object_mut(&list_ptr);
+                list_object.set_elements(collection);
+            }
+
+            let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
+
+            let path = vm.current_path().clone();
+            vm.add_result(path, mapping);
+
+            let execution_result = ExecutionResult {
+                flow: FlowControl::Continue,
+                dependencies: total_dependencies,
+                changes: total_changes,
+                result: Mapping::new(),
+            };
+
+            execution_result
+        };
+
+        vm.set_callable(pointer.clone(), inner);
+
+        pointer
+    };
+    
+    module.add_part("tuple".to_owned(), Box::new(outer));
+}
+
 fn define_float_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
         let ptr = vm.knowledge().get_type(&"float".to_owned()).unwrap().clone();
@@ -132,7 +260,7 @@ fn define_float_cast(module: &mut Module) {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
-                check_arg(vm, &args[0], "first", vec!("number", "string"));
+                check_arg(vm, &args[0], "first", vec!("number", "str"));
             }
             
             let type_name = "float".to_owned();
@@ -171,7 +299,7 @@ fn define_input(module: &mut Module) {
                 check_arg(vm, &args[0], "first", vec!("object", "NoneType"));
             }
 
-            let type_name = "string".to_owned();
+            let type_name = "str".to_owned();
 
             let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
 
@@ -363,7 +491,7 @@ fn define_ord(module: &mut Module) {
             let Environment { vm, .. } = env;
 
             if args.len() > 0 {
-                check_arg(vm, &args[0], "first", vec!("string"));
+                check_arg(vm, &args[0], "first", vec!("str"));
             }
 
             let type_name = "int".to_owned();

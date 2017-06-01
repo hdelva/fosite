@@ -1,6 +1,8 @@
 use core::*;
 
 use std::collections::BTreeSet;
+use std::cmp;
+
 
 pub struct PythonCall {
 
@@ -22,6 +24,12 @@ impl CallExecutor for PythonCall {
         let mut args: Vec<Mapping> = Vec::new();
         let mut kwargs: Vec<(String, Mapping)> = Vec::new();
 
+        let mut results: Vec<Vec<(Path, Mapping)>> = Vec::new();
+
+        let mut node = vm.current_node().clone();
+        node.pop();
+        vm.add_node(node);
+
         for arg in arg_nodes.iter() {
             let mut arg_result = vm.execute(executors, arg);
             total_changes.append(&mut arg_result.changes);
@@ -38,6 +46,11 @@ impl CallExecutor for PythonCall {
             }
         }
 
+        vm.pop_node();
+
+        //println!("------changes {:?}", total_changes);
+        //println!("------dependencies {:?}", total_dependencies);
+
         let mut target_result = vm.execute(executors, target);
         total_changes.append(&mut target_result.changes);
         total_dependencies.append(&mut target_result.dependencies);
@@ -51,8 +64,6 @@ impl CallExecutor for PythonCall {
         // keep these separated from the argument results
         let mut body_changes = Vec::new();
         let mut body_dependencies = Vec::new();
-
-        let mut results: Vec<Vec<(Path, Mapping)>> = Vec::new();
 
         for (index, (path, address)) in target_result.result.into_iter().enumerate() {
             let new_node = PathNode::Frame(
@@ -88,6 +99,8 @@ impl CallExecutor for PythonCall {
                     len as i16));
 
             vm.push_path(current_path);
+
+            vm.new_result();
 
             // todo filter the body changes
             if let Some(body_result) = vm.call(executors, &address, aug_args, aug_kwargs) {
@@ -175,6 +188,147 @@ impl CallExecutor for PythonCall {
     }
 }
 
+fn get_branch_points(original: Vec<Path>) -> BTreeSet<Vec<PathNode>> {
+    let mut result = BTreeSet::new();
+    for og in original.into_iter() {
+        let mut pls = Vec::new();
+        for node in og.into_iter() {
+            if node.is_branch() {
+                pls.push(node);
+            }
+        }
+        result.insert(pls);
+    }
+    return result;
+}
+
+fn get_other_paths(original: &[PathNode]) -> BTreeSet<Vec<PathNode>> {
+    let mut result = BTreeSet::new();
+    let head = &original[..original.len() - 1];
+    let tail = &original[original.len() - 1];
+
+    for opposite in tail.reverse() {
+        let mut new = head.to_vec();
+        new.push(opposite);
+        result.insert(new);
+    }
+
+    return result;
+}
+
+fn bad_paths(original: Vec<Path>) -> BTreeSet<Path> {
+    let mut branches = get_branch_points(original);
+
+    let mut cleaned = BTreeSet::new();
+    'outer:
+    for path in branches.iter() {
+        for other_path in branches.iter() {
+            let l = cmp::min(path.len(), other_path.len());
+            if path.len() > other_path.len() && other_path[..l] == path[..l] {
+                continue 'outer;
+            }
+        }
+
+        cleaned.insert(path.clone());
+    }
+    branches = cleaned;
+    
+    let mut todo = BTreeSet::new();
+    
+    // init
+    for b in branches.iter() {
+        if b.len() > 0 {
+            let mut temp = get_other_paths(b);
+            todo.append(&mut temp);
+        } else {
+            // shit's fine, unconditional return
+            return BTreeSet::new();
+        }
+    }
+
+    let mut cleaned = BTreeSet::new();
+    'outer2:
+    for path in todo.iter() {
+        for other_path in todo.iter() {
+            let l = cmp::min(path.len(), other_path.len());
+            if path.len() < other_path.len() && other_path[..l] == path[..l] {
+                continue 'outer2;
+            }
+        }
+
+        cleaned.insert(path.clone());
+    }
+    todo = cleaned;
+
+    let mut done = false;
+    while !done {
+        done = true;
+
+        let mut next = BTreeSet::new();
+        for path in todo.into_iter() {
+            if branches.contains(&path) {
+                done = false;
+                if path.len() == 1 {
+                    // shit's fine, both cases return
+                    return BTreeSet::new();
+                } else {
+                    let mut temp = get_other_paths(&path[..path.len()-1]);
+                    next.append(&mut temp);
+                }
+                branches.insert(path[..path.len()-1].to_vec());
+            } else {
+                next.insert(path);
+            }
+        }
+
+        todo = next;
+    }
+
+    let mut merged = BTreeSet::new();
+    for path in todo.iter() {
+        let mut m = false;
+        for other_path in todo.iter() {
+            if mergeable_paths(path, other_path) {
+                let mut new_path = path.clone();
+                new_path.append(&mut other_path.clone());
+                merged.insert(new_path);
+                m = true;
+            }
+        }
+
+        if !m {
+            merged.insert(path.clone());
+        }
+    }
+
+    todo = merged;
+
+    let mut result = BTreeSet::new();
+
+    for nodes in todo.into_iter() {
+        let mut path = Path::empty();
+        for node in nodes.into_iter() {
+            path.add_node(node);
+        }
+        result.insert(path);
+    }
+
+    return result;
+}
+
+fn mergeable_paths(path: &[PathNode], other_path: &[PathNode]) -> bool {
+    for n1 in path.iter() {
+        for n2 in other_path.iter() {
+            if n1.get_location() == n2.get_location() {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/*
 fn bad_paths(changes: Vec<Path>) -> BTreeSet<Path> {
     // remove obsolete entries first, i.e.
     // (1, 5) and (1, 5, 9)
@@ -189,15 +343,21 @@ fn bad_paths(changes: Vec<Path>) -> BTreeSet<Path> {
 
     let mut possibilities = BTreeSet::new();
     'outer:
-    for reversal in all_reversals.into_iter() {
+    for reversal in all_reversals.iter() {
         for change in changes.iter() {
             if reversal.contains(change) {
                 continue 'outer;
             }
         }
 
-        possibilities.insert(reversal);
+        for existing in all_reversals.iter() {
+            if existing.contains(reversal) && !reversal.contains(existing) {
+                continue 'outer;
+            } 
+        }
+
+        possibilities.insert(reversal.clone());
     }
 
     return possibilities;
-}
+}*/

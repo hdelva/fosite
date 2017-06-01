@@ -86,8 +86,6 @@ pub trait MessageContent: Send {
     }
 
     fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {
-        //println!("{:#?}", path);
-
         if path.len() != 0 {
             for node in path.iter() {
                 let row;
