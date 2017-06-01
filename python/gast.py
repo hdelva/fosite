@@ -425,8 +425,23 @@ class Call(Named):
     self.line = line
     self.col = col
 
+    self.relabel()
+
   def kind(self):
     return constants.CALL
+
+  def relabel(self):
+    global count
+    
+
+    for arg in self.positional_args:
+      arg.relabel()
+
+    for kwarg in self.keyword_args:
+      arg.relabel()
+
+    self.id = count
+    count += 1
 
 class Assign(GastNode):
   def __init__(self, targets: 'list', value: 'Expression', line, col):

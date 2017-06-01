@@ -205,6 +205,14 @@ class Scan:
       return gast.BoolOp(left, 'not in', right, line, col, negate='in')
 
   def unary_operator(self, code):
+    if type(code.op) is USub:
+      if type(code.operand) is Num:
+        n = code.operand.n 
+        if type(n) is float:
+          return gast.Float(-n, code.lineno, code.col_offset)
+        else:
+          return gast.Int(-n, code.lineno, code.col_offset)
+
     operand = self.expression(code.operand)
     operation = code.op
     return self._unary_operator(operand, operation, code.lineno, code.col_offset)
@@ -212,7 +220,7 @@ class Scan:
   def _unary_operator(self, operand, operation, line, col):
     if type(operation) is UAdd:
       return gast.UnOp('+', operand, line, col)
-    elif type(operation) is USub:
+    elif type(operation) is USub:        
       return gast.UnOp('-', operand, line, col)
     elif type(operation) is Not:
       return gast.Negate(operand, line, col)
@@ -316,10 +324,18 @@ class Scan:
       index = self.expression(op.value)
       return gast.Index(target, index, code.lineno, code.col_offset)
     elif type(op) is Slice:
-      lower = self.expression(op.lower)
-      upper = self.expression(op.upper)
+      if op.lower is None:
+        lower = gast.Int(0, code.lineno, code.col_offset)
+      else:
+        lower = self.expression(op.lower)
+
+      if op.upper is None:
+        upper = gast.Int(0, code.lineno, code.col_offset)
+      else:
+        upper = self.expression(op.upper)
+
       if op.step is None:
-        step = gast.Number(1, code.lineno, code.col_offset)
+        step = gast.Int(1, code.lineno, code.col_offset)
       else:
         step = self.expression(op.step)
       return gast.Slice(target, lower, upper, step, code.lineno, code.col_offset)
@@ -333,7 +349,7 @@ class Scan:
           lower = self.expression(op.lower)
           upper = self.expression(op.upper)
           if op.step is None:
-            step = gast.Number(1, code.lineno, code.col_offset)
+            step = gast.Int(1, code.lineno, code.col_offset)
           else:
             step = self.expression(op.step)
           temp = gast.Sequence(lower, upper, step, code.lineno, code.col_offset)
@@ -389,7 +405,6 @@ class Scan:
       keyword = arg.arg
       value = self.expression(arg.value)
       kwargs.append(self.argument(keyword, value))
-      args.append(value) # even keyword arguments have a position
 
     return gast.Call(name, args, code.lineno, code.col_offset, kwargs)    
 
@@ -609,7 +624,7 @@ class Scan:
             # _not_ an actual identifier, conform to the argument syntax used when calling
             identifier = arg.arg
 
-            default = None
+            default = gast.Nil(arg.lineno, arg.col_offset)
 
             if i >= len(args) - len(defaults):
                 offset = len(args) - i - 1
@@ -638,7 +653,7 @@ class Scan:
             identifier = arg.arg
             
             if default is None:
-                default = None
+                default = gast.Nil(arg.lineno, arg.col_offset)
             else:
                 default = self.literal(default)
         
@@ -650,25 +665,25 @@ class Scan:
 
     # Helper function for vararg arguments
     def vararg(arg):
-        # name of the identifier
-        # _not_ an actual identifier, conform to the argument syntax used when calling
+        if arg is None:
+            return None
+
         identifier = arg.arg
 
-        # varargs are starred
-        return self.starred(identifier)
+        return identifier
+        #return gast.Argument(identifier, gast.List([], arg.lineno, arg.col_offset))
 
     # Helper function for kwarg arguments
     def kwarg(arg):
-        # name of the identifier
-        # _not_ an actual identifier, conform to the argument syntax used when calling
+        if arg is None:
+            return None
+
         identifier = arg.arg
 
-        # kwargs are double starred
-        return self.starred(self.starred(identifier))
+        return identifier
+        #return gast.Argument(identifier, gast.List([], arg.lineno, arg.col_offset))
 
-    # extract the name and declare a variable of the same name
-    name = function.name
-    identifier = gast.Identifier(name, function.lineno, function.col_offset)
+    identifier = function.name
 
     # contains all kinds of arguments
     args = function.args
@@ -678,21 +693,15 @@ class Scan:
     _positional_defaults = args.defaults
     _kw_only_args = args.kwonlyargs
     _kw_defaults = args.kw_defaults
-    _vararg = args.vararg 
-    _kwarg = args.kwarg
+    _vararg = vararg(args.vararg)
+    _kwarg = kwarg(args.kwarg)
 
     # process the kinds of arguments
     positional_args = positional_args(_positional_args, _positional_defaults)
-
-    if _vararg is not None:
-      positional_args.append(vararg(_vararg))
-
     keyword_args = keyword_args(_kw_only_args, _kw_defaults)
-    if _kwarg is not None:
-      keyword_args.append(kwarg(_kwarg))
 
     body = self.block(function.body)
 
-    return gast.Function(identifier, positional_args, keyword_args, body, function.lineno, function.col_offset)
+    return gast.Function(identifier, positional_args, keyword_args, _vararg, _kwarg, body, function.lineno, function.col_offset)
 
 
