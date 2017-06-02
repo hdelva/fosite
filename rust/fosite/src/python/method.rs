@@ -26,7 +26,7 @@ impl MethodExecutor for PythonMethod {
 
         let pointer = vm.object_of_type(&"method".to_owned());
 
-        vm.set_callable(pointer.clone(), fun);
+        vm.set_callable(pointer, fun);
 
         pointer
     }

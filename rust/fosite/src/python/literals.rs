@@ -66,7 +66,7 @@ impl DictExecutor for PythonDict {
 
                     for (path, address) in intermediate.result.into_iter(){
                         let kind = vm.get_object(&address).get_extension().first().unwrap();
-                        let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+                        let repr = Representant::new(address, *kind, Some(1), Some(1));
                         chunk.add_representant(path, repr);    
                     }
                     
@@ -77,7 +77,7 @@ impl DictExecutor for PythonDict {
 
                     for (path, address) in intermediate.result.into_iter(){
                         let kind = vm.get_object(&address).get_extension().first().unwrap();
-                        let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+                        let repr = Representant::new(address, *kind, Some(1), Some(1));
                         chunk.add_representant(path, repr);    
                     }
                     
@@ -103,14 +103,14 @@ impl DictExecutor for PythonDict {
 
         {
             let mut obj = vm.get_object_mut(&dict_ptr);
-            let keys_mapping = Mapping::simple(Path::empty(), keys_ptr.clone());
-            let values_mapping = Mapping::simple(Path::empty(), values_ptr.clone());
+            let keys_mapping = Mapping::simple(Path::empty(), keys_ptr);
+            let values_mapping = Mapping::simple(Path::empty(), values_ptr);
 
             obj.assign_attribute("___keys".to_owned(), Path::empty(), keys_mapping);
             obj.assign_attribute("___values".to_owned(), Path::empty(), values_mapping);
         }
 
-        let mapping = Mapping::simple(Path::empty(), dict_ptr.clone());
+        let mapping = Mapping::simple(Path::empty(), dict_ptr);
 
         ExecutionResult {
             flow: FlowControl::Continue,
@@ -163,7 +163,7 @@ impl StringExecutor for PythonString {
             string_object.define_elements(vec!(chunk), Path::empty());
         }
 
-        let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+        let mapping = Mapping::simple(Path::empty(), string_ptr);
 
         ExecutionResult {
             flow: FlowControl::Continue,
@@ -182,7 +182,7 @@ impl IntExecutor for PythonInt {
         let type_name = "int".to_owned();
         let pointer = vm.object_of_type(&type_name);
 
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let mapping = Mapping::simple(Path::empty(), pointer);
 
         ExecutionResult {
             flow: FlowControl::Continue,
@@ -201,7 +201,7 @@ impl FloatExecutor for PythonFloat {
         let type_name = "float".to_owned();
         let pointer = vm.object_of_type(&type_name);
 
-        let mapping = Mapping::simple(Path::empty(), pointer.clone());
+        let mapping = Mapping::simple(Path::empty(), pointer);
 
         ExecutionResult {
             flow: FlowControl::Continue,
@@ -265,7 +265,7 @@ fn collection_from_comprehension(
             }
 
             let kind = vm.get_object(&el_address).get_extension().first().unwrap();
-            let repr = Representant::new(el_address, kind.clone(), Some(1), None);
+            let repr = Representant::new(el_address, *kind, Some(1), None);
             chunk.add_representant(new_path, repr);  
         }
     }
@@ -280,7 +280,7 @@ fn collection_from_comprehension(
 
     vm.pop_path();
 
-    let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
+    let mapping = Mapping::simple(Path::empty(), obj_ptr);
 
     ExecutionResult {
         flow: FlowControl::Continue,
@@ -308,7 +308,7 @@ fn collection_from_literal(
 
         for (path, address) in intermediate.result.into_iter(){
             let kind = vm.get_object(&address).get_extension().first().unwrap();
-            let repr = Representant::new(address, kind.clone(), Some(1), Some(1));
+            let repr = Representant::new(address, *kind, Some(1), Some(1));
             chunk.add_representant(path, repr);    
         }
 
@@ -323,7 +323,7 @@ fn collection_from_literal(
         obj.define_elements(chunks, Path::empty());
     }
 
-    let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
+    let mapping = Mapping::simple(Path::empty(), obj_ptr);
 
     ExecutionResult {
         flow: FlowControl::Continue,

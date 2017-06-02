@@ -26,7 +26,7 @@ pub fn new_builtin_module() -> Module {
 
 fn define_int_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let ptr = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();
+        let ptr = *vm.knowledge().get_type(&"int".to_owned()).unwrap();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -34,14 +34,14 @@ fn define_int_cast(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number", "str"));
             }
             
             let type_name = "int".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -63,7 +63,7 @@ fn define_int_cast(module: &mut Module) {
 
 fn define_str_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.knowledge().get_type(&"str".to_owned()).unwrap().clone();
+        let pointer = *vm.knowledge().get_type(&"str".to_owned()).unwrap();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -71,13 +71,13 @@ fn define_str_cast(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("object"));
             }
 
             let type_name = "str".to_owned();
 
-            let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+            let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
             let string_ptr = vm.object_of_type(&type_name);
             let character_ptr = vm.object_of_type(&type_name);
@@ -98,7 +98,7 @@ fn define_str_cast(module: &mut Module) {
                 string_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), string_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -111,7 +111,7 @@ fn define_str_cast(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -121,7 +121,7 @@ fn define_str_cast(module: &mut Module) {
 
 fn define_list_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.knowledge().get_type(&"list".to_owned()).unwrap().clone();
+        let pointer = *vm.knowledge().get_type(&"list".to_owned()).unwrap();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -129,7 +129,7 @@ fn define_list_cast(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("collection"));
             }
 
@@ -138,7 +138,7 @@ fn define_list_cast(module: &mut Module) {
 
             let mut content = Vec::new();
 
-            for mapping in args.iter() {
+            for mapping in &args {
                 for &(ref path, ref address) in mapping.iter() {
                     let old_object = vm.get_object(address);
                     let elements = old_object.get_elements().get_content();
@@ -159,7 +159,7 @@ fn define_list_cast(module: &mut Module) {
                 list_object.set_elements(collection);
             }
 
-            let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), list_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -172,7 +172,7 @@ fn define_list_cast(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -182,7 +182,7 @@ fn define_list_cast(module: &mut Module) {
 
 fn define_tuple_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.knowledge().get_type(&"tuple".to_owned()).unwrap().clone();
+        let pointer = *vm.knowledge().get_type(&"tuple".to_owned()).unwrap();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -190,7 +190,7 @@ fn define_tuple_cast(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("collection"));
             }
 
@@ -199,7 +199,7 @@ fn define_tuple_cast(module: &mut Module) {
 
             let mut content = Vec::new();
 
-            for mapping in args.iter() {
+            for mapping in &args {
                 for &(ref path, ref address) in mapping.iter() {
                     let old_object = vm.get_object(address);
                     let elements = old_object.get_elements().get_content();
@@ -220,7 +220,7 @@ fn define_tuple_cast(module: &mut Module) {
                 list_object.set_elements(collection);
             }
 
-            let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), list_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -233,7 +233,7 @@ fn define_tuple_cast(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -243,7 +243,7 @@ fn define_tuple_cast(module: &mut Module) {
 
 fn define_float_cast(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let ptr = vm.knowledge().get_type(&"float".to_owned()).unwrap().clone();
+        let ptr = *vm.knowledge().get_type(&"float".to_owned()).unwrap();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -251,14 +251,14 @@ fn define_float_cast(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number", "str"));
             }
             
             let type_name = "float".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -285,13 +285,13 @@ fn define_input(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("object", "NoneType"));
             }
 
             let type_name = "str".to_owned();
 
-            let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+            let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
             let string_ptr = vm.object_of_type(&type_name);
             let character_ptr = vm.object_of_type(&type_name);
@@ -312,7 +312,7 @@ fn define_input(module: &mut Module) {
                 string_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), string_ptr);
             
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -325,7 +325,7 @@ fn define_input(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -340,7 +340,7 @@ fn define_print(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            for arg in args.iter() {
+            for arg in &args {
                 check_arg(vm, arg, "any", vec!("object", "NoneType"));
             }
 
@@ -352,7 +352,7 @@ fn define_print(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -367,14 +367,14 @@ fn define_abs(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number"));
             }
 
             let type_name = "int".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -386,7 +386,7 @@ fn define_abs(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -402,14 +402,14 @@ fn define_len(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("collection"));
             }
 
             let type_name = "int".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -421,7 +421,7 @@ fn define_len(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -436,14 +436,14 @@ fn define_round(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number"));
             }
 
             let type_name = "int".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -455,7 +455,7 @@ fn define_round(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -470,14 +470,14 @@ fn define_ord(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("str"));
             }
 
             let type_name = "int".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -489,7 +489,7 @@ fn define_ord(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -512,7 +512,7 @@ fn define_range(module: &mut Module) {
             let list_type_name = "list".to_owned();
 
             let int_type_name = "int".to_owned();
-            let int_type = vm.knowledge().get_type(&int_type_name).unwrap().clone();
+            let int_type = *vm.knowledge().get_type(&int_type_name).unwrap();
 
             let list_ptr = vm.object_of_type(&list_type_name);
             let int_ptr = vm.object_of_type(&int_type_name);
@@ -525,7 +525,7 @@ fn define_range(module: &mut Module) {
                 list_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), list_ptr);
             
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -538,7 +538,7 @@ fn define_range(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };

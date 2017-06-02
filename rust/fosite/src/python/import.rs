@@ -37,7 +37,7 @@ impl ImportExecutor for PythonImport {
 
                     {
                         let mut vm_scope = vm.last_scope_mut();
-                        vm_scope.set_mapping(into.clone(), path.clone(), Mapping::simple(Path::empty(), ptr.clone()));
+                        vm_scope.set_mapping(into.clone(), path.clone(), Mapping::simple(Path::empty(), ptr));
                     }
 
                     let obj = vm.get_object_mut(&ptr);

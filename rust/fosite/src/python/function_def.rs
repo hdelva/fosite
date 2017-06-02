@@ -93,7 +93,7 @@ impl FunctionDefExecutor for PythonFunction {
 
         let pointer = vm.object_of_type(&"function".to_owned());
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
         let mut aresult = vm.assign_direct(executors, name.clone(), Mapping::simple(Path::empty(), pointer));
         changes.append(&mut aresult.changes);
         dependencies.append(&mut aresult.dependencies);
@@ -167,7 +167,7 @@ fn assign_vararg(vm: &mut VirtualMachine,
 
             for &(ref path, ref address) in arg.iter(){
                 let kind = vm.get_object(address).get_extension().first().unwrap();
-                let repr = Representant::new(address.clone(), kind.clone(), Some(1), Some(1));
+                let repr = Representant::new(address.clone(), *kind, Some(1), Some(1));
                 chunk.add_representant(path.clone(), repr);    
             }
             
@@ -273,14 +273,14 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
             // define the keys
             let mut chunk = CollectionChunk::empty();
             let kind = vm.get_object(&str_ptr).get_extension().first().unwrap();
-            let repr = Representant::new(str_ptr, kind.clone(), Some(1), Some(1));
+            let repr = Representant::new(str_ptr, *kind, Some(1), Some(1));
             chunk.add_representant(Path::empty(), repr);  
             key_chunks.push(chunk); 
 
             let mut chunk = CollectionChunk::empty();
             for &(ref path, ref address) in mapping.iter(){
                 let kind = vm.get_object(address).get_extension().first().unwrap();
-                let repr = Representant::new(address.clone(), kind.clone(), Some(1), Some(1));
+                let repr = Representant::new(address.clone(), *kind, Some(1), Some(1));
                 chunk.add_representant(path.clone(), repr);    
             }
 
@@ -299,8 +299,8 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
 
         {
             let mut obj = vm.get_object_mut(&dict_ptr);
-            let keys_mapping = Mapping::simple(Path::empty(), keys_ptr.clone());
-            let values_mapping = Mapping::simple(Path::empty(), values_ptr.clone());
+            let keys_mapping = Mapping::simple(Path::empty(), keys_ptr);
+            let values_mapping = Mapping::simple(Path::empty(), values_ptr);
 
             obj.assign_attribute("___keys".to_owned(), Path::empty(), keys_mapping);
             obj.assign_attribute("___values".to_owned(), Path::empty(), values_mapping);

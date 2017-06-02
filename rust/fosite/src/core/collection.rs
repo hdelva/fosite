@@ -175,7 +175,7 @@ impl CollectionBranch {
             for (path, repr) in chunk.iter() {
                 if !types.contains(&repr.kind) {
                     result.add_mapping(path.clone(), repr.object.clone());
-                    types.insert(repr.kind.clone());
+                    types.insert(repr.kind);
                 }  
             }
         }
@@ -187,7 +187,7 @@ impl CollectionBranch {
         let mut result = BTreeSet::new();
         for chunk in self.content.iter() {
             for (_, repr) in chunk.iter() {
-                result.insert(repr.kind.clone());
+                result.insert(repr.kind);
             }
         }
 
@@ -321,7 +321,7 @@ impl CollectionBranch {
                 let new_max = repr.maximum.map(|old| old - *delta_max.unwrap_or(&0));
 
                 if new_max.unwrap_or(1) > 0 {
-                    let new_repr = Representant::new(repr.object.clone(), repr.kind.clone(), new_min, new_max);
+                    let new_repr = Representant::new(repr.object.clone(), repr.kind, new_min, new_max);
                     new_chunk.add_representant(path.clone(), new_repr);
                 }
             }

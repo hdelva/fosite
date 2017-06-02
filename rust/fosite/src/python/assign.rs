@@ -334,14 +334,14 @@ impl PythonAssign {
             let value_obj = vm.get_object(&pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
-            value_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
+            value_chunk.add_representant(path.clone(), Representant::new(pointer, *kind, Some(0), Some(1)));
         }
 
         for &(ref path, ref pointer) in index_mapping.iter() {
             let value_obj = vm.get_object(pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
-            key_chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), Some(1)));
+            key_chunk.add_representant(path.clone(), Representant::new(*pointer, *kind, Some(0), Some(1)));
         }
 
         for &(_, ref opt_address) in values.iter() {
@@ -400,7 +400,7 @@ impl PythonAssign {
             let value_obj = vm.get_object(&pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
-            chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
+            chunk.add_representant(path.clone(), Representant::new(pointer, *kind, Some(0), max));
         }
 
         // remember the type of the collection before the addition

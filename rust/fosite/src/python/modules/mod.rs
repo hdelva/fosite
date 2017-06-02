@@ -29,8 +29,8 @@ fn check_arg(vm: &mut VirtualMachine, arg: &Mapping, index: &'static str, permit
     'outer:
     for &(ref path, ref address) in arg.iter() {
         let types = vm.ancestors(address);
-        for t in types.iter() {
-            if permitted_ptr.contains(&t) {
+        for t in &types {
+            if permitted_ptr.contains(t) {
                 continue 'outer;
             }
         }
@@ -40,11 +40,11 @@ fn check_arg(vm: &mut VirtualMachine, arg: &Mapping, index: &'static str, permit
         problems.push((path.clone(), type_name.clone()));
     }
 
-    if problems.len() > 0 {
+    if !problems.is_empty() {
         let content = ArgInvalid::new(index, permitted, problems);
         let message = Message::Output { 
             source: vm.current_node().clone(),
             content: Box::new(content)};
-        &CHANNEL.publish(message);
+        CHANNEL.publish(message);
     }
 }

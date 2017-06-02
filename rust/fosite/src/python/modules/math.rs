@@ -23,14 +23,14 @@ fn define_sin(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number"));
             }
 
             let type_name = "float".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -42,7 +42,7 @@ fn define_sin(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -57,14 +57,14 @@ fn define_cos(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number"));
             }
 
             let type_name = "float".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -76,7 +76,7 @@ fn define_cos(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -91,14 +91,14 @@ fn define_radians(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number"));
             }
 
             let type_name = "float".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -110,7 +110,7 @@ fn define_radians(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -125,14 +125,14 @@ fn define_floor(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("number"));
             }
 
             let type_name = "int".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -144,7 +144,7 @@ fn define_floor(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };

@@ -11,7 +11,7 @@ pub fn new_list_module() -> Module {
 
 fn define_reverse(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.knowledge().get_type(&"list".to_owned()).unwrap().clone();
+        let pointer = *vm.knowledge().get_type(&"list".to_owned()).unwrap();
 
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let total_changes = Vec::new();
@@ -19,7 +19,7 @@ fn define_reverse(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("collection"));
             }
 
@@ -28,7 +28,7 @@ fn define_reverse(module: &mut Module) {
 
             let mut content = Vec::new();
 
-            for mapping in args.iter() {
+            for mapping in &args {
                 for &(ref path, ref address) in mapping.iter() {
                     let old_object = vm.get_object(address);
                     let elements = old_object.get_elements().get_content();
@@ -48,7 +48,7 @@ fn define_reverse(module: &mut Module) {
                 list_object.set_elements(collection);
             }
 
-            let mapping = Mapping::simple(Path::empty(), list_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), list_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -61,7 +61,7 @@ fn define_reverse(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -116,7 +116,7 @@ fn define_append(module: &mut Module) {
                             source: vm.current_node().clone(),
                             content: Box::new(content),
                         };
-                        &CHANNEL.publish(message);
+                        CHANNEL.publish(message);
                     }
                 }
             }
@@ -134,7 +134,7 @@ fn define_append(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -148,12 +148,12 @@ fn make_chunk(vm: &VirtualMachine, mapping: &Mapping) -> CollectionChunk {
 
     let mut max = Some(1);
     for node in vm.current_path().iter().rev() {
-        match node {
-            &PathNode::Loop(_) => {
+        match *node {
+            PathNode::Loop(_) => {
                 max = None;
                 break;
             },
-            &PathNode::Frame(_, _, _, _) => {
+            PathNode::Frame(_, _, _, _) => {
                 break;
             },
             _ => ()
@@ -161,10 +161,10 @@ fn make_chunk(vm: &VirtualMachine, mapping: &Mapping) -> CollectionChunk {
     }
 
     for &(ref path, ref pointer) in mapping.iter() {
-        let value_obj = vm.get_object(&pointer);
+        let value_obj = vm.get_object(pointer);
         let kind = value_obj.get_extension().first().unwrap();
 
-        chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
+        chunk.add_representant(path.clone(), Representant::new(*pointer, *kind, Some(0), max));
     }
 
     chunk

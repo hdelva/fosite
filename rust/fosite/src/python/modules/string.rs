@@ -19,13 +19,13 @@ fn define_format(module: &mut Module) {
         let inner = | env: Environment, args: Vec<Mapping>, _: Vec<(String, Mapping)> | {
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("object"));
             }
 
             let type_name = "str".to_owned();
 
-            let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+            let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
             let string_ptr = vm.object_of_type(&type_name);
             let character_ptr = vm.object_of_type(&type_name);
@@ -46,7 +46,7 @@ fn define_format(module: &mut Module) {
                 string_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), string_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -59,7 +59,7 @@ fn define_format(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -77,13 +77,13 @@ fn define_find(module: &mut Module) {
 
             let Environment { vm, .. } = env;
 
-            if args.len() > 0 {
+            if !args.is_empty() {
                 check_arg(vm, &args[0], "first", vec!("str"));
             }
 
             let type_name = "int".to_owned();
 
-            let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+            let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
             let string_ptr = vm.object_of_type(&type_name);
             let character_ptr = vm.object_of_type(&type_name);
@@ -104,7 +104,7 @@ fn define_find(module: &mut Module) {
                 string_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), string_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -117,7 +117,7 @@ fn define_find(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -134,7 +134,7 @@ fn define_upper(module: &mut Module) {
 
             let type_name = "str".to_owned();
 
-            let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+            let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
             let string_ptr = vm.object_of_type(&type_name);
             let character_ptr = vm.object_of_type(&type_name);
@@ -155,7 +155,7 @@ fn define_upper(module: &mut Module) {
                 string_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), string_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -168,7 +168,7 @@ fn define_upper(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -185,7 +185,7 @@ fn define_lower(module: &mut Module) {
 
             let type_name = "str".to_owned();
 
-            let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+            let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
             let string_ptr = vm.object_of_type(&type_name);
             let character_ptr = vm.object_of_type(&type_name);
@@ -206,7 +206,7 @@ fn define_lower(module: &mut Module) {
                 string_object.define_elements(vec!(chunk), Path::empty());
             }
 
-            let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
+            let mapping = Mapping::simple(Path::empty(), string_ptr);
 
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
@@ -219,7 +219,7 @@ fn define_lower(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
@@ -237,7 +237,7 @@ fn define_isalpha(module: &mut Module) {
             let type_name = "bool".to_owned();
             let pointer = vm.object_of_type(&type_name);
 
-            let mapping = Mapping::simple(Path::empty(), pointer.clone());
+            let mapping = Mapping::simple(Path::empty(), pointer);
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
@@ -249,7 +249,7 @@ fn define_isalpha(module: &mut Module) {
             }
         };
 
-        vm.set_callable(pointer.clone(), inner);
+        vm.set_callable(pointer, inner);
 
         pointer
     };
