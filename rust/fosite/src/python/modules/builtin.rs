@@ -45,14 +45,12 @@ fn define_int_cast(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: total_dependencies,
                 changes: total_changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(ptr, inner);
@@ -105,14 +103,12 @@ fn define_str_cast(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: total_dependencies,
                 changes: total_changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -168,14 +164,12 @@ fn define_list_cast(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: total_dependencies,
                 changes: total_changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -231,14 +225,12 @@ fn define_tuple_cast(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: total_dependencies,
                 changes: total_changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -270,14 +262,12 @@ fn define_float_cast(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: total_dependencies,
                 changes: total_changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(ptr, inner);
@@ -327,14 +317,12 @@ fn define_input(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -356,14 +344,12 @@ fn define_print(module: &mut Module) {
                 check_arg(vm, arg, "any", vec!("object", "NoneType"));
             }
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -392,14 +378,12 @@ fn define_abs(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -429,14 +413,12 @@ fn define_len(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -465,14 +447,12 @@ fn define_round(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -501,14 +481,12 @@ fn define_ord(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -552,14 +530,12 @@ fn define_range(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);

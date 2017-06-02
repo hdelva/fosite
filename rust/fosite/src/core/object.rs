@@ -41,11 +41,11 @@ impl Object {
     }
 
     pub fn is_type(&self) -> bool {
-        return self.is_type;
+        self.is_type
     }
 
     pub fn get_parent(&self) -> &Option<Pointer> {
-        return &self.parent;
+        &self.parent
     }
 
     pub fn set_parent(&mut self, parent: Pointer) {
@@ -57,11 +57,11 @@ impl Object {
     }
 
     pub fn get_extension(&self) -> &Vec<Pointer> {
-        return &self.extensions;
+        &self.extensions
     }
 
     pub fn get_extension_mut(&mut self) -> &mut Vec<Pointer> {
-        return &mut self.extensions;
+        &mut self.extensions
     }
 
     pub fn next_branch(&mut self) {
@@ -140,7 +140,7 @@ impl Object {
             return format!("{}[{}]", type_name, element_types.join(&", ".to_owned()));
         }
 
-        return type_name;
+        type_name
     }
 
     // attributes
@@ -153,15 +153,15 @@ impl Object {
     }
 
     pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
-        return self.attributes.resolve_optional_identifier(name);
+        self.attributes.resolve_optional_identifier(name)
     }
 
     pub fn get_scope_mut(&mut self) -> &mut Scope {
-        return &mut self.attributes;
+        &mut self.attributes
     }
 
     pub fn get_scope(&self) -> &Scope {
-        return &self.attributes;
+        &self.attributes
     }
 
     // elements
@@ -214,6 +214,6 @@ impl Object {
     }
 
     pub fn get_elements(&self) -> &Collection {
-        return &self.elements;
+        &self.elements
     }
 }

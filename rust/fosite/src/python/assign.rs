@@ -40,12 +40,12 @@ impl AssignExecutor for PythonAssign {
 
         let mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
             changes: total_changes,
             result: mapping,
-        };
+        }
     }
 
     fn direct(&self,
@@ -73,12 +73,12 @@ impl AssignExecutor for PythonAssign {
 
         let mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
             changes: total_changes,
             result: mapping,
-        };
+        }
     }
 }
 
@@ -181,12 +181,12 @@ impl PythonAssign {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 
     fn slice(&self, 
@@ -224,7 +224,7 @@ impl PythonAssign {
             result_mapping.add_mapping(path.clone(), slice_ptr);
         }
 
-        return result_mapping;
+        result_mapping
     }
 
     fn assign_to_iterable(&self, 
@@ -293,12 +293,12 @@ impl PythonAssign {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 
     fn insert_dictionary(&self, 
@@ -526,12 +526,12 @@ impl PythonAssign {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 
     fn assign_to_attribute(&self,
@@ -587,12 +587,12 @@ impl PythonAssign {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 
     fn assign_to_identifier(&self,
@@ -627,11 +627,11 @@ impl PythonAssign {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 }

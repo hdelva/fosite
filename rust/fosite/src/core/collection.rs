@@ -100,11 +100,11 @@ impl CollectionBranch {
     }
 
     pub fn size_range(&self) -> (Option<usize>, Option<usize>) {
-        return (self.min_size, self.max_size);
+        (self.min_size, self.max_size)
     }
 
     pub fn is_reliable(&self) -> bool {
-        return self.min_size.is_some() && self.max_size.is_some();
+        self.min_size.is_some() && self.max_size.is_some()
     }
 
     pub fn insert(&mut self, new_chunk: CollectionChunk) {
@@ -137,13 +137,13 @@ impl CollectionBranch {
 
     fn first_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
         let result = linearize(n as usize, &self.content, false);
+        
         // todo, make efficient pls
-        return result.iter().cloned().map(|x| x.iter().cloned().rev().collect()).collect();
+        result.iter().cloned().map(|x| x.iter().cloned().rev().collect()).collect()
     }
 
     fn last_combinations(&self, n: i16) -> Vec<LinkedList<Mapping>> {
-        let result = linearize(n as usize, &self.content, true);
-        return result;
+        linearize(n as usize, &self.content, true)
     }
 
     pub fn get_element(&self, n: i16) -> Mapping {
@@ -165,7 +165,7 @@ impl CollectionBranch {
             }
         }
 
-        return result;
+        result
     }
 
     pub fn get_any_element(&self) -> Mapping {
@@ -179,7 +179,8 @@ impl CollectionBranch {
                 }  
             }
         }
-        return result;
+
+        result
     }
 
     pub fn get_types(&self) -> BTreeSet<Pointer> {
@@ -189,7 +190,8 @@ impl CollectionBranch {
                 result.insert(repr.kind.clone());
             }
         }
-        return result;
+
+        result
     }
 
     pub fn get_first_n(&self, n: i16) -> Vec<Mapping> {
@@ -211,7 +213,7 @@ impl CollectionBranch {
             result.push(element);
         }
 
-        return result;
+        result
     }
 
     pub fn get_last_n(&self, n: i16) -> Vec<Mapping> {
@@ -233,7 +235,7 @@ impl CollectionBranch {
             result.push(element);
         }
 
-        return result;
+        result
     }
 
     pub fn slice(&self, start: i16, end: i16) -> CollectionBranch {
@@ -329,7 +331,7 @@ impl CollectionBranch {
             }
         }
 
-        return CollectionBranch::new(new_content);
+        CollectionBranch::new(new_content)
     }
 
     pub fn concatenate(&mut self, other: CollectionBranch) {
@@ -356,7 +358,7 @@ impl CollectionMapping {
     fn augment(mut self, node: PathNode) -> CollectionMapping {
         self.path.add_node(node.clone());
 
-        return CollectionMapping::new(self.path, self.branch);
+        CollectionMapping::new(self.path, self.branch)
     }
 }
 
@@ -373,15 +375,15 @@ impl Branch {
     }
 
     pub fn get_content(&self) -> &Vec<CollectionMapping> {
-        return &self.content;
+        &self.content
     }
 
     pub fn iter(&self) -> Iter<CollectionMapping> {
-        return self.content.iter();
+        self.content.iter()
     }
 
     pub fn into_iter(self) -> IntoIter<CollectionMapping> {
-        return self.content.into_iter();
+        self.content.into_iter()
     }
 
     pub fn add_mapping(&mut self, mapping: CollectionMapping) {
@@ -400,7 +402,8 @@ impl Branch {
             let (min, max) = branch.size_range();
             result.push( (path.clone(), min, max) );
         }
-        return result;
+
+        result
     }
 
     pub fn is_reliable(&self) -> Vec<(Path, bool)> {
@@ -410,7 +413,8 @@ impl Branch {
             let rel = branch.is_reliable();
             result.push( (path.clone(), rel) );
         }
-        return result;
+
+        result
     }
 
     pub fn insert(&mut self, element: CollectionChunk) {
@@ -463,7 +467,8 @@ impl Branch {
                 count += 1;
             }
         }
-        return result;
+
+        result
     }
 
     pub fn get_any_element(&self, node: &PathID) -> Mapping {
@@ -490,7 +495,8 @@ impl Branch {
                 count += 1;
             }
         }
-        return result;
+
+        result
     }
 
     pub fn get_types(&self) -> BTreeSet<Pointer> {
@@ -502,7 +508,8 @@ impl Branch {
 
             result.append(&mut possibilities);
         }
-        return result;
+
+        result
     }
 
     pub fn get_first_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
@@ -534,7 +541,8 @@ impl Branch {
                 }
             }
         }
-        return result;
+
+        result
     }
 
     pub fn get_last_n(&self, n: i16, node: &PathID) -> Vec<Mapping> {
@@ -567,7 +575,7 @@ impl Branch {
             }
         }
 
-        return result;
+        result
     }
 
     pub fn slice(&self, start: i16, end: i16) -> Vec<(Path, CollectionBranch)> {
@@ -577,9 +585,9 @@ impl Branch {
             let new_branch = branch.slice(start, end);
             result.push( (path.clone(), new_branch));
         }
-        return result;
-    }
 
+        result
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -608,15 +616,15 @@ impl Frame {
     }
 
     fn len(&self) -> usize {
-        return self.branches.len()
+        self.branches.len()
     }
 
     fn iter(&self) -> Iter<Branch> {
-        return self.branches.iter();
+        self.branches.iter()
     }
 
     fn into_iter(self) -> IntoIter<Branch> {
-        return self.branches.into_iter();
+        self.branches.into_iter()
     }
 
     fn next_branch(&mut self) {
@@ -718,7 +726,7 @@ impl Collection {
         }
 
         new.set_content(new_content);
-        return new;
+        new
     }
 
     pub fn set_content(&mut self, content: Vec<(Path, CollectionBranch)>) {
@@ -743,7 +751,7 @@ impl Collection {
     // collection things
 
     pub fn num_frames(&self) -> usize {
-        return self.frames.len();
+        self.frames.len()
     }
 
     pub fn grow(&mut self, path: &Path, start: usize) {
@@ -1023,7 +1031,8 @@ fn linearize(n: usize,
                     }
                 }
             }
-            return result;
+            
+            result
         }
         _ => panic!("not enough elements to unpack"),
     }

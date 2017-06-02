@@ -27,12 +27,12 @@ impl ForEachExecutor for PythonFor {
         total_changes.append(&mut result.changes);
         total_dependencies.append(&mut result.dependencies);
 
-        return ExecutionResult {
+        ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
             flow: FlowControl::Continue,
             result: Mapping::new(),
-        };
+        }
     }
 }
 
@@ -65,12 +65,12 @@ impl PythonFor {
 
         vm.merge_loop(&total_changes);
 
-        return ExecutionResult {
+        ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
             flow: FlowControl::Continue,
             result: Mapping::new(),
-        };
+        }
     }
 
     fn check_changes(&self, vm: &mut VirtualMachine, gen: &Mapping) {

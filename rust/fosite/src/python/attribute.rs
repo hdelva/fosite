@@ -142,12 +142,12 @@ impl AttributeExecutor for PythonAttribute {
             ), &parent_mapping);
         }
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
             changes: total_changes,
             result: mapping,
-        };
+        }
     }
 }
 
@@ -207,6 +207,6 @@ impl PythonAttribute {
             }
         }
 
-        return result;
+        result
     }
 }

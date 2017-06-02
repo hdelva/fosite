@@ -20,11 +20,11 @@ impl ReturnExecutor for PythonReturn {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::TerminateCall,
             dependencies: vec!(),
             changes: vec!(),
             result: result_mapping,
-        };
+        }
     }
 }

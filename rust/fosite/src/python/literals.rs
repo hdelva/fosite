@@ -112,14 +112,12 @@ impl DictExecutor for PythonDict {
 
         let mapping = Mapping::simple(Path::empty(), dict_ptr.clone());
 
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: mapping,
-        };
-
-        return execution_result;
+        }
     }
 }
 
@@ -167,14 +165,12 @@ impl StringExecutor for PythonString {
 
         let mapping = Mapping::simple(Path::empty(), string_ptr.clone());
 
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec!(),
             result: mapping,
-        };
-
-        return execution_result;
+        }
     }
 }
 
@@ -188,14 +184,12 @@ impl IntExecutor for PythonInt {
 
         let mapping = Mapping::simple(Path::empty(), pointer.clone());
 
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![],
             result: mapping,
-        };
-
-        return execution_result;
+        }
     }
 }
 
@@ -209,14 +203,12 @@ impl FloatExecutor for PythonFloat {
 
         let mapping = Mapping::simple(Path::empty(), pointer.clone());
 
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![],
             result: mapping,
-        };
-
-        return execution_result;
+        }
     }
 }
 
@@ -290,14 +282,12 @@ fn collection_from_comprehension(
 
     let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
 
-    let execution_result = ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,
         result: mapping,
-    };
-
-    return execution_result;
+    }
 }
 
 fn collection_from_literal(
@@ -335,12 +325,10 @@ fn collection_from_literal(
 
     let mapping = Mapping::simple(Path::empty(), obj_ptr.clone());
 
-    let execution_result = ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,
         result: mapping,
-    };
-
-    return execution_result;
+    }
 }

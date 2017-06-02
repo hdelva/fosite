@@ -43,12 +43,12 @@ impl GeneratorExecutor for PythonGenerator {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 }
 
@@ -70,12 +70,12 @@ impl FilterExecutor for PythonFilter {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };        
+        } 
     }
 }
 
@@ -95,12 +95,12 @@ impl MapExecutor for PythonMap {
         changes.append(&mut op_result.changes);
         dependencies.append(&mut op_result.dependencies);
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: op_result.result,
-        };      
+        }      
     }
 }
 
@@ -122,11 +122,11 @@ impl AndThenExecutor for PythonAndThen {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };         
+        }         
     }
 }

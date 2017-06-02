@@ -14,11 +14,11 @@ impl NegateExecutor for PythonNegate {
 
         let result_mapping = Mapping::simple(Path::empty(), ptr);
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 }

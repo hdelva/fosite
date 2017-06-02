@@ -148,14 +148,11 @@ impl IndexExecutor for PythonIndex {
             &CHANNEL.publish(message);
         }
         
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
             changes: total_changes,
             result: result_mapping,
-        };
-
-        return execution_result;
-            
+        }  
     }
 }

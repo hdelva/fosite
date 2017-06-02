@@ -39,6 +39,6 @@ impl Module {
             }
         }
 
-        return pointers;
+        pointers
     }
 }

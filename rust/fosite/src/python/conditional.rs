@@ -42,8 +42,7 @@ impl ConditionalExecutor for PythonConditional {
             }
         }
 
-        let result = self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies);
-        return result
+        self.branch(vm, executors, body, or_else, yes, no, total_changes, total_dependencies)
     }
 }
 
@@ -163,11 +162,11 @@ impl PythonConditional {
 
         vm.merge_branches(&total_changes, hide_as_loop, vec!(no, yes));
 
-        return ExecutionResult {
+        ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
             flow: flow,
             result: Mapping::new(),
-        };
+        }
     }
 }

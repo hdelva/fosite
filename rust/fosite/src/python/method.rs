@@ -28,6 +28,6 @@ impl MethodExecutor for PythonMethod {
 
         vm.set_callable(pointer.clone(), fun);
 
-        return pointer;
+        pointer
     }
 }

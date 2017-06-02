@@ -58,7 +58,7 @@ impl VirtualMachine {
     }
 
     pub fn retrieve_module(&mut self, name: &String) -> Option<Module> {
-        return self.modules.remove(name);
+        self.modules.remove(name)
     }
 
     pub fn insert_module(&mut self, name: String, module: Module) {
@@ -92,7 +92,7 @@ impl VirtualMachine {
     }
 
     pub fn is_callable(&self, address: &Pointer) -> bool {
-        return self.callables.contains_key(address);
+        self.callables.contains_key(address)
     }
 
     pub fn set_callable<T: 'static>(&mut self, address: Pointer, callable: T) where
@@ -105,7 +105,7 @@ impl VirtualMachine {
     }
 
     pub fn get_result(&mut self) -> Vec<(Path, Mapping)> {
-        return self.results.pop().unwrap();
+        self.results.pop().unwrap()
     }
 
     pub fn add_result(&mut self, path: Path, mapping: Mapping) {
@@ -179,7 +179,7 @@ impl VirtualMachine {
         }
 
         // return the dependency information
-        return analysis;
+        analysis
     }
 
     pub fn start_watch(&mut self) {
@@ -220,11 +220,11 @@ impl VirtualMachine {
     }
 
     pub fn scopes(&self) -> Iter<Scope> {
-        return self.scopes.iter();
+        self.scopes.iter()
     }
 
     pub fn last_scope_mut(&mut self) -> &mut Scope {
-        return self.scopes.last_mut().unwrap();
+        self.scopes.last_mut().unwrap()
     }
 
     pub fn pop_path(&mut self) {
@@ -244,7 +244,7 @@ impl VirtualMachine {
     }
 
     pub fn get_branch_restrictions(&self) -> &Vec<Vec<Path>> {
-        return &self.branch_restrictions;
+        &self.branch_restrictions
     }
 
     pub fn set_branch_restrictions(&mut self, restrictions: Vec<Vec<Path>>) {
@@ -271,7 +271,7 @@ impl VirtualMachine {
             new_mapping.add_mapping(path, address);
         }
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: input.flow,
             changes: input.changes,
             dependencies: input.dependencies,
@@ -771,14 +771,10 @@ impl VirtualMachine {
 
         let mut current = self.nodes.pop().unwrap();
         let _ = current.pop();
-        /*if last != *id {
-            current.push(last);
-        }*/
+
         self.nodes.push(current);
 
-        let result = self.filter(result);
-
-        return result;
+        self.filter(result)
     }
 
     pub fn next_branch(&mut self, changes: &Vec<AnalysisItem>) {
@@ -895,7 +891,7 @@ impl VirtualMachine {
             _ => panic!("There is no type with name {}", type_name),
         }
 
-        return pointer;
+        pointer
     }
 
     pub fn object_of_type_pointer(&mut self, type_pointer: &Pointer) -> Pointer {
@@ -903,7 +899,7 @@ impl VirtualMachine {
         let object = self.memory.get_object_mut(&pointer);
         object.extend(type_pointer.clone());
 
-        return pointer;
+        pointer
     }
 
     // todo, implement more generic
@@ -916,12 +912,13 @@ impl VirtualMachine {
                            mapping.clone());
         self.knowledge_base.add_constant(name, &pointer);
         let result = Mapping::simple(Path::empty(), self.knowledge_base.constant("None"));
-        return ExecutionResult {
+        
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
             changes: vec![AnalysisItem::Identifier (name.clone())],
             result: result,
-        };
+        }
     }
 
     // todo, implement more generic
@@ -960,7 +957,7 @@ impl VirtualMachine {
     }
 
     pub fn knowledge_base(&mut self) -> &mut KnowledgeBase {
-        return &mut self.knowledge_base;
+        &mut self.knowledge_base
     }
 
     pub fn new_scope(&mut self) {
@@ -979,13 +976,15 @@ impl VirtualMachine {
         if type_name1 == type_name2 {
             return true;
         }
+
         let type_pointer1 = self.knowledge_base.get_type(type_name1);
-        return self.is_instance(type_pointer1.unwrap(), type_name2);
+        self.is_instance(type_pointer1.unwrap(), type_name2)
     }
 
     pub fn is_instance(&self, object: &Pointer, type_name: &String) -> bool {
         let type_pointer = self.knowledge_base.get_type(&type_name);
-        return self.ancestors(object).contains(type_pointer.unwrap());
+        
+        self.ancestors(object).contains(type_pointer.unwrap())
     }
 
     pub fn ancestors(&self, pointer: &Pointer) -> Vec<Pointer> {
@@ -1001,15 +1000,14 @@ impl VirtualMachine {
             result.append(&mut intermediate);
         }
 
-        return result;
+        result
     }
 
     pub fn common_ancestor(&self, first: &Pointer, second: &Pointer) -> BTreeSet<Pointer> {
         let first_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(first).into_iter());
         let second_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(second).into_iter());
 
-        let intersection = &first_ancestors & &second_ancestors;
-        return intersection;
+        &first_ancestors & &second_ancestors
     }
 
     pub fn current_node(&self) -> &PathID {

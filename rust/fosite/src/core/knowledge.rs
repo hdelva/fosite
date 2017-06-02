@@ -49,12 +49,12 @@ impl KnowledgeBase {
             return 2;
         }
 
-        return self.constants.get(name).unwrap().clone();
+        self.constants.get(name).unwrap().clone()
     }
 
     pub fn operation_supported(&self, type_name: &String, operation: &String) -> bool {
         match self.arithmetic_types.get(type_name) {
-            Some(ops) => return ops.contains(operation),
+            Some(ops) => ops.contains(operation),
             _ => false,
         }
     }
@@ -79,10 +79,10 @@ impl KnowledgeBase {
     }
 
     pub fn get_type(&self, name: &String) -> Option<&Pointer> {
-        return self.types.get_by_first(name);
+        self.types.get_by_first(name)
     }
 
     pub fn get_type_name(&self, pointer: &Pointer) -> &String {
-        return self.types.get_by_second(pointer).expect("No type at this address");
+        self.types.get_by_second(pointer).expect("No type at this address")
     }
 }

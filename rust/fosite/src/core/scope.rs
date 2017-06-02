@@ -37,7 +37,7 @@ impl Branch {
     }
 
     fn resolve_identifier(&self, name: &String) -> Option<&OptionalMapping> {
-        return self.content.get(name);
+        self.content.get(name)
     }
 
     fn set_optional_mapping(&mut self, name: String, mapping: OptionalMapping) {
@@ -55,18 +55,8 @@ impl Branch {
         self.set_optional_mapping(name, new_mapping);
     }
 
-/*
-    fn set_result(&mut self, mapping: Mapping) {
-        self.set_mapping("___result".to_owned(), mapping);
-    }
-
-    fn get_result(&self) -> Option<&OptionalMapping> {
-        return self.resolve_identifier(&"___result".to_owned());
-    } 
-    */
-
     fn contains_mapping(&self, name: &String) -> bool {
-        return self.content.contains_key(name);
+        self.content.contains_key(name)
     }
 }
 
@@ -106,7 +96,7 @@ impl StatisChamber {
             }
         } 
 
-        return result;
+        result
     }
 
     pub fn fill(&mut self, name: String, mapping: OptionalMapping) {
@@ -192,19 +182,19 @@ impl Frame {
     }
 
     fn len(&self) -> usize {
-        return self.branches.len()
+        self.branches.len()
     }
 
     fn iter(&self) -> Iter<SubFrame> {
-        return self.branches.iter();
+        self.branches.iter()
     }
 
     fn iter_mut(&mut self) -> IterMut<SubFrame> {
-        return self.branches.iter_mut();
+        self.branches.iter_mut()
     }
 
     fn into_iter(self) -> IntoIter<SubFrame> {
-        return self.branches.into_iter();
+        self.branches.into_iter()
     }
 
     fn next_branch(&mut self) {
@@ -220,7 +210,7 @@ impl Frame {
     }
 
     fn resolve_identifier(&self, name: &String) -> Option<&OptionalMapping> {
-        return self.branches[self.current].content.resolve_identifier(name);
+        self.branches[self.current].content.resolve_identifier(name)
     }
 
     fn set_optional_mapping(&mut self, name: String, mapping: OptionalMapping) {
@@ -282,7 +272,7 @@ impl Scope {
     }
 
     pub fn num_frames(&self) -> usize {
-        return self.frames.len();
+        self.frames.len()
     }
 
     pub fn resolve_optional_identifier(&self, name: &String) -> &OptionalMapping {
@@ -302,7 +292,7 @@ impl Scope {
             } 
         }  
         
-        return &self.default;
+        &self.default
     }
 
     fn grow(&mut self, path: &Path, start: usize) {
@@ -574,7 +564,7 @@ impl Scope {
             self.next_branch();
         }
 
-        return (new_content, new_loop_freeze, new_function_freeze);
+        (new_content, new_loop_freeze, new_function_freeze)
     } 
 }
 
@@ -589,5 +579,6 @@ fn filter(mapping: OptionalMapping, restrictions: &Vec<Path>) -> OptionalMapping
         }
         new_mapping.add_mapping(path, address);
     }
-    return new_mapping;
+
+    new_mapping
 }

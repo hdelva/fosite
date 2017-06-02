@@ -21,7 +21,7 @@ impl Channel {
     }
 
     pub fn iter(&self) -> ChannelIterator {
-        return ChannelIterator { source: &self.rx };
+        ChannelIterator { source: &self.rx }
     }
 }
 
@@ -33,7 +33,7 @@ impl<'a> Iterator for ChannelIterator<'a> {
     type Item = Message;
 
     fn next(&mut self) -> Option<Message> {
-        return self.source.recv().ok();
+        self.source.recv().ok()
     }
 }
 

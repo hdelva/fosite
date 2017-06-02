@@ -42,9 +42,7 @@ impl WhileExecutor for PythonWhile {
             }
         }
 
-        let result = self.branch(vm, executors, body, total_changes, total_dependencies);
-
-        return result;
+        self.branch(vm, executors, body, total_changes, total_dependencies)
     }
 }
 
@@ -76,12 +74,12 @@ impl PythonWhile {
 
         vm.merge_loop(&total_changes);
 
-        return ExecutionResult {
+        ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
             flow: FlowControl::Continue,
             result: Mapping::new(),
-        };
+        }
     }
 
     fn check_changes(&self, vm: &mut VirtualMachine) {
@@ -219,7 +217,7 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
         }
     }
 
-    return relevant_reversals;
+    relevant_reversals
 }
 
 fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeSet<Path> {
@@ -256,5 +254,5 @@ fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeS
         }
     }
 
-    return possibilities;
+    possibilities
 }

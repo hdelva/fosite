@@ -164,13 +164,11 @@ impl BinOpExecutor for PythonBinOp {
             &CHANNEL.publish(message);
         }
 
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: total_dependencies,
             changes: total_changes,
             result: result,
-        };
-
-        return execution_result;
+        }
     }
 }

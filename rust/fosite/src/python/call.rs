@@ -179,12 +179,12 @@ impl CallExecutor for PythonCall {
             }
         }
 
-        return ExecutionResult {
+        ExecutionResult {
             changes: total_changes,
             dependencies: total_dependencies,
             flow: FlowControl::Continue,
             result: result_mapping,
-        };        
+        }        
     }
 }
 
@@ -199,7 +199,8 @@ fn get_branch_points(original: Vec<Path>) -> BTreeSet<Vec<PathNode>> {
         }
         result.insert(pls);
     }
-    return result;
+
+    result
 }
 
 fn get_other_paths(original: &[PathNode]) -> BTreeSet<Vec<PathNode>> {
@@ -213,7 +214,7 @@ fn get_other_paths(original: &[PathNode]) -> BTreeSet<Vec<PathNode>> {
         result.insert(new);
     }
 
-    return result;
+    result
 }
 
 fn bad_paths(original: Vec<Path>) -> BTreeSet<Path> {
@@ -313,7 +314,7 @@ fn bad_paths(original: Vec<Path>) -> BTreeSet<Path> {
         result.insert(path);
     }
 
-    return result;
+    result
 }
 
 fn mergeable_paths(path: &[PathNode], other_path: &[PathNode]) -> bool {
@@ -325,39 +326,5 @@ fn mergeable_paths(path: &[PathNode], other_path: &[PathNode]) -> bool {
         }
     }
 
-    return true;
+    true
 }
-
-/*
-fn bad_paths(changes: Vec<Path>) -> BTreeSet<Path> {
-    // remove obsolete entries first, i.e.
-    // (1, 5) and (1, 5, 9)
-    let mut all_reversals = BTreeSet::new();
-
-    for change in changes.iter() {
-        let change_reversals = change.reverse();
-        for reversal in change_reversals.iter().rev() {
-            all_reversals.insert(reversal.clone());
-        }
-    }
-
-    let mut possibilities = BTreeSet::new();
-    'outer:
-    for reversal in all_reversals.iter() {
-        for change in changes.iter() {
-            if reversal.contains(change) {
-                continue 'outer;
-            }
-        }
-
-        for existing in all_reversals.iter() {
-            if existing.contains(reversal) && !reversal.contains(existing) {
-                continue 'outer;
-            } 
-        }
-
-        possibilities.insert(reversal.clone());
-    }
-
-    return possibilities;
-}*/

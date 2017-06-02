@@ -30,14 +30,12 @@ fn define_sin(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -66,14 +64,12 @@ fn define_cos(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -102,14 +98,12 @@ fn define_tan(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);

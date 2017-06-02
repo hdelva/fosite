@@ -53,14 +53,12 @@ fn define_reverse(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: total_dependencies,
                 changes: total_changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -128,14 +126,12 @@ fn define_append(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(),
                 changes: vec!(),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -171,5 +167,5 @@ fn make_chunk(vm: &VirtualMachine, mapping: &Mapping) -> CollectionChunk {
         chunk.add_representant(path.clone(), Representant::new(pointer.clone(), kind.clone(), Some(0), max));
     }
 
-    return chunk;
+    chunk
 }

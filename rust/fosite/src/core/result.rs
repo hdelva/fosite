@@ -59,13 +59,13 @@ impl AnalysisItem {
     pub fn as_node(&self) -> GastNode {
         match self {
             &AnalysisItem::Identifier ( ref name ) => {
-                return GastNode {
+                GastNode {
                     id: 0,
                     kind: NodeType::Identifier { name: name.clone() },
                 }
             }
             &AnalysisItem::Attribute ( ref parent, ref name ) => {
-                return GastNode {
+                GastNode {
                     id: 0,
                     kind: NodeType::Attribute {
                         parent: Box::new(parent.as_node()),

@@ -54,12 +54,11 @@ impl ImportExecutor for PythonImport {
             vm.insert_module(module_name.clone(), module);
         } 
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec!(),
             changes: vec!(),
             result: Mapping::new(),
-        };
-
+        }
     }
 }

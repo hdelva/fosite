@@ -8,11 +8,11 @@ impl ContinueExecutor for PythonContinue {
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::TerminateLoop,
             dependencies: vec!(),
             changes: vec!(),
             result: result_mapping,
-        };
+        }
     }
 }

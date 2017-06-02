@@ -21,16 +21,15 @@ impl Worker {
             spawn(move || logger.message_loop())
         };
 
-        let worker = Worker { thread: thread };
-
-        return worker;
+        Worker { thread: thread }
     }
 
     pub fn finalize(self) -> Result<()> {
         &CHANNEL.publish({
             Message::Terminate
         });
-        return self.thread.join();
+
+        self.thread.join()
     }
 }
 

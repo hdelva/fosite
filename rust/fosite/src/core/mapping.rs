@@ -26,11 +26,11 @@ impl Mapping {
     }
 
     pub fn iter(&self) -> Iter<(Path, Pointer)> {
-        return self.possibilities.iter();
+        self.possibilities.iter()
     }
 
     pub fn into_iter(self) -> IntoIter<(Path, Pointer)> {
-        return self.possibilities.into_iter();
+        self.possibilities.into_iter()
     }
 
     pub fn augment(self, node: PathNode) -> Mapping {
@@ -39,11 +39,12 @@ impl Mapping {
             path.add_node(node.clone());
             new_possibilities.push((path.clone(), address));
         }
-        return Mapping { possibilities: new_possibilities };
+
+        Mapping { possibilities: new_possibilities }
     }
 
     pub fn len(&self) -> usize {
-        return self.possibilities.len();
+        self.possibilities.len()
     }
 
     pub fn prune(&self, cutoff: &PathID) -> Mapping {
@@ -51,7 +52,8 @@ impl Mapping {
         for &(ref path, ref address) in self.iter() {
             new.add_mapping(path.prune(cutoff), *address);
         }
-        return new;
+
+        new
     }
 }
 
@@ -70,15 +72,15 @@ impl OptionalMapping {
     }
 
     pub fn iter(&self) -> Iter<(Path, Option<Pointer>)> {
-        return self.possibilities.iter();
+        self.possibilities.iter()
     }
 
     pub fn into_iter(self) -> IntoIter<(Path, Option<Pointer>)> {
-        return self.possibilities.into_iter();
+        self.possibilities.into_iter()
     }
 
     pub fn len(&self) -> usize {
-        return self.possibilities.len();
+        self.possibilities.len()
     }
 
     pub fn augment(self, node: PathNode) -> OptionalMapping {
@@ -87,6 +89,7 @@ impl OptionalMapping {
             path.add_node(node.clone());
             new_possibilities.push((path.clone(), opt_address));
         }
-        return OptionalMapping { possibilities: new_possibilities };
+
+        OptionalMapping { possibilities: new_possibilities }
     }
 }

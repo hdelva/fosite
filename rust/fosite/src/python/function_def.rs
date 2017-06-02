@@ -83,14 +83,12 @@ impl FunctionDefExecutor for PythonFunction {
             let body = &BODY.lock().unwrap()[index].clone();
             let body_result = vm.execute(executors, &body);
             
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: body_result.dependencies,
                 changes: body_result.changes,
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         let pointer = vm.object_of_type(&"function".to_owned());
@@ -100,7 +98,7 @@ impl FunctionDefExecutor for PythonFunction {
         changes.append(&mut aresult.changes);
         dependencies.append(&mut aresult.dependencies);
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             changes: changes,
             dependencies: dependencies,
@@ -138,7 +136,7 @@ fn assign_positional(vm: &mut VirtualMachine,
         changes.append(&mut intermediate.changes);
     }
 
-    return ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,
@@ -193,7 +191,7 @@ fn assign_vararg(vm: &mut VirtualMachine,
     changes.append(&mut intermediate.changes);
 
 
-    return ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,
@@ -238,7 +236,7 @@ fn assign_kw(vm: &mut VirtualMachine,
         changes.append(&mut intermediate.changes);
     }
 
-    return ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,
@@ -318,7 +316,7 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
     dependencies.append(&mut aresult.dependencies);
     changes.append(&mut aresult.changes);
 
-    return ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,
@@ -341,7 +339,7 @@ fn assign_defaults(vm: &mut VirtualMachine,
         changes.append(&mut aresult.changes);
     }
 
-    return ExecutionResult {
+    ExecutionResult {
         flow: FlowControl::Continue,
         dependencies: dependencies,
         changes: changes,

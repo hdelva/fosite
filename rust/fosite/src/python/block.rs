@@ -32,11 +32,11 @@ impl BlockExecutor for PythonBlock {
             }
         }
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: flow,
             dependencies: total_dependencies,
             changes: total_changes,
             result: Mapping::new(),
-        };
+        }
     }
 }

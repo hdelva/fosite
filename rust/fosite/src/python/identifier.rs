@@ -50,13 +50,11 @@ impl IdentifierExecutor for PythonIdentifier {
 
         vm.store_identifier_dependency(AnalysisItem::Identifier(name.clone()), &mapping);
 
-        let execution_result = ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![AnalysisItem::Identifier(name.clone())],
             changes: vec![],
             result: mapping,
-        };
-
-        return execution_result;
+        }
     }
 }

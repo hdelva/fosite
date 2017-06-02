@@ -235,7 +235,7 @@ pub fn build(node: &Json) -> GastNode {
         &CHANNEL.publish(message);
     }
 
-    return node;
+    node
 }
 
 fn build_import(id: GastID, node: &Json) -> GastNode {
@@ -263,12 +263,12 @@ fn build_import(id: GastID, node: &Json) -> GastNode {
         parts.push((original, alias));
     }
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Import {
                              module: module,
                              parts: parts,
                              into: into,
-                         });
+                         })
 }
 
 fn build_binop(id: GastID, node: &Json) -> GastNode {
@@ -286,13 +286,13 @@ fn build_binop(id: GastID, node: &Json) -> GastNode {
     let json_ass = obj.get("associative").unwrap();
     let ass = json_ass.as_boolean().unwrap();
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::BinOp {
                              left: left,
                              right: right,
                              op: op,
                              associative: ass,
-                         });
+                         })
 }
 
 fn build_return(id: GastID, node: &Json) -> GastNode {
@@ -301,10 +301,10 @@ fn build_return(id: GastID, node: &Json) -> GastNode {
     let json_value = obj.get("value").unwrap();
     let value = Box::new(build(json_value));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Return {
                              value: value,
-                         });
+                         })
 }
 
 fn build_argument(id: GastID, node: &Json) -> GastNode {
@@ -316,11 +316,11 @@ fn build_argument(id: GastID, node: &Json) -> GastNode {
     let json_value = obj.get("value").unwrap();
     let value = Box::new(build(json_value));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Argument {
                              name: name,
                              value: value,
-                         });
+                         })
 }
 
 fn build_slice(id: GastID, node: &Json) -> GastNode {
@@ -335,12 +335,12 @@ fn build_slice(id: GastID, node: &Json) -> GastNode {
     let json_upper = obj.get("upper").unwrap();
     let upper = Box::new(build(json_upper));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Slice {
                              target: target,
                              lower: lower,
                              upper: upper,
-                         });
+                         })
 }
 
 fn build_negate(id: GastID, node: &Json) -> GastNode {
@@ -349,10 +349,10 @@ fn build_negate(id: GastID, node: &Json) -> GastNode {
     let json_value = obj.get("value").unwrap();
     let value = Box::new(build(json_value));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Negate {
                              value: value,
-                         });
+                         })
 }
 
 fn build_index(id: GastID, node: &Json) -> GastNode {
@@ -364,11 +364,11 @@ fn build_index(id: GastID, node: &Json) -> GastNode {
     let json_index = obj.get("index").unwrap();
     let index = Box::new(build(json_index));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Index {
                              target: target,
                              index: index,
-                         });
+                         })
 }
 
 fn build_unop(id: GastID, node: &Json) -> GastNode {
@@ -380,11 +380,11 @@ fn build_unop(id: GastID, node: &Json) -> GastNode {
     let json_op = obj.get("op").unwrap();
     let op = json_op.as_string().unwrap().to_owned();
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::UnOp {
                              value: value,
                              op: op,
-                         });
+                         })
 }
 
 fn build_boolop(id: GastID, node: &Json) -> GastNode {
@@ -413,14 +413,14 @@ fn build_boolop(id: GastID, node: &Json) -> GastNode {
         None
     };
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::BoolOp {
                              left: left,
                              right: right,
                              op: op,
                              reversed: reversed,
                              negated: negated,
-                         });
+                         })
 }
 
 fn build_bool(id: GastID, node: &Json) -> GastNode {
@@ -429,19 +429,19 @@ fn build_bool(id: GastID, node: &Json) -> GastNode {
     let json_value = obj.get("value").unwrap();
     let value = json_value.as_boolean().unwrap();
 
-    return GastNode::new(id, NodeType::Boolean { value: value });
+    GastNode::new(id, NodeType::Boolean { value: value })
 }
 
 fn build_break(id: GastID) -> GastNode {
-    return GastNode::new(id, NodeType::Break { });
+    GastNode::new(id, NodeType::Break { })
 }
 
 fn build_continue(id: GastID) -> GastNode {
-    return GastNode::new(id, NodeType::Continue { });
+    GastNode::new(id, NodeType::Continue { })
 }
 
 fn build_nil(id: GastID) -> GastNode {
-    return GastNode::new(id, NodeType::Nil {});
+    GastNode::new(id, NodeType::Nil {})
 }
 
 fn build_if(id: GastID, node: &Json) -> GastNode {
@@ -456,12 +456,12 @@ fn build_if(id: GastID, node: &Json) -> GastNode {
     let json_orelse = obj.get("orElse").unwrap();
     let or_else = Box::new(build(json_orelse));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::If {
                              test: test,
                              body: body,
                              or_else: or_else,
-                         });
+                         })
 }
 
 fn build_function(id: GastID, node: &Json) -> GastNode {
@@ -498,7 +498,7 @@ fn build_function(id: GastID, node: &Json) -> GastNode {
     let json_body = obj.get("body").unwrap();
     let body = Box::new(build(json_body));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::FunctionDef {
                              name: name,
                              body: body,
@@ -506,7 +506,7 @@ fn build_function(id: GastID, node: &Json) -> GastNode {
                              kw_args: kwargs,
                              vararg: vararg,
                              kw_vararg: kw_vararg,
-                         });
+                         })
 }
 
 
@@ -521,11 +521,11 @@ fn build_while(id: GastID, node: &Json) -> GastNode {
     let body = Box::new(build(json_body));
 
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::While {
                              test: test,
                              body: body,
-                         });
+                         })
 }
 
 fn build_foreach(id: GastID, node: &Json) -> GastNode {
@@ -537,11 +537,11 @@ fn build_foreach(id: GastID, node: &Json) -> GastNode {
     let json_body = obj.get("body").unwrap();
     let body = Box::new(build(json_body));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::ForEach {
                              before: before,
                              body: body,
-                         });
+                         })
 }
 
 fn build_block(id: GastID, node: &Json) -> GastNode {
@@ -552,7 +552,7 @@ fn build_block(id: GastID, node: &Json) -> GastNode {
         content.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::Block { content: content });
+    GastNode::new(id, NodeType::Block { content: content })
 }
 
 fn build_assign(id: GastID, node: &Json) -> GastNode {
@@ -567,35 +567,35 @@ fn build_assign(id: GastID, node: &Json) -> GastNode {
     let json_value = obj.get("value").unwrap();
     let value = Box::new(build(json_value));
 
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Assignment {
                              targets: targets,
                              value: value,
-                         });
+                         })
 }
 
 fn build_identifier(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let name = obj.get("name").unwrap().as_string().unwrap().to_owned();
-    return GastNode::new(id, NodeType::Identifier { name: name });
+    GastNode::new(id, NodeType::Identifier { name: name })
 }
 
 fn build_int(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let value = obj.get("value").unwrap().as_i64().unwrap();
-    return GastNode::new(id, NodeType::Int { value: value });
+    GastNode::new(id, NodeType::Int { value: value })
 }
 
 fn build_float(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let value = obj.get("value").unwrap().as_f64().unwrap();
-    return GastNode::new(id, NodeType::Float { value: value });
+    GastNode::new(id, NodeType::Float { value: value })
 }
 
 fn build_string(id: GastID, node: &Json) -> GastNode {
     let obj = node.as_object().unwrap();
     let value = obj.get("value").unwrap().as_string().unwrap().to_owned();
-    return GastNode::new(id, NodeType::String { value: value });
+    GastNode::new(id, NodeType::String { value: value })
 }
 
 fn build_attribute(id: GastID, node: &Json) -> GastNode {
@@ -603,11 +603,11 @@ fn build_attribute(id: GastID, node: &Json) -> GastNode {
     let raw_parent = obj.get("of").unwrap();
     let attribute = obj.get("attribute").unwrap().as_string().unwrap().to_owned();
     let parent = Box::new(build(raw_parent));
-    return GastNode::new(id,
+    GastNode::new(id,
                          NodeType::Attribute {
                              parent: parent,
                              attribute: attribute,
-                         });
+                         })
 }
 
 fn build_list(id: GastID, node: &Json) -> GastNode {
@@ -619,7 +619,7 @@ fn build_list(id: GastID, node: &Json) -> GastNode {
         content.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::List { content: content });
+    GastNode::new(id, NodeType::List { content: content })
 }
 
 fn build_call(id: GastID, node: &Json) -> GastNode {
@@ -642,7 +642,7 @@ fn build_call(id: GastID, node: &Json) -> GastNode {
         kwargs.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::Call { target: Box::new(target), args: args, kwargs: kwargs });
+    GastNode::new(id, NodeType::Call { target: Box::new(target), args: args, kwargs: kwargs })
 }
 
 fn build_set(id: GastID, node: &Json) -> GastNode {
@@ -654,7 +654,7 @@ fn build_set(id: GastID, node: &Json) -> GastNode {
         content.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::Set { content: content });
+    GastNode::new(id, NodeType::Set { content: content })
 }
 
 fn build_dict(id: GastID, node: &Json) -> GastNode {
@@ -666,7 +666,7 @@ fn build_dict(id: GastID, node: &Json) -> GastNode {
         content.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::Dict { content: content });
+    GastNode::new(id, NodeType::Dict { content: content })
 }
 
 fn build_pair(id: GastID, node: &Json) -> GastNode {
@@ -678,7 +678,7 @@ fn build_pair(id: GastID, node: &Json) -> GastNode {
     let json_second = obj.get("second").unwrap();
     let second = Box::new(build(json_second));
 
-    return GastNode::new(id, NodeType::Pair { first: first, second: second });
+    GastNode::new(id, NodeType::Pair { first: first, second: second })
 }
 
 fn build_sequence(id: GastID, node: &Json) -> GastNode {
@@ -690,7 +690,7 @@ fn build_sequence(id: GastID, node: &Json) -> GastNode {
         content.push(build(element));
     }
 
-    return GastNode::new(id, NodeType::Sequence { content: content });
+    GastNode::new(id, NodeType::Sequence { content: content })
 }
 
 fn build_generator(id: GastID, node: &Json) -> GastNode {
@@ -702,7 +702,7 @@ fn build_generator(id: GastID, node: &Json) -> GastNode {
     let json_target = obj.get("target").unwrap();
     let target = Box::new(build(json_target));
 
-    return GastNode::new(id, NodeType::Generator { source: source, target: target });
+    GastNode::new(id, NodeType::Generator { source: source, target: target })
 }
 
 fn build_filter(id: GastID, node: &Json) -> GastNode {
@@ -714,7 +714,7 @@ fn build_filter(id: GastID, node: &Json) -> GastNode {
     let json_condition = obj.get("condition").unwrap();
     let condition = Box::new(build(json_condition));
 
-    return GastNode::new(id, NodeType::Filter { source: source, condition: condition });
+    GastNode::new(id, NodeType::Filter { source: source, condition: condition })
 }
 
 fn build_map(id: GastID, node: &Json) -> GastNode {
@@ -726,7 +726,7 @@ fn build_map(id: GastID, node: &Json) -> GastNode {
     let json_op = obj.get("op").unwrap();
     let op = Box::new(build(json_op));
 
-    return GastNode::new(id, NodeType::Map { source: source, op: op });
+    GastNode::new(id, NodeType::Map { source: source, op: op })
 }
 
 fn build_andthen(id: GastID, node: &Json) -> GastNode {
@@ -738,5 +738,5 @@ fn build_andthen(id: GastID, node: &Json) -> GastNode {
     let json_second = obj.get("second").unwrap();
     let second = Box::new(build(json_second));
 
-    return GastNode::new(id, NodeType::AndThen { first: first, second: second });
+    GastNode::new(id, NodeType::AndThen { first: first, second: second })
 }

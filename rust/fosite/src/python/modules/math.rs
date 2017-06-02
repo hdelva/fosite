@@ -34,14 +34,12 @@ fn define_sin(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -70,14 +68,12 @@ fn define_cos(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -106,14 +102,12 @@ fn define_radians(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -142,14 +136,12 @@ fn define_floor(module: &mut Module) {
             let path = vm.current_path().clone();
             vm.add_result(path, mapping);
 
-            let execution_result = ExecutionResult {
+            ExecutionResult {
                 flow: FlowControl::Continue,
                 dependencies: vec!(AnalysisItem::Object(5)),
                 changes: vec!(AnalysisItem::Object(5)),
                 result: Mapping::new(),
-            };
-
-            execution_result
+            }
         };
 
         vm.set_callable(pointer.clone(), inner);
@@ -163,9 +155,7 @@ fn define_floor(module: &mut Module) {
 
 fn define_pi(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.object_of_type(&"float".to_owned());
-
-        pointer
+        vm.object_of_type(&"float".to_owned())
     };
 
     module.add_part("pi".to_owned(), Box::new(outer));
@@ -173,9 +163,7 @@ fn define_pi(module: &mut Module) {
 
 fn define_e(module: &mut Module) {
     let outer = |vm: &mut VirtualMachine| {
-        let pointer = vm.object_of_type(&"float".to_owned());
-
-        pointer
+        vm.object_of_type(&"float".to_owned())
     };
 
     module.add_part("e".to_owned(), Box::new(outer));

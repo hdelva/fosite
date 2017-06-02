@@ -82,7 +82,7 @@ pub trait MessageContent: Send {
             result.insert(new_path);
         }
 
-        return result;
+        result
     }
 
     fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {

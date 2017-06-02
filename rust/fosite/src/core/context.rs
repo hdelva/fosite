@@ -25,11 +25,11 @@ impl Context {
     }
 
     pub fn get_public_scope(&self) -> &Scope {
-        return &self.public_scope;
+        &self.public_scope
     }
 
     pub fn get_public_scope_mut(&mut self) -> &mut Scope {
-        return &mut self.public_scope;
+        &mut self.public_scope
     }
 }
 

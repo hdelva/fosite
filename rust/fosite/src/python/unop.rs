@@ -23,11 +23,11 @@ impl UnOpExecutor for PythonUnOp {
             result_mapping.add_mapping(path, n);
         }
 
-        return ExecutionResult {
+        ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: dependencies,
             changes: changes,
             result: result_mapping,
-        };
+        }
     }
 }
