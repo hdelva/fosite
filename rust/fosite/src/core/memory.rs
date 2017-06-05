@@ -3,18 +3,12 @@ use std::collections::HashMap;
 use super::Pointer;
 use super::Object;
 
-use super::FunctionDefinition;
-use super::BuiltinFunction;
-
 pub struct Memory {
     count: i16,
 
     pointer_chain: HashMap<Pointer, Pointer>,
 
     objects: HashMap<Pointer, Object>,
-
-    function_definitions: HashMap<Pointer, FunctionDefinition>,
-    builtin_functions: HashMap<Pointer, BuiltinFunction>,
 }
 
 impl Memory {
@@ -23,8 +17,6 @@ impl Memory {
             count: 0,
             pointer_chain: HashMap::new(),
             objects: HashMap::new(),
-            function_definitions: HashMap::new(),
-            builtin_functions: HashMap::new(),
         }
     }
 
@@ -75,21 +67,6 @@ impl Memory {
         self.objects.remove(address);
     }
 
-
-    pub fn define_custom_function(&mut self, defintion: FunctionDefinition) {
-        let index = self.count;
-        self.count += 1;
-
-        self.function_definitions.insert(index, defintion);
-    }
-
-    pub fn define_builtin_function(&mut self, definition: BuiltinFunction) {
-        let index = self.count;
-        self.count += 1;
-
-        self.builtin_functions.insert(index, definition);
-    }
-
     /// get things from the memory
     pub fn get_object(&self, address: &Pointer) -> &Object {
         match self.objects.get(address) {
@@ -98,25 +75,10 @@ impl Memory {
         }
     }
 
-    /// get things from the memory
+    // get things from the memory
     pub fn get_object_mut(&mut self, address: &Pointer) -> &mut Object {
         match self.objects.get_mut(address) {
             Some(mut value) => value,
-            None => panic!("Invalid Pointer Value"),
-        }
-    }
-
-
-    pub fn get_function_definition(&self, address: &Pointer) -> &FunctionDefinition {
-        match self.function_definitions.get(address) {
-            Some(def) => def,
-            None => panic!("Invalid Pointer Value"),
-        }
-    }
-
-    pub fn get_builtin_function(&self, address: &Pointer) -> &BuiltinFunction {
-        match self.builtin_functions.get(address) {
-            Some(def) => def,
             None => panic!("Invalid Pointer Value"),
         }
     }

@@ -19,8 +19,6 @@ mod module;
 mod output;
 
 pub use super::Pointer;
-pub use super::FunctionDefinition;
-pub use super::BuiltinFunction;
 
 pub use self::object::*;
 pub use self::memory::*;

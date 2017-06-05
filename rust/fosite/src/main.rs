@@ -20,22 +20,7 @@ use std::fs::File;
 use core::Worker;
 use core::Executors;
 
-
 use python::*;
-
-// todo implement for each builtin function
-pub struct BuiltinFunction {
-
-}
-
-impl BuiltinFunction {
-    // fn call(&self, kb: &mut KnowledgeBase, args: [&Object]);
-}
-
-pub struct FunctionDefinition {
-
-}
-/// type aliases
 
 type Type = i16;
 
@@ -104,45 +89,45 @@ fn test_vm() {
     // builtins
     vm.new_scope();
 
-    vm.declare_simple_type(&"object".to_owned());
-    vm.declare_sub_type(&executors, &"NoneType".to_owned(), &"object".to_owned());
-    vm.declare_new_constant(&"None".to_owned(), &"NoneType".to_owned());
+    vm.declare_simple_type("object");
+    vm.declare_sub_type(&executors, "NoneType", "object");
+    vm.declare_new_constant("None", "NoneType");
 
     // magical variables, used internally
-    vm.declare_simple_type(&"hidden".to_owned());
-    vm.declare_new_constant(&"___implicit".to_owned(), &"hidden".to_owned()); // at address 5
-    vm.declare_new_constant(&"___result".to_owned(), &"hidden".to_owned());
+    vm.declare_simple_type("hidden");
+    vm.declare_new_constant("___implicit", "hidden"); // at address 5
+    vm.declare_new_constant("___result", "hidden");
 
     // 
-    vm.declare_sub_type(&executors, &"function".to_owned(), &"object".to_owned());
-    vm.declare_sub_type(&executors, &"method".to_owned(), &"function".to_owned());
-    vm.declare_sub_type(&executors, &"module".to_owned(), &"object".to_owned());
+    vm.declare_sub_type(&executors, "function", "object");
+    vm.declare_sub_type(&executors, "method", "function");
+    vm.declare_sub_type(&executors, "module", "object");
 
-    vm.declare_sub_type(&executors, &"number".to_owned(), &"object".to_owned());
-    vm.declare_sub_type(&executors, &"int".to_owned(), &"number".to_owned());
-    vm.declare_sub_type(&executors, &"float".to_owned(), &"number".to_owned());
-    vm.declare_sub_type(&executors, &"bool".to_owned(), &"int".to_owned());
-    vm.declare_new_constant(&"True".to_owned(), &"bool".to_owned());
-    vm.declare_new_constant(&"False".to_owned(), &"bool".to_owned());
+    vm.declare_sub_type(&executors, "number", "object");
+    vm.declare_sub_type(&executors, "int", "number");
+    vm.declare_sub_type(&executors, "float", "number");
+    vm.declare_sub_type(&executors, "bool", "int");
+    vm.declare_new_constant("True", "bool");
+    vm.declare_new_constant("False", "bool");
 
     // cpython doesn't really have a collection type, still convenient
     // all iterable things
-    vm.declare_sub_type(&executors, &"collection".to_owned(), &"object".to_owned());
+    vm.declare_sub_type(&executors, "collection", "object");
 
-    vm.declare_sub_type(&executors, &"set".to_owned(), &"collection".to_owned());
-    vm.declare_sub_type(&executors, &"dict".to_owned(), &"collection".to_owned());
+    vm.declare_sub_type(&executors, "set", "collection");
+    vm.declare_sub_type(&executors, "dict", "collection");
 
     // sequences have are ordered
-    vm.declare_sub_type(&executors, &"sequence".to_owned(), &"collection".to_owned());
+    vm.declare_sub_type(&executors, "sequence", "collection");
 
-    vm.declare_sub_type(&executors, &"immutable_sequence".to_owned(), &"sequence".to_owned());
-    vm.declare_sub_type(&executors, &"str".to_owned(), &"immutable_sequence".to_owned());
-    vm.declare_sub_type(&executors, &"tuple".to_owned(), &"immutable_sequence".to_owned());
-    vm.declare_sub_type(&executors, &"byte".to_owned(), &"immutable_sequence".to_owned());
+    vm.declare_sub_type(&executors, "immutable_sequence", "sequence");
+    vm.declare_sub_type(&executors, "str", "immutable_sequence");
+    vm.declare_sub_type(&executors, "tuple", "immutable_sequence");
+    vm.declare_sub_type(&executors, "byte", "immutable_sequence");
 
-    vm.declare_sub_type(&executors, &"mutable_sequence".to_owned(), &"sequence".to_owned());
-    vm.declare_sub_type(&executors, &"list".to_owned(), &"mutable_sequence".to_owned());
-    vm.declare_sub_type(&executors, &"byte_array".to_owned(), &"mutable_sequence".to_owned());
+    vm.declare_sub_type(&executors, "mutable_sequence", "sequence");
+    vm.declare_sub_type(&executors, "list", "mutable_sequence");
+    vm.declare_sub_type(&executors, "byte_array", "mutable_sequence");
 
     {
         let mut kb = vm.knowledge_base();
@@ -206,11 +191,11 @@ fn test_vm() {
     define_modules(&mut vm);
 
     // load builtin functions
-    vm.import(&executors, &"builtin".to_owned(), &[], &None);
+    vm.import(&executors, "builtin", &[], &None);
 
     // load methods
-    vm.import(&executors, &"str".to_owned(), &[], &Some("str".to_owned()));
-    vm.import(&executors, &"list".to_owned(), &[], &Some("list".to_owned()));
+    vm.import(&executors, "str", &[], &Some("str".to_owned()));
+    vm.import(&executors, "list", &[], &Some("list".to_owned()));
 
     // global scope
     vm.new_scope();
