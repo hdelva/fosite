@@ -42,7 +42,7 @@ impl MessageContent for TypeUnsafe {
 
         for (index, (_, paths)) in self.types.iter().enumerate() {
             for path in paths.iter() {
-                match path.iter().next_back() {
+                match path._iter().next_back() {
                     Some(thing) => set.insert((index as i16, thing.clone())),
                     _ => set.insert((0, PathNode::Condition(vec!(0), 0, 1))),
                 };

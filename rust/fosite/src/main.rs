@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(too_many_arguments)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -205,11 +206,11 @@ fn test_vm() {
     define_modules(&mut vm);
 
     // load builtin functions
-    vm.import(&executors, &"builtin".to_owned(), &vec!(), &None);
+    vm.import(&executors, &"builtin".to_owned(), &[], &None);
 
     // load methods
-    vm.import(&executors, &"str".to_owned(), &vec!(), &Some("str".to_owned()));
-    vm.import(&executors, &"list".to_owned(), &vec!(), &Some("list".to_owned()));
+    vm.import(&executors, &"str".to_owned(), &[], &Some("str".to_owned()));
+    vm.import(&executors, &"list".to_owned(), &[], &Some("list".to_owned()));
 
     // global scope
     vm.new_scope();

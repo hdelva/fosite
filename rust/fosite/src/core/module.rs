@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 type Part = Fn(&mut VirtualMachine) -> Pointer;
 
+#[derive(Default)]
 pub struct Module {
     parts: HashMap<String, Box<Part>>,
 }
@@ -23,8 +24,8 @@ impl Module {
     pub fn make_object(&self, vm: &mut VirtualMachine, names: Vec<(String, String)>) -> Vec<(String, Pointer)> {
         let mut pointers = Vec::new();
 
-        if names.len() == 0 {
-            for (name, part) in self.parts.iter() {
+        if !names.is_empty() {
+            for (name, part) in &self.parts {
                 let pointer = part(vm);
                 pointers.push((name.clone(), pointer));
             }

@@ -40,7 +40,7 @@ impl MessageContent for OutOfBounds {
 
         let mut fingerprint = Path::empty();
 
-        for &(ref path, _) in self.cases.iter() {
+        for &(ref path, _) in &self.cases {
             if path > &fingerprint {
                 fingerprint = path.clone();
             }
@@ -64,8 +64,8 @@ impl MessageContent for OutOfBounds {
             println!("  Case {}",
                     Bold.paint(format!("{}", index + 1)));
             println!("    {} has at most {} elements in the following case", self.target, max);
-            if path.len() > 0 {
-                self.print_path(sources, &path, "    ");
+            if path.is_empty() {
+                self.print_path(sources, path, "    ");
             } else {
                 println!("    {}", Red.bold().paint("Always"));
             }

@@ -29,7 +29,7 @@ fn define_reverse(module: &mut Module) {
             let mut content = Vec::new();
 
             for mapping in &args {
-                for &(ref path, ref address) in mapping.iter() {
+                for &(ref path, ref address) in mapping {
                     let old_object = vm.get_object(address);
                     let elements = old_object.get_elements().get_content();
                     for collection_mapping in elements.iter().rev() {
@@ -84,7 +84,7 @@ fn define_append(module: &mut Module) {
                 let this = &args[0];
                 let chunk = make_chunk(vm, &args[1]);
 
-                for &(_, ref target_address) in this.iter() {
+                for &(_, ref target_address) in this {
                     // remember the type of the collection before the addition
                     let original_type;
                     {
@@ -147,7 +147,7 @@ fn make_chunk(vm: &VirtualMachine, mapping: &Mapping) -> CollectionChunk {
     let mut chunk = CollectionChunk::empty();
 
     let mut max = Some(1);
-    for node in vm.current_path().iter().rev() {
+    for node in vm.current_path()._iter().rev() {
         match *node {
             PathNode::Loop(_) => {
                 max = None;
@@ -160,7 +160,7 @@ fn make_chunk(vm: &VirtualMachine, mapping: &Mapping) -> CollectionChunk {
         }
     }
 
-    for &(ref path, ref pointer) in mapping.iter() {
+    for &(ref path, ref pointer) in mapping {
         let value_obj = vm.get_object(pointer);
         let kind = value_obj.get_extension().first().unwrap();
 

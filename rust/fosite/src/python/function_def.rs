@@ -17,7 +17,7 @@ pub struct PythonFunction {
 impl FunctionDefExecutor for PythonFunction {
     fn execute(&self, 
                env: Environment, 
-               name: &String,
+               name: &str,
                rpos: &[GastNode],
                rkw: &[GastNode],
                vararg: &Option<String>,
@@ -33,7 +33,7 @@ impl FunctionDefExecutor for PythonFunction {
         let mut rkw_evaluated = Vec::new();
 
         for node in rpos.iter() {
-            if let &NodeType::Argument {ref name, ref value} = &node.kind {
+            if let NodeType::Argument {ref name, ref value} = node.kind {
                 let mut eval_result = vm.execute(executors, value);
                 rpos_evaluated.push((name.clone(), eval_result.result));
                 dependencies.append(&mut eval_result.dependencies);
@@ -42,7 +42,7 @@ impl FunctionDefExecutor for PythonFunction {
         }
 
         for node in rkw.iter() {
-            if let &NodeType::Argument {ref name, ref value} = &node.kind {
+            if let NodeType::Argument {ref name, ref value} = node.kind {
                 let mut eval_result = vm.execute(executors, value);
                 rkw_evaluated.push((name.clone(), eval_result.result));
                 dependencies.append(&mut eval_result.dependencies);
@@ -62,16 +62,16 @@ impl FunctionDefExecutor for PythonFunction {
         let inner = move | env: Environment, args: Vec<Mapping>, kw_args: Vec<(String, Mapping)> | {
             let Environment { vm, executors } = env;
 
-            let new_node = vm.current_path().iter().last().unwrap().clone(); // should be the function call node
+            let new_node = vm.current_path()._iter().last().unwrap().clone(); // should be the function call node
 
             let mut aug_args = Vec::new();
             let mut aug_kwargs = Vec::new();
 
-            for &(ref n, ref a) in ARGS.lock().unwrap()[index].iter() {
+            for &(ref n, ref a) in &ARGS.lock().unwrap()[index] {
                 aug_args.push( (n.clone(), a.clone().augment(new_node.clone())) );
             }
 
-            for &(ref n, ref a) in KW_ARGS.lock().unwrap()[index].iter() {
+            for &(ref n, ref a) in &KW_ARGS.lock().unwrap()[index] {
                 aug_kwargs.push( (n.clone(), a.clone().augment(new_node.clone())) );
             }
 
@@ -81,7 +81,7 @@ impl FunctionDefExecutor for PythonFunction {
                         &VARARG.lock().unwrap()[index], &KW_VARARG.lock().unwrap()[index]);
 
             let body = &BODY.lock().unwrap()[index].clone();
-            let body_result = vm.execute(executors, &body);
+            let body_result = vm.execute(executors, body);
             
             ExecutionResult {
                 flow: FlowControl::Continue,
@@ -94,7 +94,7 @@ impl FunctionDefExecutor for PythonFunction {
         let pointer = vm.object_of_type(&"function".to_owned());
 
         vm.set_callable(pointer, inner);
-        let mut aresult = vm.assign_direct(executors, name.clone(), Mapping::simple(Path::empty(), pointer));
+        let mut aresult = vm.assign_direct(executors, name.to_owned(), Mapping::simple(Path::empty(), pointer));
         changes.append(&mut aresult.changes);
         dependencies.append(&mut aresult.dependencies);
 
@@ -121,7 +121,7 @@ fn assign_positional(vm: &mut VirtualMachine,
     let mut changes = vec!();
 
     // todo, use the default value before moving to varargs
-    if arg.len() > 0 && gpos.len() > 0 {
+    if !arg.is_empty() && !gpos.is_empty() {
         let &(ref name, _) = &arg[0];
         let mapping = gpos[0].clone();
         let mut aresult = vm.assign_direct(executors, name.clone(), mapping);
@@ -157,17 +157,17 @@ fn assign_vararg(vm: &mut VirtualMachine,
     let mut dependencies = vec!();
     let mut changes = vec!();
 
-    if let &Some(ref name) = vararg {
+    if let Some(ref name) = *vararg {
         let type_name = "list".to_owned();
         let obj_ptr = vm.object_of_type(&type_name);        
 
         let mut chunks = Vec::new();
-        for arg in gpos.iter() {
+        for arg in gpos {
             let mut chunk = CollectionChunk::empty();
 
-            for &(ref path, ref address) in arg.iter(){
+            for &(ref path, ref address) in arg {
                 let kind = vm.get_object(address).get_extension().first().unwrap();
-                let repr = Representant::new(address.clone(), *kind, Some(1), Some(1));
+                let repr = Representant::new(*address, *kind, Some(1), Some(1));
                 chunk.add_representant(path.clone(), repr);    
             }
             
@@ -214,7 +214,7 @@ fn assign_kw(vm: &mut VirtualMachine,
         s1.insert(name);
     }
 
-    if gkw.len() > 0 && s1.len() > 0 {
+    if !gkw.is_empty() && !s1.is_empty() {
         let mut next = Vec::new();
 
         for &(ref name, ref mapping) in gkw.iter() {
@@ -254,7 +254,7 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
     let mut dependencies = vec!();
     let mut changes = vec!();
 
-    if let &Some(ref target) = kw_vararg {
+    if let Some(ref target) = *kw_vararg {
         let str_type = "str".to_owned();
         let str_ptr = vm.object_of_type(&str_type);
 
@@ -278,9 +278,9 @@ fn assign_kw_vararg(vm: &mut VirtualMachine,
             key_chunks.push(chunk); 
 
             let mut chunk = CollectionChunk::empty();
-            for &(ref path, ref address) in mapping.iter(){
+            for &(ref path, ref address) in mapping {
                 let kind = vm.get_object(address).get_extension().first().unwrap();
-                let repr = Representant::new(address.clone(), *kind, Some(1), Some(1));
+                let repr = Representant::new(*address, *kind, Some(1), Some(1));
                 chunk.add_representant(path.clone(), repr);    
             }
 

@@ -11,17 +11,17 @@ impl SliceExecutor for PythonSlice {
         let lower;
         let upper;
 
-        match &lower_node.kind {
-            &NodeType::Int {ref value} => {
-                lower = value.clone() as i16;
+        match lower_node.kind {
+            NodeType::Int {ref value} => {
+                lower = *value as i16;
             },
             _ => lower = 0,
         }
 
-        match &upper_node.kind {
-            &NodeType::Int {ref value} => {
+        match upper_node.kind {
+            NodeType::Int {ref value} => {
                 if *value < 0 {
-                    upper = -1 * value.clone() as i16;
+                    upper = (*value * -1) as i16;
                 } else {
                     upper = 0;
                 }
@@ -34,12 +34,12 @@ impl SliceExecutor for PythonSlice {
 
         let mut result_mapping = Mapping::new();
 
-        for (path, address) in value_result.result.into_iter() {
+        for (path, address) in value_result.result {
             let t;
             let elements;
             {
                 let o = vm.get_object(&address);
-                t = o.get_extension().last().unwrap().clone();
+                t = *o.get_extension().last().unwrap();
                 elements = o.slice_elements(lower, upper);
             }
             

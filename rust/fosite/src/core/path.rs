@@ -50,7 +50,7 @@ impl Ord for PathNode {
             (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1).cmp( &(l2, i2) )
             },
-            _ => self.get_location().cmp(&other.get_location()),
+            _ => self.get_location().cmp(other.get_location()),
         }
     }
 }
@@ -64,7 +64,7 @@ impl PartialOrd for PathNode {
             (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                (l1, i1).partial_cmp( &(l2, i2) )
             },
-            _ => self.get_location().partial_cmp(&other.get_location())
+            _ => self.get_location().partial_cmp(other.get_location())
         }
     }
 }
@@ -87,8 +87,8 @@ impl Eq for PathNode {}
 
 impl Hash for PathNode {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            &PathNode::Element(ref l, ref i, _) => {
+        match *self {
+            PathNode::Element(ref l, ref i, _) => {
                 l.hash(state);
                 i.hash(state);
             },
@@ -99,26 +99,26 @@ impl Hash for PathNode {
 
 impl PathNode {
     pub fn is_assign(&self) -> bool {
-        match self {
-            &PathNode::Assignment(_, _) => true,
+        match *self {
+            PathNode::Assignment(_, _) => true,
             _ => false,
         }
     }
 
     pub fn is_branch(&self) -> bool {
-        match self {
-            &PathNode::Condition(_, _, _) => true,
+        match *self {
+            PathNode::Condition(_, _, _) => true,
             _ => false,
         }
     }
 
     pub fn reverse(&self) -> Vec<PathNode> {
-        match self {
-            &PathNode::Condition(ref l, ref x, ref y) => {
+        match *self {
+            PathNode::Condition(ref l, ref x, ref y) => {
                 let mut v = Vec::new();
                 for i in 0..*y{
                     if i != *x {
-                        v.push(PathNode::Condition(l.clone(), i, y.clone()));
+                        v.push(PathNode::Condition(l.clone(), i, *y));
                     }
                 }
                 v
@@ -128,13 +128,13 @@ impl PathNode {
     }
 
     pub fn get_location(&self) -> &PathID {
-        match self {
-            &PathNode::Condition(ref location, _, _) => location,
-            &PathNode::Assignment(ref location, _) => location,
-            &PathNode::Loop(ref location) => location,
-            &PathNode::Return(ref location) => location,
-            &PathNode::Frame(ref location, _, _, _) => location,
-            &PathNode::Element(ref location, _, _) => location,
+        match *self {
+            PathNode::Condition(ref location, _, _) |
+            PathNode::Assignment(ref location, _) |
+            PathNode::Loop(ref location) |
+            PathNode::Return(ref location) |
+            PathNode::Frame(ref location, _, _, _) |
+            PathNode::Element(ref location, _, _) => location,
         }
     }
 
@@ -151,23 +151,15 @@ impl PathNode {
     // this is used to check whether or a path is contained in another
     fn equals(&self, other: &PathNode) -> bool {
         match (self, other) {
-            (&PathNode::Condition(ref l1, ref i1, _), &PathNode::Condition(ref l2, ref i2, _)) => {
-                l1 == l2 && i1 == i2
-            }
-            (&PathNode::Loop(ref l1), &PathNode::Loop(ref l2)) => {
-                l1 == l2
-            }
-            (&PathNode::Frame(ref l1, _, ref i1, _), &PathNode::Frame(ref l2, _, ref i2, _)) => {
-                l1 == l2 && i1 == i2
-            }
-            (&PathNode::Return(ref l1), &PathNode::Return(ref l2)) => {
-                l1 == l2
-            }
-            (&PathNode::Assignment(ref l1, ..), &PathNode::Assignment(ref l2, ..)) => {
-                l1 == l2
-            }
+            (&PathNode::Condition(ref l1, ref i1, _), &PathNode::Condition(ref l2, ref i2, _)) | 
+            (&PathNode::Frame(ref l1, _, ref i1, _), &PathNode::Frame(ref l2, _, ref i2, _)) |
             (&PathNode::Element(ref l1, ref i1, _), &PathNode::Element(ref l2, ref i2, _)) => {
                 l1 == l2 && i1 == i2
+            }
+            (&PathNode::Return(ref l1), &PathNode::Return(ref l2)) |
+            (&PathNode::Loop(ref l1), &PathNode::Loop(ref l2)) |
+            (&PathNode::Assignment(ref l1, ..), &PathNode::Assignment(ref l2, ..)) => {
+                l1 == l2
             }
             _ => false,
         }
@@ -188,20 +180,20 @@ impl Path {
         self.nodes.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn get_nodes(&self) -> &BTreeSet<PathNode> {
         &self.nodes
     }
 
-    pub fn iter(&self) -> Iter<PathNode> {
+    pub fn _iter(&self) -> Iter<PathNode> {
         self.nodes.iter()
     }
 
-    pub fn into_iter(self) -> IntoIter<PathNode> {
-        self.nodes.into_iter()
-    }
-
     pub fn merge_into(&mut self, other: Path) {
-        for node in other.into_iter() {
+        for node in other {
             self.nodes.insert(node);
         }
     }
@@ -243,9 +235,9 @@ impl Path {
         let mut result = Vec::new();
         let mut current = Path::empty();
 
-        for node in self.nodes.iter() {
+        for node in &self.nodes {
             if node.is_branch() {
-                for rev in node.reverse().into_iter() {
+                for rev in node.reverse() {
                     let mut temp = current.clone();
                     temp.add_node(rev);
                     result.push(temp);
@@ -258,14 +250,45 @@ impl Path {
         result
     } 
 
+    #[allow(ptr_arg)]
     pub fn prune(&self, cutoff: &PathID) -> Path {
         let mut new = Path::empty();
-        for node in self.nodes.iter() {
+        for node in &self.nodes {
             if node.get_location() > cutoff {
                 new.add_node(node.clone());
             }
         }
         
         new
+    }
+}
+
+impl<'a> IntoIterator for &'a Path {
+    type Item = &'a PathNode;
+    type IntoIter = PathIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PathIterator {it: self.nodes.iter()}
+    }
+}
+
+pub struct PathIterator<'a> {
+    it: Iter<'a, PathNode>,
+}
+
+impl<'a> Iterator for PathIterator<'a> {
+    type Item = &'a PathNode;
+
+    fn next(&mut self) -> Option<&'a PathNode> {
+        self.it.next()
+    }
+}
+
+impl IntoIterator for Path {
+    type Item = PathNode;
+    type IntoIter = IntoIter<PathNode>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.nodes.into_iter()
     }
 }

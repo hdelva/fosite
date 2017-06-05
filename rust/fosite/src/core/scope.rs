@@ -29,14 +29,14 @@ impl Branch {
             },
             Entry::Occupied(mut o) => {
                 let mut b = o.get_mut();
-                for (path, address) in mapping.into_iter() {
+                for (path, address) in mapping {
                     b.add_mapping(path, address);
                 }
             }
         }
     }
 
-    fn resolve_identifier(&self, name: &String) -> Option<&OptionalMapping> {
+    fn resolve_identifier(&self, name: &str) -> Option<&OptionalMapping> {
         self.content.get(name)
     }
 
@@ -47,9 +47,8 @@ impl Branch {
     fn set_mapping(&mut self, name: String, mapping: Mapping) {
         let mut new_mapping = OptionalMapping::new();
 
-        for &(ref path, ref address) in mapping.iter() {
-            new_mapping
-            .add_mapping(path.clone(), Some(address.clone()));
+        for (path, address) in mapping {
+            new_mapping.add_mapping(path, Some(address));
         }
 
         self.set_optional_mapping(name, new_mapping);
@@ -75,9 +74,9 @@ impl StatisChamber {
     pub fn thaw(self) -> HashMap<String, OptionalMapping> {
         let mut result = HashMap::new();
 
-        for (path, branch) in self.content.into_iter() {
-            for (name, mapping) in branch.content.into_iter() {
-                for (mapping_path, address) in mapping.into_iter() {
+        for (path, branch) in self.content {
+            for (name, mapping) in branch.content {
+                for (mapping_path, address) in mapping {
                     let mut new_path = path.clone();
                     new_path.merge_into(mapping_path.clone());
 
@@ -209,7 +208,7 @@ impl Frame {
         self.current = index;
     }
 
-    fn resolve_identifier(&self, name: &String) -> Option<&OptionalMapping> {
+    fn resolve_identifier(&self, name: &str) -> Option<&OptionalMapping> {
         self.branches[self.current].content.resolve_identifier(name)
     }
 
@@ -244,8 +243,8 @@ impl Frame {
     fn set_mapping(&mut self, name: String, mapping: Mapping) {
         let mut new_mapping = OptionalMapping::new();
 
-        for &(ref path, ref address) in mapping.iter() {
-            new_mapping.add_mapping(path.clone(), Some(address.clone()));
+        for (path, address) in mapping {
+            new_mapping.add_mapping(path, Some(address));
         }
 
         self.set_optional_mapping(name, new_mapping);
@@ -275,7 +274,7 @@ impl Scope {
         self.frames.len()
     }
 
-    pub fn resolve_optional_identifier(&self, name: &String) -> &OptionalMapping {
+    pub fn resolve_optional_identifier(&self, name: &str) -> &OptionalMapping {
         if self.frames.len() > 0 {
             let mut index = self.frames.len() - 1;
 
@@ -296,7 +295,7 @@ impl Scope {
     }
 
     fn grow(&mut self, path: &Path, start: usize) {
-        for node in path.iter().skip(start) {
+        for node in path._iter().skip(start) {
             let mut frame = Frame::new(node.clone());
             match node {
                 &PathNode::Condition(_, x, _) |
@@ -313,7 +312,7 @@ impl Scope {
     pub fn set_mapping(&mut self, name: String, path: Path, mapping: Mapping) {
         let mut new_mapping = OptionalMapping::new();
 
-        for (m_path, address) in mapping.into_iter() {
+        for (m_path, address) in mapping {
             new_mapping.add_mapping(m_path, Some(address));
         }
 
@@ -372,12 +371,12 @@ impl Scope {
 
         // remember all the old hides
         if let Some(old_frame) = self.frames.pop() {
-            for subframe in old_frame.branches.into_iter() {
-                for (path, branch) in subframe.frozen_loop.content.into_iter() {
+            for subframe in old_frame.branches {
+                for (path, branch) in subframe.frozen_loop.content {
                     new_loop.content.insert(path, branch);
                 }
 
-                for (path, branch) in subframe.frozen_function.content.into_iter() {
+                for (path, branch) in subframe.frozen_function.content {
                     new_function.content.insert(path, branch);
                 }
             }
@@ -386,15 +385,15 @@ impl Scope {
 
         if let Some(frame) = self.frames.last_mut() {
             // transfer the hidden mappings
-            for (name, mapping) in new_content.content.into_iter() {
+            for (name, mapping) in new_content.content {
                 frame.set_optional_mapping(name, mapping);
             }
 
-            for (path, branch) in new_loop.content.into_iter() {
+            for (path, branch) in new_loop.content {
                 frame.set_loop_statis(path, branch);
             }
 
-            for (path, branch) in new_function.content.into_iter() {
+            for (path, branch) in new_function.content {
                 frame.set_function_statis(path, branch);
             }
         }   
@@ -408,12 +407,12 @@ impl Scope {
         let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!(), &vec!());
 
         if let Some(old_frame) = self.frames.pop() {
-            for subframe in old_frame.branches.into_iter() {
-                for (path, branch) in subframe.frozen_loop.content.into_iter() {
+            for subframe in old_frame.branches {
+                for (path, branch) in subframe.frozen_loop.content {
                     new_loop.content.insert(path, branch);
                 } 
 
-                for (path, branch) in subframe.frozen_function.content.into_iter() {
+                for (path, branch) in subframe.frozen_function.content {
                     new_function.content.insert(path, branch);
                 }  
             }
@@ -421,15 +420,15 @@ impl Scope {
 
         if let Some(frame) = self.frames.last_mut() {
             // transfer the hidden mappings
-            for (name, mapping) in new_content.content.into_iter() {
+            for (name, mapping) in new_content.content {
                 frame.set_optional_mapping(name, mapping);
             }
 
-            for (path, branch) in new_function.content.into_iter() {
+            for (path, branch) in new_function.content {
                 frame.set_function_statis(path, branch);
             }
 
-            for (name, mapping) in new_loop.thaw().into_iter() {
+            for (name, mapping) in new_loop.thaw() {
                 frame.add_optional_mapping(name, mapping);
             }
         } 
@@ -443,12 +442,12 @@ impl Scope {
         let (new_content, mut new_loop, mut new_function) = self.prepare_merge(vec!(), &vec!());
 
         if let Some(old_frame) = self.frames.pop() {
-            for subframe in old_frame.branches.into_iter() {
-                for (path, branch) in subframe.frozen_loop.content.into_iter() {
+            for subframe in old_frame.branches {
+                for (path, branch) in subframe.frozen_loop.content {
                     new_loop.content.insert(path, branch);
                 } 
 
-                for (path, branch) in subframe.frozen_function.content.into_iter() {
+                for (path, branch) in subframe.frozen_function.content {
                     new_function.content.insert(path, branch);
                 }  
             }
@@ -456,15 +455,15 @@ impl Scope {
 
         if let Some(frame) = self.frames.last_mut() {
             // transfer the hidden mappings
-            for (name, mapping) in new_content.content.into_iter() {
+            for (name, mapping) in new_content.content {
                 frame.set_optional_mapping(name, mapping);
             }
 
-            for (name, mapping) in new_loop.thaw().into_iter() {
+            for (name, mapping) in new_loop.thaw() {
                 frame.add_optional_mapping(name, mapping);
             }
 
-            for (name, mapping) in new_function.thaw().into_iter() {
+            for (name, mapping) in new_function.thaw() {
                 frame.add_optional_mapping(name, mapping);
             }
         } 
@@ -554,7 +553,7 @@ impl Scope {
                     }
                     Entry::Occupied(mut m) => {
                         let mut old_mapping = m.get_mut();
-                        for (path, address) in new_mapping.into_iter() {
+                        for (path, address) in new_mapping {
                             old_mapping.add_mapping(path, address);
                         }
                     }
@@ -571,7 +570,7 @@ impl Scope {
 fn filter(mapping: OptionalMapping, restrictions: &Vec<Path>) -> OptionalMapping {
     let mut new_mapping = OptionalMapping::new();
     'outer:
-    for (path, address) in mapping.into_iter() {
+    for (path, address) in mapping {
         for r in restrictions.iter() {
             if path.contains(r) {
                 continue 'outer;

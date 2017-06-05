@@ -8,7 +8,7 @@ pub struct PythonAssign { }
 impl AssignExecutor for PythonAssign {
     fn execute(&self,
                env: Environment,
-               targets: &Vec<GastNode>,
+               targets: &[GastNode],
                value: &GastNode)
                -> ExecutionResult {
         let Environment { vm, executors } = env;
@@ -22,7 +22,7 @@ impl AssignExecutor for PythonAssign {
         let mut value_dependencies = value_execution.dependencies;
         let mut value_mapping = OptionalMapping::new(); 
         
-        for (path, address) in value_execution.result.into_iter(){
+        for (path, address) in value_execution.result{
             value_mapping.add_mapping(path, Some(address));
         }
 
@@ -60,7 +60,7 @@ impl AssignExecutor for PythonAssign {
 
         let mut value_mapping = OptionalMapping::new();
         
-        for (path, address) in value.into_iter(){
+        for (path, address) in value{
             value_mapping.add_mapping(path, Some(address));
         }
 
@@ -89,18 +89,18 @@ impl PythonAssign {
                         target: &GastNode,
                         mapping: &OptionalMapping)
                         -> ExecutionResult {
-        match &target.kind {
-            &NodeType::Identifier { ref name } => {
+        match target.kind {
+            NodeType::Identifier { ref name } => {
                 self.assign_to_identifier(vm, executors, name, mapping)
             }
-            &NodeType::List { ref content } |
-            &NodeType::Sequence { ref content } => {
+            NodeType::List { ref content } |
+            NodeType::Sequence { ref content } => {
                 self.assign_to_iterable(vm, executors, content, mapping)
             },
-            &NodeType::Attribute { ref parent, ref attribute } => {
+            NodeType::Attribute { ref parent, ref attribute } => {
                 self.assign_to_attribute(vm, executors, parent, attribute, mapping)
             }
-            &NodeType::Index {ref target, ref index} => {
+            NodeType::Index {ref target, ref index} => {
                 self.assign_to_index(vm, executors, target, index, mapping)
             }
             _ => panic!("unimplemented"),
@@ -121,7 +121,7 @@ impl PythonAssign {
 
         let mut value_mappings = Vec::new();
 
-        for &(ref path, ref opt_address) in mapping.iter() {
+        for &(ref path, ref opt_address) in mapping {
             if opt_address.is_none() {
                 // todo, propagate the results of the masked values here
                 continue;
@@ -162,9 +162,9 @@ impl PythonAssign {
                     value_mappings.push(OptionalMapping::new());
                 }
 
-                let ref mut new_mapping = value_mappings[index];
+                let new_mapping = &mut value_mappings[index];
 
-                for (element_path, address) in mapping.into_iter() {
+                for (element_path, address) in mapping {
                     let mut new_path = vm.current_path().clone();
                     new_path.merge_into(element_path.clone());
                     new_path.merge_into(path.clone());
@@ -174,7 +174,7 @@ impl PythonAssign {
         }
 
         for (target_mapping, target) in value_mappings.iter().zip(content) {
-            let mut partial_result = self.assign_to_target(vm, executors, target, &target_mapping);
+            let mut partial_result = self.assign_to_target(vm, executors, target, target_mapping);
             changes.append(&mut partial_result.changes);
             dependencies.append(&mut partial_result.dependencies);
         }
@@ -197,7 +197,7 @@ impl PythonAssign {
               -> Mapping {
         let mut result_mapping = Mapping::new();
 
-        for &(ref path, ref opt_address) in mapping.iter() {
+        for &(ref path, ref opt_address) in mapping {
             if opt_address.is_none() {
                 // todo, propagate the results of the masks here
                 continue;
@@ -236,8 +236,8 @@ impl PythonAssign {
         let mut dependencies = Vec::new();
         let mut changes = Vec::new();
 
-        for &(_, ref opt_address) in mapping.iter() {
-            if let &Some(ref address) = opt_address {
+        for &(_, ref opt_address) in mapping {
+            if let Some(ref address) = *opt_address {
                 dependencies.push(AnalysisItem::Object(*address));
             }
         }
@@ -249,7 +249,7 @@ impl PythonAssign {
         let mut split = None;
         for (index, target) in content.iter().enumerate() {
             let &GastNode {ref kind, ..} = target;
-            if let &NodeType::UnOp { ref value, .. } = kind {
+            if let NodeType::UnOp { ref value, .. } = *kind {
                 split = Some((index, value));
             }
         }
@@ -275,7 +275,7 @@ impl PythonAssign {
 
             let slice_mapping = self.slice(vm, mapping, index as i16, pls as i16);
             let mut new_mapping = OptionalMapping::new();
-            for (path, address) in slice_mapping.into_iter() {
+            for (path, address) in slice_mapping {
                 new_mapping.add_mapping(path, Some(address));
             }
             let mut partial_result = self.assign_to_target(vm, executors, target, &new_mapping);
@@ -323,7 +323,7 @@ impl PythonAssign {
         let mut key_chunk = CollectionChunk::empty();
         let mut value_chunk = CollectionChunk::empty();
 
-        for &(ref path, ref opt_pointer) in value_mapping.iter() {
+        for &(ref path, ref opt_pointer) in value_mapping {
             if opt_pointer.is_none() {
                 // todo propagate results of masks here
                 continue;
@@ -337,15 +337,15 @@ impl PythonAssign {
             value_chunk.add_representant(path.clone(), Representant::new(pointer, *kind, Some(0), Some(1)));
         }
 
-        for &(ref path, ref pointer) in index_mapping.iter() {
+        for &(ref path, ref pointer) in index_mapping {
             let value_obj = vm.get_object(pointer);
             let kind = value_obj.get_extension().first().unwrap();
 
             key_chunk.add_representant(path.clone(), Representant::new(*pointer, *kind, Some(0), Some(1)));
         }
 
-        for &(_, ref opt_address) in values.iter() {
-            if let &Some(ref address) = opt_address {
+        for &(_, ref opt_address) in &values {
+            if let Some(ref address) = *opt_address {
                 // add the new element
                 let mut parent_object = vm.get_object_mut(address);
 
@@ -354,8 +354,8 @@ impl PythonAssign {
             }
         }
         
-        for &(_, ref opt_address) in keys.iter() {
-            if let &Some(ref address) = opt_address {
+        for &(_, ref opt_address) in &keys {
+            if let Some(ref address) = *opt_address {
                 // add the new element
                 let mut parent_object = vm.get_object_mut(address);
 
@@ -377,20 +377,20 @@ impl PythonAssign {
         let mut chunk = CollectionChunk::empty();
 
         let mut max = Some(1);
-        for node in current_path.iter().rev() {
-            match node {
-                &PathNode::Loop(_) => {
+        for node in current_path._iter().rev() {
+            match *node {
+                PathNode::Loop(_) => {
                     max = None;
                     break;
                 },
-                &PathNode::Frame(_, _, _, _) => {
+                PathNode::Frame(_, _, _, _) => {
                     break;
                 },
                 _ => ()
             }
         }
 
-        for &(ref path, ref opt_pointer) in mapping.iter() {
+        for &(ref path, ref opt_pointer) in mapping {
             if opt_pointer.is_none() {
                 continue;
             }
@@ -434,7 +434,7 @@ impl PythonAssign {
                 source: vm.current_node().clone(),
                 content: Box::new(content),
             };
-            &CHANNEL.publish(message);
+            CHANNEL.publish(message);
         }
     }
 
@@ -465,7 +465,7 @@ impl PythonAssign {
 
         // add the object changes
         // perform the assignment
-        for &(ref target_path, ref target_address) in target_mapping.iter() {
+        for &(ref target_path, ref target_address) in &target_mapping {
             // does this type of object support item assignment?
             {
                 let seq_type;
@@ -476,24 +476,24 @@ impl PythonAssign {
 
                 {
                     let kb = vm.knowledge();
-                    seq_type = kb.get_type(&"mutable_sequence".to_owned()).unwrap().clone();
-                    dict_type = kb.get_type(&"dict".to_owned()).unwrap().clone();
+                    seq_type = *kb.get_type(&"mutable_sequence".to_owned()).unwrap();
+                    dict_type = *kb.get_type(&"dict".to_owned()).unwrap();
                 }
 
-                let types = vm.ancestors(&target_address);
+                let types = vm.ancestors(target_address);
                 
                 if types.contains(&seq_type) { 
-                    changes.push(AnalysisItem::Object(target_address.clone()));
+                    changes.push(AnalysisItem::Object(*target_address));
 
-                    vm.store_object_change(target_address.clone(), &new_path);
+                    vm.store_object_change(*target_address, &new_path);
 
                     // todo, pass on the new_path
                     self.insert_collection(vm, target, target_address, &mapping);
                 }
                 else if types.contains(&dict_type) {
-                    changes.push(AnalysisItem::Object(target_address.clone()));
+                    changes.push(AnalysisItem::Object(*target_address));
 
-                    vm.store_object_change(target_address.clone(), &new_path);
+                    vm.store_object_change(*target_address, &new_path);
 
                     // todo, pass on the new_path
                     self.insert_dictionary(vm, target_address, &index_mapping, &mapping);
@@ -515,13 +515,13 @@ impl PythonAssign {
             }   
         }
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             let content = InsertInvalid::new(target.to_string(), errors);
             let message = Message::Output {
                 source: vm.current_node().clone(),
                 content: Box::new(content),
             };
-            &CHANNEL.publish(message);
+            CHANNEL.publish(message);
         }
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
@@ -538,7 +538,7 @@ impl PythonAssign {
                            vm: &mut VirtualMachine,
                            executors: &Executors,
                            parent: &GastNode,
-                           attribute: &String,
+                           attribute: &str,
                            mapping: &OptionalMapping)
                            -> ExecutionResult {
 
@@ -558,31 +558,31 @@ impl PythonAssign {
 
         // add the object changes
         // perform the assignment
-        for &(ref parent_path, ref parent_address) in parent_mapping.iter() {
+        for &(ref parent_path, ref parent_address) in &parent_mapping {
             // todo this clone shouldn't be necessary
             let mut new_path = vm.current_path().clone();
             new_path.merge_into(parent_path.clone());
 
-            changes.push(AnalysisItem::Object(parent_address.clone()));
+            changes.push(AnalysisItem::Object(*parent_address));
 
-            vm.store_object_change(parent_address.clone(), &new_path);
+            vm.store_object_change(*parent_address, &new_path);
 
             let mut parent_object = vm.get_object_mut(parent_address);
-            parent_object.assign_opt_attribute(attribute.clone(), new_path, mapping.clone())
+            parent_object.assign_opt_attribute(attribute.to_owned(), new_path, mapping.clone())
         }
 
         if let Some(item) = parent.kind.to_analysis_item() {
             changes.push(AnalysisItem::Attribute (
                 Box::new(item.clone()),
-                attribute.clone(),
+                attribute.to_owned(),
             ));
 
             let path = &vm.current_path().clone();
             
             vm.store_identifier_change(AnalysisItem::Attribute (
                 Box::new(item),
-                attribute.clone(),
-            ), &path, &parent_mapping);
+                attribute.to_owned(),
+            ), path, &parent_mapping);
         }
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));
@@ -598,31 +598,31 @@ impl PythonAssign {
     fn assign_to_identifier(&self,
                             vm: &mut VirtualMachine,
                             _: &Executors,
-                            target: &String,
+                            target: &str,
                             mapping: &OptionalMapping)
                             -> ExecutionResult {
-        let changes = vec![AnalysisItem::Identifier (target.clone())];
+        let changes = vec![AnalysisItem::Identifier (target.to_owned())];
 
         // todo get rid of clone
         let mapping = mapping.clone()
-            .augment(PathNode::Assignment(vm.current_node().clone(), target.clone()));
+            .augment(PathNode::Assignment(vm.current_node().clone(), target.to_owned()));
 
         let path = vm.current_path().clone();
 
         {
             let mut new_mapping = Mapping::new();
-            for &(ref path, ref address) in mapping.iter() {
-                if let &Some(ref address) = address {
-                    new_mapping.add_mapping(path.clone(), address.clone());
+            for &(ref path, ref address) in &mapping {
+                if let Some(ref address) = *address {
+                    new_mapping.add_mapping(path.clone(), *address);
                 }
             }
-            vm.store_identifier_change(AnalysisItem::Identifier(target.clone()), &path, &new_mapping);
+            vm.store_identifier_change(AnalysisItem::Identifier(target.to_owned()), &path, &new_mapping);
         }
         
 
         {
             let mut scope = vm.last_scope_mut();
-            scope.set_optional_mapping(target.clone(), path, mapping.clone());
+            scope.set_optional_mapping(target.to_owned(), path, mapping.clone());
         }
 
         let result_mapping = Mapping::simple(Path::empty(), vm.knowledge().constant("None"));

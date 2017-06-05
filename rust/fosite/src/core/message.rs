@@ -31,6 +31,7 @@ pub enum Message {
 }
 
 pub trait MessageContent: Send {
+    #[allow(ptr_arg)]
     fn hash(&self, source: &PathID) -> u64;
 
     fn print_warning_preamble(&self, sources: &Sources, node: PathID) {
@@ -50,14 +51,14 @@ pub trait MessageContent: Send {
     fn reduce_paths(&self, sources: &Sources, paths: &BTreeSet<Path>) -> BTreeSet<Path> {
         let mut result = BTreeSet::new();
 
-        for path in paths.iter() {
+        for path in paths {
             let mut new_path = Path::empty();
             let mut current_node: Option<&PathNode> = None;
             let mut current_col = 0;
 
-            for node in path.iter() {           
+            for node in path {           
                 if let Some(source_node) = node.get_location().last(){
-                    if let Some( &(_, col) ) = sources.get(&source_node) {
+                    if let Some( &(_, col) ) = sources.get(source_node) {
                         if col <= current_col {
                             if let Some(acc) = current_node {
                                 new_path.add_node(acc.clone());
@@ -86,13 +87,13 @@ pub trait MessageContent: Send {
     }
 
     fn print_path(&self, sources: &Sources, path: &Path, padding: &str) {
-        if path.len() != 0 {
-            for node in path.iter() {
+        if !path.is_empty() {
+            for node in path {
                 let row;
                 let col;
                 
                 if let Some(source_node) = node.get_location().last(){
-                    if let Some( &(pls1, pls2) ) = sources.get(&source_node) {
+                    if let Some( &(pls1, pls2) ) = sources.get(source_node) {
                         row = pls1;
                         col = pls2;
                     } else {
@@ -103,39 +104,39 @@ pub trait MessageContent: Send {
                 }
                 
 
-                match node {
-                    &PathNode::Condition(_, b, _) => {
+                match *node {
+                    PathNode::Condition(_, b, _) => {
                         let condition = if b == 0 { "true" } else { "false" };
                         println!("{}{} {} is {}",
                                  padding,
                                  "Condition at",
                                  Bold.paint(format!("row {}, column {}", row, col + 1)),
-                                 Bold.paint(format!("{}", condition)));
+                                 Bold.paint(condition));
                     }
-                    &PathNode::Loop(_) => {
+                    PathNode::Loop(_) => {
                         println!("{}Iteration of the loop at {}",
                                  padding,
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
-                    &PathNode::Assignment(_, ref name) => {
+                    PathNode::Assignment(_, ref name) => {
                         println!("{}Assignment to {} at {}",
                                  padding,
-                                 Bold.paint(format!("{}", name)),
+                                 Bold.paint(name),
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
-                    &PathNode::Return(_) => {
+                    PathNode::Return(_) => {
                         println!("{}{} {}",
                                  padding,
                                  "Return at",
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
-                    &PathNode::Element(_, _, _) => {
+                    PathNode::Element(_, _, _) => {
                         println!("{}{} {}",
                                  padding,
                                  "Element of the collection at",
                                  Bold.paint(format!("row {}, column {}", row, col + 1)));
                     }
-                    &PathNode::Frame(_, ref target, _, _) => {
+                    PathNode::Frame(_, ref target, _, _) => {
                         println!("{}Call to {} at {}",
                                  padding,
                                  Bold.paint(target.as_ref().unwrap()),

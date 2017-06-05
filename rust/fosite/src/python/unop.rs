@@ -12,11 +12,11 @@ impl UnOpExecutor for PythonUnOp {
 
         let mut result_mapping = Mapping::new();
 
-        for (path, address) in value_result.result.into_iter() {
+        for (path, address) in value_result.result {
             let t;
             {
                 let o = vm.get_object(&address);
-                t = o.get_extension().last().unwrap().clone();
+                t = *o.get_extension().last().unwrap();
             }
             
             let n = vm.object_of_type_pointer(&t);

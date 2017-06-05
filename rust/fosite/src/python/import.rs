@@ -7,8 +7,8 @@ pub struct PythonImport {
 impl ImportExecutor for PythonImport {
     fn execute(&self,
                env: Environment,
-               module_name: &String,
-               parts: &Vec<(String, String)>,
+               module_name: &str,
+               parts: &[(String, String)],
                into: &Option<String>)
                -> ExecutionResult {
 
@@ -17,17 +17,17 @@ impl ImportExecutor for PythonImport {
         let module = vm.retrieve_module(module_name);
 
         if let Some(module) = module {
-            let pointers = module.make_object(vm, parts.clone());
+            let pointers = module.make_object(vm, parts.to_owned());
 
             {
                 let mut scope;
                 let path = vm.current_path().clone();
-                if let &Some(ref into) = into {
+                if let Some(ref into) = *into {
                     // where should this thing go
                     let mut ptr = -1;
                     if let Some(existing) = vm.knowledge().get_type(into) {
                         // `into` is a typename, we're defining class attributes
-                        ptr = existing.clone();
+                        ptr = *existing;
                     } 
                     
                     if ptr < 0 {
@@ -51,7 +51,7 @@ impl ImportExecutor for PythonImport {
                 }
             }
 
-            vm.insert_module(module_name.clone(), module);
+            vm.insert_module(module_name.to_owned(), module);
         } 
 
         ExecutionResult {

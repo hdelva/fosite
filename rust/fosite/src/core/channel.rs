@@ -25,6 +25,13 @@ impl Channel {
     }
 }
 
+impl Default for Channel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 pub struct ChannelIterator<'a> {
     source: &'a Receiver<Message>,
 }

@@ -3,7 +3,7 @@ use core::*;
 pub struct PythonList {}
 
 impl ListExecutor for PythonList {
-    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+    fn execute(&self, env: Environment, content: &[GastNode] ) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let type_name = "list".to_owned();
@@ -16,7 +16,7 @@ impl ListExecutor for PythonList {
 pub struct PythonTuple {}
 
 impl SequenceExecutor for PythonTuple {
-    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+    fn execute(&self, env: Environment, content: &[GastNode] ) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let type_name = "tuple".to_owned();
@@ -29,7 +29,7 @@ impl SequenceExecutor for PythonTuple {
 pub struct PythonSet {}
 
 impl SetExecutor for PythonSet {
-    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+    fn execute(&self, env: Environment, content: &[GastNode] ) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let type_name = "set".to_owned();
@@ -42,7 +42,7 @@ impl SetExecutor for PythonSet {
 pub struct PythonDict {}
 
 impl DictExecutor for PythonDict {
-    fn execute(&self, env: Environment, content: &Vec<GastNode> ) -> ExecutionResult {
+    fn execute(&self, env: Environment, content: &[GastNode] ) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let dict_type = "dict".to_owned();
@@ -59,36 +59,32 @@ impl DictExecutor for PythonDict {
         let mut dependencies = Vec::new();
 
         for node in content {
-            match node.kind {
-                NodeType::Pair {ref first, ref second} => {
-                    let intermediate = vm.execute(executors, first);
-                    let mut chunk = CollectionChunk::empty();
+            if let NodeType::Pair {ref first, ref second} = node.kind {
+                let intermediate = vm.execute(executors, first);
+                let mut chunk = CollectionChunk::empty();
 
-                    for (path, address) in intermediate.result.into_iter(){
-                        let kind = vm.get_object(&address).get_extension().first().unwrap();
-                        let repr = Representant::new(address, *kind, Some(1), Some(1));
-                        chunk.add_representant(path, repr);    
-                    }
-                    
-                    key_chunks.push(chunk);
+                for (path, address) in intermediate.result{
+                    let kind = vm.get_object(&address).get_extension().first().unwrap();
+                    let repr = Representant::new(address, *kind, Some(1), Some(1));
+                    chunk.add_representant(path, repr);    
+                }
+                
+                key_chunks.push(chunk);
 
-                    let mut intermediate = vm.execute(executors, second);
-                    let mut chunk = CollectionChunk::empty();
+                let mut intermediate = vm.execute(executors, second);
+                let mut chunk = CollectionChunk::empty();
 
-                    for (path, address) in intermediate.result.into_iter(){
-                        let kind = vm.get_object(&address).get_extension().first().unwrap();
-                        let repr = Representant::new(address, *kind, Some(1), Some(1));
-                        chunk.add_representant(path, repr);    
-                    }
-                    
-                    changes.append(&mut intermediate.changes);
-                    dependencies.append(&mut intermediate.dependencies);
+                for (path, address) in intermediate.result{
+                    let kind = vm.get_object(&address).get_extension().first().unwrap();
+                    let repr = Representant::new(address, *kind, Some(1), Some(1));
+                    chunk.add_representant(path, repr);    
+                }
+                
+                changes.append(&mut intermediate.changes);
+                dependencies.append(&mut intermediate.dependencies);
 
-                    value_chunks.push(chunk);
-                },
-                _ => ()
-            } 
-            
+                value_chunks.push(chunk);
+            }
         }
 
         {
@@ -142,7 +138,7 @@ impl StringExecutor for PythonString {
         let Environment { mut vm, .. } = env;
         let type_name = "str".to_owned();
 
-        let string_type = vm.knowledge().get_type(&type_name).unwrap().clone();
+        let string_type = *vm.knowledge().get_type(&type_name).unwrap();
 
         let string_ptr = vm.object_of_type(&type_name);
         let character_ptr = vm.object_of_type(&type_name);
@@ -216,12 +212,12 @@ fn make_collection(
     vm: &mut VirtualMachine, 
     executors: &Executors, 
     obj_ptr: Pointer,
-    content: &Vec<GastNode>) 
+    content: &[GastNode]) 
     -> ExecutionResult {
 
     if let Some(node) = content.first() {
-        match &node.kind {
-            &NodeType::Map { .. } => {
+        match node.kind {
+            NodeType::Map { .. } => {
                 collection_from_comprehension(vm, executors, obj_ptr, node)
             },
             _ => {
@@ -254,13 +250,13 @@ fn collection_from_comprehension(
     let dependencies = content_result.dependencies;
 
     let mut chunk = CollectionChunk::empty();
-    for (path, address) in content_result.result.into_iter() {
+    for (path, address) in content_result.result {
         let obj = vm.get_object(&address);
 
         // todo, replace current node with the node of the generator
-        for (el_path, el_address) in obj.get_any_element(&vm.current_node()).into_iter() {
+        for (el_path, el_address) in obj.get_any_element(vm.current_node()) {
             let mut new_path = path.clone();
-            for node in el_path.into_iter() {
+            for node in el_path {
                 new_path.add_node(node);
             }
 
@@ -275,8 +271,7 @@ fn collection_from_comprehension(
         obj.define_elements(vec!(chunk), Path::empty());
     }
 
-    // disregard the return value
-    let _ = vm.merge_function(&changes);
+    vm.merge_function(&changes);
 
     vm.pop_path();
 
@@ -294,7 +289,7 @@ fn collection_from_literal(
     vm: &mut VirtualMachine, 
     executors: &Executors, 
     obj_ptr: Pointer,
-    content: &Vec<GastNode>) 
+    content: &[GastNode]) 
     -> ExecutionResult {
 
     let mut changes = Vec::new();
@@ -306,7 +301,7 @@ fn collection_from_literal(
 
         let mut chunk = CollectionChunk::empty();
 
-        for (path, address) in intermediate.result.into_iter(){
+        for (path, address) in intermediate.result{
             let kind = vm.get_object(&address).get_extension().first().unwrap();
             let repr = Representant::new(address, *kind, Some(1), Some(1));
             chunk.add_representant(path, repr);    

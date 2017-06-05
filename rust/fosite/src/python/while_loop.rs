@@ -25,18 +25,18 @@ impl WhileExecutor for PythonWhile {
 
         let mut no = Vec::new();
 
-        for change in test_result.changes.into_iter() {
+        for change in test_result.changes {
             total_changes.push(change);
         }
 
-        for dependency in test_result.dependencies.into_iter() {
+        for dependency in test_result.dependencies {
             total_dependencies.push(dependency);
         }
 
         let f = vm.knowledge().constant(&"False".to_owned());
 
         // split up the test result into yes/no/maybe
-        for (path, address) in test_result.result.into_iter() {
+        for (path, address) in test_result.result {
             if address == f {
                 no.push(path);
             }
@@ -93,7 +93,7 @@ impl PythonWhile {
         // it's only an actual problem if things get merged into it
         let mut real_problem = false;
 
-        for (identifier, addresses) in watch.identifiers_before.into_iter() {
+        for (identifier, addresses) in watch.identifiers_before {
             // me too thanks
             let mut same = BTreeSet::new();
 
@@ -114,17 +114,17 @@ impl PythonWhile {
 
             // quit early when there's something that hasn't changed
             // 
-            if identifier_invariants.len() == 0 {
+            if identifier_invariants.is_empty() {
                 return;
             }
 
-            for (address, identifier_paths) in identifier_invariants.into_iter() {
+            for (address, identifier_paths) in identifier_invariants {
                 if let Some(object_paths) = watch.objects_changed.get(&address) {
                     // address hasn't changed 
                     // but the object at that address has changed under some conditions 
                     for identifier_path in identifier_paths {
                         let mut invariants = possible_object_invariants(&identifier_path, object_paths);
-                        if invariants.len() > 0 {
+                        if !invariants.is_empty() {
                             real_problem = true;
                         }
                         same.append(&mut invariants);
@@ -141,8 +141,8 @@ impl PythonWhile {
 
             let mut new_problems = Vec::new();
 
-            for problem in problems.iter() {
-                for new_problem in same.iter() {
+            for problem in &problems {
+                for new_problem in &same {
                     if problem.mergeable(new_problem) {
                         let mut new = problem.clone();
                         new.merge_into(new_problem.clone());
@@ -160,7 +160,7 @@ impl PythonWhile {
                 source: vm.current_node().clone(),
                 content: Box::new(content),
             };
-            &CHANNEL.publish(message);
+            CHANNEL.publish(message);
         }
     }
 }
@@ -170,11 +170,11 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
     let mut all_changes = BTreeSet::new();
     let mut all_reversals = BTreeSet::new();
 
-    for &(ref path, _) in changes.iter() {
+    for &(ref path, _) in changes {
         all_changes.insert(path.clone());
     }
 
-    for &(ref path, _) in changes.iter(){
+    for &(ref path, _) in changes {
         let change_reversals = path.reverse();
 
         for reversal in change_reversals.into_iter().rev() {
@@ -182,7 +182,7 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
         }
     }
 
-    for &(ref path, ref address) in changes.iter(){
+    for &(ref path, ref address) in changes {
         let mut change_reversals = path.reverse();
 
         if old.contains(address) {
@@ -191,7 +191,7 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
 
         'outer:
         for reversal in change_reversals.into_iter().rev() {
-            for existing in all_reversals.iter() {
+            for existing in &all_reversals {
                 if existing.contains(&reversal) && !reversal.contains(existing) {
                     continue 'outer;
                 } 
@@ -220,7 +220,7 @@ fn possible_identifier_invariants(old: &HashSet<Pointer>, changes: &Mapping) -> 
     relevant_reversals
 }
 
-fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeSet<Path> {
+fn possible_object_invariants(parent_path: &Path, changes: &[Path]) -> BTreeSet<Path> {
     // remove obsolete entries first, i.e.
     // (1, 5) and (1, 5, 9)
     let mut all_reversals = BTreeSet::new();
@@ -234,14 +234,14 @@ fn possible_object_invariants(parent_path: &Path, changes: &Vec<Path>) -> BTreeS
 
     let mut possibilities = BTreeSet::new();
     'outer:
-    for reversal in all_reversals.iter() {
+    for reversal in &all_reversals {
         for change in changes {
             if reversal.contains(change) {
                 continue 'outer;
             }
         }
 
-        for existing in all_reversals.iter() {
+        for existing in &all_reversals {
             if existing.contains(reversal) && !reversal.contains(existing) {
                 continue 'outer;
             } 

@@ -45,7 +45,7 @@ impl MessageContent for ForLoopChange {
         println!("  This can have unexpected consequences");
         println!("  In the following cases:");
 
-        if self.paths.first().unwrap().len() == 0 {
+        if self.paths.first().unwrap().is_empty() {
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         } else {

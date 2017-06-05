@@ -47,7 +47,7 @@ impl MessageContent for NoReturn {
         println!("  Python will pretend a None value was returned");
         println!("  In the following cases:");
 
-        if self.paths.len() == 0 || self.paths.iter().next().unwrap().len() == 0{
+        if !self.paths.is_empty() || self.paths.iter().next().unwrap().is_empty() {
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         } else {

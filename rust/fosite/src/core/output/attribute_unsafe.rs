@@ -42,8 +42,8 @@ impl MessageContent for AttributeUnsafe {
 
         let mut fingerprint = &vec!(0);
 
-        for path in self.paths.iter() {
-            for node in path.iter() {
+        for path in &self.paths {
+            for node in path {
                 if node.get_location() > fingerprint {
                     fingerprint = node.get_location()
                 }
@@ -64,7 +64,7 @@ impl MessageContent for AttributeUnsafe {
                  Bold.paint(&self.attribute));
         println!("  In the following cases:");
 
-        if self.paths.len() == 0 {
+        if !self.paths.is_empty() {
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         }

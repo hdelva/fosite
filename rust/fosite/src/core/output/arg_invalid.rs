@@ -52,11 +52,11 @@ impl MessageContent for ArgInvalid {
             Bold.paint(&self.permitted));
         println!("  It has an invalid type in the following cases:");
 
-        for &(ref path, ref t) in self.actual.iter() {
+        for &(ref path, ref t) in &self.actual {
             println!("    Type {} in the following case:",
                 Bold.paint(&t));
 
-            self.print_path(sources, &path, "      ");
+            self.print_path(sources, path, "      ");
             println!("");
         }
     }

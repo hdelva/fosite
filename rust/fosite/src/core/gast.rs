@@ -134,24 +134,24 @@ pub enum NodeType {
 
 impl NodeType {
     fn to_string(&self) -> String {
-        match self {
-            &NodeType::Identifier { ref name } => name.clone(),
-            &NodeType::Attribute { ref parent, ref attribute } => {
+        match *self {
+            NodeType::Identifier { ref name } => name.clone(),
+            NodeType::Attribute { ref parent, ref attribute } => {
                 format!("{}.{}", parent.kind.to_string(), attribute)
             }
-            &NodeType::Index { ref target, ref index } => {
+            NodeType::Index { ref target, ref index } => {
                 format!("{}[{}]", target.to_string(), index.to_string())
             }
-            &NodeType::Int {ref value} => {
-                format!("{}", value)
+            NodeType::Int {ref value} => {
+                value.to_string()
             }
-            &NodeType::Float {ref value} => {
-                format!("{}", value)
+            NodeType::Float {ref value} => {
+                value.to_string()
             }
-            &NodeType::String {ref value} => {
-                format!("{}", value)
+            NodeType::String {ref value} => {
+                value.clone()
             }
-            &NodeType::Call {ref target, ref args, ..} => {
+            NodeType::Call {ref target, ref args, ..} => {
                 let pls: Vec<String> = args.iter().map(|x| x.to_string()).collect();
                 // todo add kwargs
                 format!("{}({})", target.to_string(), pls.join(", "))
@@ -161,9 +161,9 @@ impl NodeType {
     }
 
     pub fn to_analysis_item(&self) -> Option<AnalysisItem> {
-        match self {
-            &NodeType::Identifier { ref name } => Some(AnalysisItem::Identifier(name.clone())),
-            &NodeType::Attribute { ref parent, ref attribute } => {
+        match *self {
+            NodeType::Identifier { ref name } => Some(AnalysisItem::Identifier(name.clone())),
+            NodeType::Attribute { ref parent, ref attribute } => {
                 let parent_item = parent.as_ref().kind.to_analysis_item();
                 if let Some(item) = parent_item {
                     Some(AnalysisItem::Attribute(Box::new(item), attribute.clone()))
@@ -226,13 +226,13 @@ pub fn build(node: &Json) -> GastNode {
 
     if let (Some(line), Some(col)) = (line, col) {
         let message = Message::Input {
-            source: id.clone(),
+            source: id,
             line: line.as_i64().unwrap() as i16,
             col: col.as_i64().unwrap() as i16,
             node: node.clone(),
         };
 
-        &CHANNEL.publish(message);
+        CHANNEL.publish(message);
     }
 
     node

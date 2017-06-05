@@ -39,8 +39,8 @@ impl KnowledgeBase {
         }
     }
 
-    pub fn add_constant(&mut self, name: &String, address: &Pointer) {
-        self.constants.insert(name.clone(), address.clone());
+    pub fn add_constant(&mut self, name: &str, address: &Pointer) {
+        self.constants.insert(name.to_owned(), address.clone());
     }
 
     pub fn constant(&self, name: &str) -> Pointer {
@@ -52,7 +52,7 @@ impl KnowledgeBase {
         self.constants.get(name).unwrap().clone()
     }
 
-    pub fn operation_supported(&self, type_name: &String, operation: &String) -> bool {
+    pub fn operation_supported(&self, type_name: &str, operation: &str) -> bool {
         match self.arithmetic_types.get(type_name) {
             Some(ops) => ops.contains(operation),
             _ => false,
@@ -78,7 +78,7 @@ impl KnowledgeBase {
         self.types.insert(name, address);
     }
 
-    pub fn get_type(&self, name: &String) -> Option<&Pointer> {
+    pub fn get_type(&self, name: &str) -> Option<&Pointer> {
         self.types.get_by_first(name)
     }
 

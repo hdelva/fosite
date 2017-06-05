@@ -33,6 +33,12 @@ pub struct VirtualMachine {
     modules: HashMap<String, Module>,
 }
 
+impl Default for VirtualMachine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VirtualMachine {
     pub fn new() -> VirtualMachine {
         let mut path = Path::empty();
@@ -57,7 +63,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn retrieve_module(&mut self, name: &String) -> Option<Module> {
+    pub fn retrieve_module(&mut self, name: &str) -> Option<Module> {
         self.modules.remove(name)
     }
 
@@ -82,7 +88,7 @@ impl VirtualMachine {
         let pointer = self.object_of_type(&"method".to_owned());
         self.set_callable(pointer, callable);
 
-        let parent_ptr = self.knowledge().get_type(&tpe).unwrap().clone();
+        let parent_ptr = *self.knowledge().get_type(&tpe).unwrap();
 
         let mapping = Mapping::simple(Path::empty(), pointer);
 
@@ -155,7 +161,7 @@ impl VirtualMachine {
                 analysis = Some(callable(env, args, kwargs));
             }
             // give the callable back back to the VM
-            self.callables.insert(address.clone(), callable);
+            self.callables.insert(*address, callable);
         } else {
             analysis = None;
         }
@@ -167,7 +173,7 @@ impl VirtualMachine {
         let closure = self.scopes.pop().unwrap();
 
         // put the closure back into the VM 
-        self.closures.insert(address.clone(), closure);
+        self.closures.insert(*address, closure);
 
         // restore the previous function scopes if necessary
         if b {
@@ -252,15 +258,15 @@ impl VirtualMachine {
     }
 
     pub fn filter(&mut self, input: ExecutionResult) -> ExecutionResult {
-        if self.branch_restrictions.len() == 0 {
+        if self.branch_restrictions.is_empty() {
             return input;
         }
 
         let mut new_mapping = Mapping::new();
 
         'outer:
-        for (path, address) in input.result.into_iter() {
-            for restriction_set in self.branch_restrictions.iter() {
+        for (path, address) in input.result {
+            for restriction_set in &self.branch_restrictions {
                 for restriction in restriction_set.iter() {
                     if path.contains(restriction) {
                         continue 'outer;
@@ -305,7 +311,7 @@ impl VirtualMachine {
 
     pub fn function(&mut self,
                  executors: &Executors,
-                 name: &String,
+                 name: &str,
                  args: &[GastNode],
                  kw_args: &[GastNode],
                  vararg: &Option<String>,
@@ -323,7 +329,7 @@ impl VirtualMachine {
     pub fn binop(&mut self,
                  executors: &Executors,
                  left: &GastNode,
-                 op: &String,
+                 op: &str,
                  right: &GastNode)
                  -> ExecutionResult {
         match executors.binop {
@@ -338,7 +344,7 @@ impl VirtualMachine {
     pub fn boolop(&mut self,
                  executors: &Executors,
                  left: &GastNode,
-                 op: &String,
+                 op: &str,
                  right: &GastNode)
                  -> ExecutionResult {
         match executors.boolop {
@@ -393,7 +399,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn block(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+    pub fn block(&mut self, executors: &Executors, content: &[GastNode]) -> ExecutionResult {
         match executors.block {
             Some(ref block) => {
                 let env = Environment::new(self, executors);
@@ -403,7 +409,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn list(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+    pub fn list(&mut self, executors: &Executors, content: &[GastNode]) -> ExecutionResult {
         match executors.list {
             Some(ref list) => {
                 let env = Environment::new(self, executors);
@@ -413,7 +419,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn set(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+    pub fn set(&mut self, executors: &Executors, content: &[GastNode]) -> ExecutionResult {
         match executors.set {
             Some(ref set) => {
                 let env = Environment::new(self, executors);
@@ -423,7 +429,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn dict(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+    pub fn dict(&mut self, executors: &Executors, content: &[GastNode]) -> ExecutionResult {
         match executors.dict {
             Some(ref dict) => {
                 let env = Environment::new(self, executors);
@@ -433,7 +439,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn sequence(&mut self, executors: &Executors, content: &Vec<GastNode>) -> ExecutionResult {
+    pub fn sequence(&mut self, executors: &Executors, content: &[GastNode]) -> ExecutionResult {
         match executors.sequence {
             Some(ref sequence) => {
                 let env = Environment::new(self, executors);
@@ -443,7 +449,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn load_identifier(&mut self, executors: &Executors, name: &String) -> ExecutionResult {
+    pub fn load_identifier(&mut self, executors: &Executors, name: &str) -> ExecutionResult {
         match executors.identifier {
             Some(ref identifier) => {
                 let env = Environment::new(self, executors);
@@ -456,7 +462,7 @@ impl VirtualMachine {
     pub fn load_attribute(&mut self,
                           executors: &Executors,
                           parent: &GastNode,
-                          name: &String)
+                          name: &str)
                           -> ExecutionResult {
         match executors.attribute {
             Some(ref attribute) => {
@@ -519,8 +525,8 @@ impl VirtualMachine {
 
     pub fn declaration(&mut self,
                        executors: &Executors,
-                       name: &String,
-                       kind: &String)
+                       name: &str,
+                       kind: &str)
                        -> ExecutionResult {
         match executors.declaration {
             Some(ref declaration) => {
@@ -533,8 +539,8 @@ impl VirtualMachine {
 
     pub fn import(&mut self,
                        executors: &Executors,
-                       module: &String,
-                       parts: &Vec<(String, String)>,
+                       module: &str,
+                       parts: &[(String, String)],
                        into: &Option<String>)
                        -> ExecutionResult {
         match executors.import {
@@ -548,7 +554,7 @@ impl VirtualMachine {
 
     pub fn assign(&mut self,
                   executors: &Executors,
-                  targets: &Vec<GastNode>,
+                  targets: &[GastNode],
                   value: &GastNode)
                   -> ExecutionResult {
         match executors.assign {
@@ -675,95 +681,95 @@ impl VirtualMachine {
     }
 
     pub fn execute(&mut self, executors: &Executors, node: &GastNode) -> ExecutionResult {
-        let ref id = node.id;
-        let ref kind = node.kind;
+        let id = &node.id;
+        let kind = &node.kind;
 
         let mut current = self.nodes.pop().unwrap();
-        current.push(id.clone());
+        current.push(*id);
         self.nodes.push(current);
 
-        let result = match kind {
-            &NodeType::Boolean { ref value } => self.boolean(executors, *value),
-            &NodeType::String { .. } => self.string(executors),
-            &NodeType::Int { .. } => self.int(executors),
-            &NodeType::Float { .. } => self.float(executors),
-            &NodeType::Nil {} => self.load_identifier(executors, &"None".to_owned()),
-            &NodeType::BinOp { ref left, ref right, ref op, .. } => {
+        let result = match *kind {
+            NodeType::Boolean { ref value } => self.boolean(executors, *value),
+            NodeType::String { .. } => self.string(executors),
+            NodeType::Int { .. } => self.int(executors),
+            NodeType::Float { .. } => self.float(executors),
+            NodeType::Nil {} => self.load_identifier(executors, &"None".to_owned()),
+            NodeType::BinOp { ref left, ref right, ref op, .. } => {
                 self.binop(executors, left, op, right)
             }
-            &NodeType::BoolOp { ref left, ref right, ref op, .. } => {
+            NodeType::BoolOp { ref left, ref right, ref op, .. } => {
                 self.boolop(executors, left, op, right)
             }
-            &NodeType::If { ref test, ref body, ref or_else } => {
+            NodeType::If { ref test, ref body, ref or_else } => {
                 self.conditional(executors, test, body, or_else)
             }
-            &NodeType::Block { ref content } => self.block(executors, content),
-            &NodeType::Identifier { ref name } => self.load_identifier(executors, name),
-            &NodeType::Attribute { ref parent, ref attribute } => {
+            NodeType::Block { ref content } => self.block(executors, content),
+            NodeType::Identifier { ref name } => self.load_identifier(executors, name),
+            NodeType::Attribute { ref parent, ref attribute } => {
                 self.load_attribute(executors, parent, attribute)
             }
-            &NodeType::Declaration { ref id, ref kind } => self.declaration(executors, id, kind),
-            &NodeType::Assignment { ref targets, ref value } => {
+            NodeType::Declaration { ref id, ref kind } => self.declaration(executors, id, kind),
+            NodeType::Assignment { ref targets, ref value } => {
                 self.assign(executors, targets, value)
             }
-            &NodeType::While { ref test, ref body } => {
+            NodeType::While { ref test, ref body } => {
                 self.while_loop(executors, test, body)
             }
-            &NodeType::Break {  } => {
+            NodeType::Break {  } => {
                 self.break_loop(executors)
             }
-            &NodeType::Continue {  } => {
+            NodeType::Continue {  } => {
                 self.continue_loop(executors)
             }
-            &NodeType::List { ref content } => {
+            NodeType::List { ref content } => {
                 self.list(executors, content)
             }
-            &NodeType::Set { ref content } => {
+            NodeType::Set { ref content } => {
                 self.set(executors, content)
             }
-            &NodeType::Sequence {ref content } => {
+            NodeType::Sequence {ref content } => {
                 self.sequence(executors, content)
             }
-            &NodeType::Index {ref target, ref index} => {
+            NodeType::Index {ref target, ref index} => {
                 self.index(executors, target, index)
             }
-            &NodeType::Dict {ref content} => {
+            NodeType::Dict {ref content} => {
                 self.dict(executors, content)
             }
-            &NodeType::Generator {ref source, ref target} => {
+            NodeType::Generator {ref source, ref target} => {
                 self.generator(executors, source, target)
             }
-            &NodeType::Filter {ref source, ref condition} => {
+            NodeType::Filter {ref source, ref condition} => {
                 self.filter_generator(executors, source, condition)
             }
-            &NodeType::Map {ref source, ref op} => {
+            NodeType::Map {ref source, ref op} => {
                 self.map(executors, source, op)
             }
-            &NodeType::AndThen {ref first, ref second} => {
+            NodeType::AndThen {ref first, ref second} => {
                 self.andthen(executors, first, second)
             }
-            &NodeType::ForEach {ref before, ref body} => {
+            NodeType::ForEach {ref before, ref body} => {
                 self.foreach(executors, before, body)
             }
-            &NodeType::Call {ref target, ref args, ref kwargs} => {
+            NodeType::Call {ref target, ref args, ref kwargs} => {
                 self._call(executors, target, args, kwargs)
             }
-            &NodeType::Import {ref module, ref parts, ref into} => {
+            NodeType::Import {ref module, ref parts, ref into} => {
                 self.import(executors, module, parts, into)
             }
-            &NodeType::Negate {ref value} => {
+            NodeType::Negate {ref value} => {
                 self.negate(executors, value)
             }
-            &NodeType::UnOp {ref value, ..} => {
+            NodeType::UnOp {ref value, ..} => {
                 self.unop(executors, value)
             }
-            &NodeType::Slice {ref target, ref lower, ref upper} => {
+            NodeType::Slice {ref target, ref lower, ref upper} => {
                 self.slice(executors, target, lower, upper)
             }
-            &NodeType::FunctionDef {ref name, ref body, ref args, ref kw_args, ref vararg, ref kw_vararg} => {
+            NodeType::FunctionDef {ref name, ref body, ref args, ref kw_args, ref vararg, ref kw_vararg} => {
                 self.function(executors, name, args, kw_args, vararg, kw_vararg, body)
             }
-            &NodeType::Return {ref value} => {
+            NodeType::Return {ref value} => {
                 self.ret(executors, value)
             }
             _ => panic!("Unsupported Operation\n{:?}", kind),
@@ -777,17 +783,17 @@ impl VirtualMachine {
         self.filter(result)
     }
 
-    pub fn next_branch(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn next_branch(&mut self, changes: &[AnalysisItem]) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object(ref address) = change {
+            if let AnalysisItem::Object(ref address) = *change {
                 let mut object = self.memory.get_object_mut(address);
                 object.next_branch();
-            } else if let &AnalysisItem::Identifier( _ ) = change {
+            } else if let AnalysisItem::Identifier( _ ) = *change {
                 identifier_changed = true;
             }
         }
@@ -797,17 +803,17 @@ impl VirtualMachine {
         }
     }
 
-    pub fn reset_branch_counter(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn reset_branch_counter(&mut self, changes: &[AnalysisItem]) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object(ref address) = change {
+            if let AnalysisItem::Object(ref address) = *change {
                 let mut object = self.memory.get_object_mut(address);
                 object.reset_branch_counter();
-            } else if let &AnalysisItem::Identifier( _ ) = change {
+            } else if let AnalysisItem::Identifier( _ ) = *change {
                 identifier_changed = true;
             }
         }
@@ -817,17 +823,17 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_branches(&mut self, changes: &Vec<AnalysisItem>, hide_as_loop: Vec<Option<bool>>, restrictions: Vec<Vec<Path>>) {
+    pub fn merge_branches(&mut self, changes: &[AnalysisItem], hide_as_loop: Vec<Option<bool>>, restrictions: Vec<Vec<Path>>) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object (ref address) = change {
+            if let AnalysisItem::Object (ref address) = *change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_branches(hide_as_loop.clone(), &restrictions);
-            } else if let &AnalysisItem::Identifier ( _ ) = change {
+            } else if let AnalysisItem::Identifier ( _ ) = *change {
                 identifier_changed = true;
             }
         }
@@ -837,17 +843,17 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_loop(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn merge_loop(&mut self, changes: &[AnalysisItem]) {
         let mut identifier_changed = false;
 
         let set: HashSet<_> = changes.iter().collect(); // dedup
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object (ref address) = change {
+            if let AnalysisItem::Object (ref address) = *change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_loop();
-            } else if let &AnalysisItem::Identifier ( _ ) = change {
+            } else if let AnalysisItem::Identifier ( _ ) = *change {
                 identifier_changed = true;
             }
         }
@@ -857,17 +863,17 @@ impl VirtualMachine {
         }
     }
 
-    pub fn merge_function(&mut self, changes: &Vec<AnalysisItem>) {
+    pub fn merge_function(&mut self, changes: &[AnalysisItem]) {
         let mut identifier_changed = false;
         
         let set: HashSet<_> = changes.iter().collect(); // dedup
         let changes: Vec<_> = set.into_iter().collect();
 
         for change in changes {
-            if let &AnalysisItem::Object (ref address) = change {
+            if let AnalysisItem::Object (ref address) = *change {
                 let mut object = self.memory.get_object_mut(address);
                 object.merge_function();
-            } else if let &AnalysisItem::Identifier ( _ ) = change {
+            } else if let AnalysisItem::Identifier ( _ ) = *change {
                 identifier_changed = true;
             }
         }
@@ -879,14 +885,14 @@ impl VirtualMachine {
         //return self.scopes.pop().unwrap().discard_function();
     }
 
-    pub fn object_of_type(&mut self, type_name: &String) -> Pointer {
+    pub fn object_of_type(&mut self, type_name: &str) -> Pointer {
         let pointer = self.memory.new_object();
         let object = self.memory.get_object_mut(&pointer);
-        let type_pointer = self.knowledge_base.get_type(&type_name);
+        let type_pointer = self.knowledge_base.get_type(type_name);
 
         match type_pointer {
             Some(address) => {
-                object.extend(address.clone());
+                object.extend(*address);
             }
             _ => panic!("There is no type with name {}", type_name),
         }
@@ -903,11 +909,11 @@ impl VirtualMachine {
     }
 
     // todo, implement more generic
-    pub fn declare_new_constant(&mut self, name: &String, tpe: &String) -> ExecutionResult {
+    pub fn declare_new_constant(&mut self, name: &str, tpe: &str) -> ExecutionResult {
         let pointer = self.object_of_type(tpe);
         let mut scope = self.scopes.last_mut().unwrap();
         let mapping = Mapping::simple(Path::empty(), pointer);
-        scope.set_constant(name.clone(),
+        scope.set_constant(name.to_owned(),
                            self.paths.last().unwrap().clone(),
                            mapping.clone());
         self.knowledge_base.add_constant(name, &pointer);
@@ -916,13 +922,13 @@ impl VirtualMachine {
         ExecutionResult {
             flow: FlowControl::Continue,
             dependencies: vec![],
-            changes: vec![AnalysisItem::Identifier (name.clone())],
+            changes: vec![AnalysisItem::Identifier (name.to_owned())],
             result: result,
         }
     }
 
     // todo, implement more generic
-    pub fn declare_simple_type(&mut self, name: &String) {
+    pub fn declare_simple_type(&mut self, name: &str) {
         let pointer = self.memory.new_object();
         {
             let mut object = self.memory.get_object_mut(&pointer);
@@ -930,15 +936,15 @@ impl VirtualMachine {
         }
         let mapping = Mapping::simple(Path::empty(), pointer);
         let mut scope = self.scopes.last_mut().unwrap();
-        scope.set_mapping(name.clone(),
+        scope.set_mapping(name.to_owned(),
                           self.paths.last().unwrap().clone(),
                           mapping.clone());
-        self.knowledge_base.add_type(name.clone(), pointer);
+        self.knowledge_base.add_type(name.to_owned(), pointer);
     }
 
-    pub fn declare_sub_type(&mut self, executors: &Executors, name: &String, parent: &String) {
+    pub fn declare_sub_type(&mut self, executors: &Executors, name: &str, parent: &str) {
         let result = self.load_identifier(executors, parent).result;
-        let &(_, ref parent_pointer) = result.iter().next().unwrap();
+        let &(_, ref parent_pointer) = result._iter().next().unwrap();
 
         let new_pointer = self.memory.new_object();
         {
@@ -949,11 +955,11 @@ impl VirtualMachine {
 
         let mapping = Mapping::simple(Path::empty(), new_pointer);
         let mut scope = self.scopes.last_mut().unwrap();
-        scope.set_mapping(name.clone(),
+        scope.set_mapping(name.to_owned(),
                           self.paths.last().unwrap().clone(),
                           mapping.clone());
 
-        self.knowledge_base.add_type(name.clone(), new_pointer);
+        self.knowledge_base.add_type(name.to_owned(), new_pointer);
     }
 
     pub fn knowledge_base(&mut self) -> &mut KnowledgeBase {
@@ -972,7 +978,7 @@ impl VirtualMachine {
         self.memory.get_object_mut(address)
     }
 
-    pub fn is_subtype(&self, type_name1: &String, type_name2: &String) -> bool {
+    pub fn is_subtype(&self, type_name1: &str, type_name2: &str) -> bool {
         if type_name1 == type_name2 {
             return true;
         }
@@ -981,8 +987,8 @@ impl VirtualMachine {
         self.is_instance(type_pointer1.unwrap(), type_name2)
     }
 
-    pub fn is_instance(&self, object: &Pointer, type_name: &String) -> bool {
-        let type_pointer = self.knowledge_base.get_type(&type_name);
+    pub fn is_instance(&self, object: &Pointer, type_name: &str) -> bool {
+        let type_pointer = self.knowledge_base.get_type(type_name);
         
         self.ancestors(object).contains(type_pointer.unwrap())
     }
@@ -995,7 +1001,7 @@ impl VirtualMachine {
         let types = object.get_extension();
 
         for tpe in types {
-            result.push(tpe.clone());
+            result.push(*tpe);
             let mut intermediate = self.ancestors(tpe).clone();
             result.append(&mut intermediate);
         }
@@ -1004,8 +1010,8 @@ impl VirtualMachine {
     }
 
     pub fn common_ancestor(&self, first: &Pointer, second: &Pointer) -> BTreeSet<Pointer> {
-        let first_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(first).into_iter());
-        let second_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(second).into_iter());
+        let first_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(first));
+        let second_ancestors: BTreeSet<_> = BTreeSet::from_iter(self.ancestors(second));
 
         &first_ancestors & &second_ancestors
     }

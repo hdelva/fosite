@@ -62,14 +62,14 @@ impl MessageContent for BinOpInvalid {
             println!("    Left side has type {}", left_type);
             println!("    In the following cases:");
 
-            if left_paths.iter().next().unwrap().len() == 0 {
+            if left_paths.iter().next().unwrap().is_empty() {
                 println!("      {}", Red.bold().paint("Always"));
                 println!("");
             }
 
             for path in left_paths.iter() {
             //for path in self.reduce_paths(sources, &left_paths) {
-                self.print_path(sources, &path, "      ");
+                self.print_path(sources, path, "      ");
                 println!("");
             }
 
@@ -77,14 +77,14 @@ impl MessageContent for BinOpInvalid {
             println!("    Right side has type {}", right_type);
             println!("    In the following cases:");
 
-            if right_paths.iter().next().unwrap().len() == 0 {
+            if right_paths.iter().next().unwrap().is_empty() {
                 println!("      {}", Red.bold().paint("Always"));
                 println!("");
             }
 
             for path in right_paths.iter() {
             //for path in self.reduce_paths(sources, &right_paths) {
-                self.print_path(sources, &path, "      ");
+                self.print_path(sources, path, "      ");
                 println!("");
             }
         }

@@ -47,11 +47,11 @@ impl MessageContent for IdentifierInvalid {
     }
 
     fn print_message(&self, sources: &Sources, nodes: &Nodes, node: PathID) {
-        let source_node = node.last().unwrap().clone();
+        let source_node = *node.last().unwrap();
         let node_type = nodes.get(&source_node).unwrap();
 
-        match &node_type.kind {
-            &NodeType::Identifier {..} => (),
+        match node_type.kind {
+            NodeType::Identifier {..} => (),
             _ => return
         }
 
@@ -62,7 +62,7 @@ impl MessageContent for IdentifierInvalid {
 
         let relevant_paths = self.reduce_paths(sources, &self.paths);
 
-        if relevant_paths.len() == 0 {
+        if !relevant_paths.is_empty() {
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         }

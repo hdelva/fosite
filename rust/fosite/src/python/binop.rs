@@ -10,7 +10,7 @@ impl BinOpExecutor for PythonBinOp {
     fn execute(&self,
                env: Environment,
                left: &GastNode,
-               op: &String,
+               op: &str,
                right: &GastNode)
                -> ExecutionResult {
         let mut total_changes = Vec::new();
@@ -31,8 +31,8 @@ impl BinOpExecutor for PythonBinOp {
 
         let mut error = BTreeMap::new();
 
-        for &(ref left_path, ref left_address) in left_mapping.iter() {
-            for &(ref right_path, ref right_address) in right_mapping.iter() {
+        for &(ref left_path, ref left_address) in &left_mapping {
+            for &(ref right_path, ref right_address) in &right_mapping {
                 if !left_path.mergeable(right_path) {
                     continue;
                 }
@@ -49,17 +49,17 @@ impl BinOpExecutor for PythonBinOp {
                 let mut ancestor_name = "None".to_owned();
 
                 for ancestor in vm.common_ancestor(left_address, right_address).iter().rev() {
-                    ancestor_name = vm.knowledge().get_type_name(&ancestor).clone();
+                    ancestor_name = vm.knowledge().get_type_name(ancestor).clone();
                     if vm.knowledge().operation_supported(&ancestor_name, op) {
                         break;
                     }
                 }
 
                 // multiplying sequences with an integer is an annoying special case
-                let tuple_type = vm.knowledge().get_type(&"tuple".to_owned()).unwrap().clone();  
-                let list_type = vm.knowledge().get_type(&"list".to_owned()).unwrap().clone();  
-                let string_type = vm.knowledge().get_type(&"str".to_owned()).unwrap().clone();  
-                let int_type = vm.knowledge().get_type(&"int".to_owned()).unwrap().clone();    
+                let tuple_type = *vm.knowledge().get_type(&"tuple".to_owned()).unwrap();  
+                let list_type = *vm.knowledge().get_type(&"list".to_owned()).unwrap(); 
+                let string_type = *vm.knowledge().get_type(&"str".to_owned()).unwrap(); 
+                let int_type = *vm.knowledge().get_type(&"int".to_owned()).unwrap();
 
                 let left_ancestors = vm.ancestors(left_address);
                 let right_ancestors = vm.ancestors(right_address);
@@ -86,10 +86,10 @@ impl BinOpExecutor for PythonBinOp {
 
                     // + for concatenation
                     // sets use - for difference, just model it as a concatenation for now
-                    if (op == &"+".to_owned() || op == &"-".to_owned()) 
-                        && vm.is_subtype(&new_type, &"collection".to_owned()) {
+                    if (op == "+" || op == "-") 
+                        && vm.is_subtype(&new_type, "collection") {
                         // todo, dirty workaround for augmented assign
-                        new_ptr = left_address.clone();
+                        new_ptr = *left_address;
 
                         let new_col;
                         {
@@ -105,12 +105,12 @@ impl BinOpExecutor for PythonBinOp {
                     }   
 
                     result.add_mapping(new_path, new_ptr);              
-                } else if op == &"*" && b1 && b3 {
+                } else if op == "*" && b1 && b3 {
                     let old_type;
                     let collection;
                     {
                         let old_object = vm.get_object(left_address);
-                        old_type = old_object.get_extension().first().unwrap().clone();
+                        old_type = *old_object.get_extension().first().unwrap();
                         collection = old_object.get_elements().clone();
                     }
 
@@ -118,12 +118,12 @@ impl BinOpExecutor for PythonBinOp {
                     result.add_mapping(new_path, new_ptr);
                     let mut new_object = vm.get_object_mut(&new_ptr);
                     new_object.set_elements(collection); 
-                } else if op == &"*" && b2 && b4 {
+                } else if op == "*" && b2 && b4 {
                     let old_type;
                     let collection;
                     {
                         let old_object = vm.get_object(right_address);
-                        old_type = old_object.get_extension().first().unwrap().clone();
+                        old_type = *old_object.get_extension().first().unwrap();
                         collection = old_object.get_elements().clone();
                     }
 
@@ -156,12 +156,12 @@ impl BinOpExecutor for PythonBinOp {
             }
         }
 
-        if error.len() > 0 {
-            let content = BinOpInvalid::new(op.clone(), error);
+        if !error.is_empty() {
+            let content = BinOpInvalid::new(op.to_owned(), error);
             let message = Message::Output { 
                 source: vm.current_node().clone(),
                 content: Box::new(content)};
-            &CHANNEL.publish(message);
+            CHANNEL.publish(message);
         }
 
         ExecutionResult {

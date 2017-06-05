@@ -19,11 +19,11 @@ impl ConditionalExecutor for PythonConditional {
         let mut no = Vec::new();
         let mut yes = Vec::new();
 
-        for change in test_result.changes.into_iter() {
+        for change in test_result.changes {
             total_changes.push(change);
         }
 
-        for dependency in test_result.dependencies.into_iter() {
+        for dependency in test_result.dependencies {
             total_dependencies.push(dependency);
         }
 
@@ -34,7 +34,7 @@ impl ConditionalExecutor for PythonConditional {
         let f = vm.knowledge().constant(&"False".to_owned());
 
         // split up the test result into yes/no/maybe
-        for (path, address) in test_result.result.into_iter() {
+        for (path, address) in test_result.result {
             if address == t {
                 yes.push(path);
             } else if address == f {

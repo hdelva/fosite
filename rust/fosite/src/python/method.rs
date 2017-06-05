@@ -12,11 +12,11 @@ impl MethodExecutor for PythonMethod {
         -> Pointer {
 
         let Environment {vm, ..} = env;
-        let parent = parent.clone();
-        let address = address.clone();
+        let parent = *parent;
+        let address = *address;
 
         let fun = move | env: Environment, mut args: Vec<Mapping>, kwargs: Vec<(String, Mapping)> | {
-            let mut new_args = vec!(Mapping::simple(Path::empty(), parent.clone()));
+            let mut new_args = vec!(Mapping::simple(Path::empty(), parent));
             new_args.append(&mut args);
 
             let Environment { vm, executors } = env;

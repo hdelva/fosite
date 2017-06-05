@@ -13,13 +13,13 @@ impl GeneratorExecutor for PythonGenerator {
         let dependencies = source_result.dependencies;
 
         let mut mapping = Mapping::new();
-        for (path, address) in source_result.result.into_iter() {
+        for (path, address) in source_result.result {
             let obj = vm.get_object(&address);
 
             // todo, replace current node with the node of the generator
-            for (el_path, el_address) in obj.get_any_element(&vm.current_node()).into_iter() {
+            for (el_path, el_address) in obj.get_any_element(vm.current_node()) {
                 let mut new_path = path.clone();
-                for node in el_path.into_iter() {
+                for node in el_path {
                     new_path.add_node(node);
                 }
 

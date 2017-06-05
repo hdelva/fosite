@@ -152,7 +152,7 @@ impl Object {
         self.attributes.set_optional_mapping(name, path, mapping);
     }
 
-    pub fn get_attribute(&self, name: &String) -> &OptionalMapping {
+    pub fn get_attribute(&self, name: &str) -> &OptionalMapping {
         self.attributes.resolve_optional_identifier(name)
     }
 

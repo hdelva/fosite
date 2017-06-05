@@ -77,14 +77,14 @@ impl PythonFor {
         let mut watch = vm.pop_watch();
         let mut actual = BTreeSet::new();
 
-        for &(_, ref address) in gen.iter() {
-            actual.insert(address.clone());
+        for &(_, ref address) in gen {
+            actual.insert(*address);
         }
 
         let mut problems = vec!();
 
-        for (identifier, addresses) in watch.identifiers_before.into_iter() {
-            for address in addresses.iter() {
+        for (identifier, addresses) in watch.identifiers_before {
+            for address in &addresses {
                 if !actual.contains(address){
                     continue;
                 }
@@ -95,8 +95,8 @@ impl PythonFor {
             }
 
             if let Some(mapping) = watch.identifiers_changed.get(&identifier) {
-                for &(ref path, ref address) in mapping.iter() {
-                    if !addresses.contains(&address){
+                for &(ref path, ref address) in mapping {
+                    if !addresses.contains(address){
                         continue;
                     }
 
@@ -105,13 +105,13 @@ impl PythonFor {
             }
         }
 
-        if problems.len() > 0 {
+        if !problems.is_empty() {
             let content = ForLoopChange::new(problems);
             let message = Message::Output {
                 source: vm.current_node().clone(),
                 content: Box::new(content),
             };
-            &CHANNEL.publish(message);
+            CHANNEL.publish(message);
         }   
     }
 }

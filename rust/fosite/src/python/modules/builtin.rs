@@ -139,7 +139,7 @@ fn define_list_cast(module: &mut Module) {
             let mut content = Vec::new();
 
             for mapping in &args {
-                for &(ref path, ref address) in mapping.iter() {
+                for &(ref path, ref address) in mapping {
                     let old_object = vm.get_object(address);
                     let elements = old_object.get_elements().get_content();
                     for collection_mapping in elements.iter() {
@@ -200,7 +200,7 @@ fn define_tuple_cast(module: &mut Module) {
             let mut content = Vec::new();
 
             for mapping in &args {
-                for &(ref path, ref address) in mapping.iter() {
+                for &(ref path, ref address) in mapping {
                     let old_object = vm.get_object(address);
                     let elements = old_object.get_elements().get_content();
                     for collection_mapping in elements.iter() {

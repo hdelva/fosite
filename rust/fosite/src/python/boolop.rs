@@ -10,7 +10,7 @@ impl BoolOpExecutor for PythonBoolOp {
     fn execute(&self,
                env: Environment,
                left: &GastNode,
-               op: &String,
+               op: &str,
                right: &GastNode)
                -> ExecutionResult {
         let mut total_changes = Vec::new();
@@ -36,8 +36,8 @@ impl BoolOpExecutor for PythonBoolOp {
         
         let op: &str = &*op; 
 
-        for &(ref left_path, ref left_address) in left_mapping.iter() {
-            for &(ref right_path, ref right_address) in right_mapping.iter() {
+        for &(ref left_path, ref left_address) in &left_mapping {
+            for &(ref right_path, ref right_address) in &right_mapping {
                 if !left_path.mergeable(right_path) {
                     continue;
                 }
@@ -120,16 +120,16 @@ impl BoolOpExecutor for PythonBoolOp {
             }
         }
 
-        if error.len() > 0 {
+        if !error.is_empty() {
             let content = BinOpInvalid::new(op.to_owned(), error);
             let message = Message::Output {
                 source: vm.current_node().clone(),
                 content: Box::new(content),
             };
-            &CHANNEL.publish(message);
+            CHANNEL.publish(message);
         }
 
-        if result.len() == 0 {
+        if result.is_empty() {
             let new_object = vm.object_of_type(&"bool".to_owned());
             result.add_mapping(Path::empty(), new_object);
         }

@@ -3,7 +3,7 @@ use core::*;
 pub struct PythonBlock { }
 
 impl BlockExecutor for PythonBlock {
-    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult {
+    fn execute(&self, env: Environment, content: &[GastNode]) -> ExecutionResult {
         let Environment { vm, executors } = env;
 
         let mut total_dependencies = Vec::new();
@@ -17,19 +17,10 @@ impl BlockExecutor for PythonBlock {
             let mut dependencies = intermediate.dependencies;
             let mut changes = intermediate.changes;
 
-            //println!("!!!!!!node {:?}", node.kind);
-            //println!("!!!!!!dependencies {:?}", dependencies);
-            //println!("!!!!!!changes {:?}\n", changes);
-
             total_dependencies.append(&mut dependencies);
             total_changes.append(&mut changes);
 
             flow = intermediate.flow;
-
-            match &flow {
-                &FlowControl::Continue => (),
-                _ => (),
-            }
         }
 
         ExecutionResult {

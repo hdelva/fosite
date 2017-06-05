@@ -49,11 +49,11 @@ impl MessageContent for AttributeInvalid {
     }
 
     fn print_message(&self, sources: &Sources, nodes: &Nodes, node: PathID) {
-        let source_node = node.last().unwrap().clone();
+        let source_node = *node.last().unwrap();
         let node_type = nodes.get(&source_node).unwrap();
 
-        match &node_type.kind {
-            &NodeType::Attribute {..} => (),
+        match node_type.kind {
+            NodeType::Attribute {..} => (),
             _ => return
         }
 
@@ -63,7 +63,7 @@ impl MessageContent for AttributeInvalid {
                  Bold.paint(&self.attribute));
         println!("  In the following cases:");
 
-        if self.paths.len() == 0 {
+        if !self.paths.is_empty() {
             println!("    {}", Red.bold().paint("Always"));
             println!("");
         }

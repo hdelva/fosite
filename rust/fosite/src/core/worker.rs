@@ -25,13 +25,20 @@ impl Worker {
     }
 
     pub fn finalize(self) -> Result<()> {
-        &CHANNEL.publish({
+        CHANNEL.publish({
             Message::Terminate
         });
 
         self.thread.join()
     }
 }
+
+impl Default for Worker {
+    fn default() -> Self {
+         Self::new()
+    }
+}
+
 
 
 struct Logger {

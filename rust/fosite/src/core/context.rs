@@ -33,6 +33,12 @@ impl Context {
     }
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct ExecutionContext {
     context: Context,
     hidden: Scope,

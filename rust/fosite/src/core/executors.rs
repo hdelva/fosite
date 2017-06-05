@@ -61,7 +61,7 @@ pub trait SliceExecutor {
 pub trait AssignExecutor {
     fn execute(&self,
                env: Environment,
-               targets: &Vec<GastNode>,
+               targets: &[GastNode],
                value: &GastNode)
                -> ExecutionResult;
 
@@ -89,8 +89,8 @@ pub trait NegateExecutor {
 pub trait ImportExecutor {
     fn execute(&self,
                env: Environment,
-               module: &String,
-               parts: &Vec<(String, String)>,
+               module: &str,
+               parts: &[(String, String)],
                into: &Option<String>)
                -> ExecutionResult;
 }
@@ -104,7 +104,7 @@ pub trait IndexExecutor {
 }
 
 pub trait DeclarationExecutor {
-    fn execute(&self, env: Environment, name: &String, kind: &String) -> ExecutionResult;
+    fn execute(&self, env: Environment, name: &str, kind: &str) -> ExecutionResult;
 }
 
 pub trait IntExecutor {
@@ -132,38 +132,38 @@ pub trait BooleanExecutor {
 }
 
 pub trait ListExecutor {
-    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, content: &[GastNode]) -> ExecutionResult;
 }
 
 pub trait SetExecutor {
-    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, content: &[GastNode]) -> ExecutionResult;
 }
 
 pub trait DictExecutor {
-    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, content: &[GastNode]) -> ExecutionResult;
 }
 
 pub trait SequenceExecutor {
-    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, content: &[GastNode]) -> ExecutionResult;
 }
 
 pub trait AttributeExecutor {
-    fn execute(&self, env: Environment, parent: &GastNode, name: &String) -> ExecutionResult;
+    fn execute(&self, env: Environment, parent: &GastNode, name: &str) -> ExecutionResult;
 }
 
 pub trait IdentifierExecutor {
-    fn execute(&self, env: Environment, name: &String) -> ExecutionResult;
+    fn execute(&self, env: Environment, name: &str) -> ExecutionResult;
 }
 
 pub trait BlockExecutor {
-    fn execute(&self, env: Environment, content: &Vec<GastNode>) -> ExecutionResult;
+    fn execute(&self, env: Environment, content: &[GastNode]) -> ExecutionResult;
 }
 
 pub trait BinOpExecutor {
     fn execute(&self,
                env: Environment,
                left: &GastNode,
-               op: &String,
+               op: &str,
                right: &GastNode)
                -> ExecutionResult;
 }
@@ -172,7 +172,7 @@ pub trait BoolOpExecutor {
     fn execute(&self,
                env: Environment,
                left: &GastNode,
-               op: &String,
+               op: &str,
                right: &GastNode)
                -> ExecutionResult;
 }
@@ -230,7 +230,7 @@ pub trait CallExecutor {
 pub trait FunctionDefExecutor {
     fn execute(&self, 
                env: Environment, 
-               name: &String,
+               name: &str,
                args: &[GastNode],
                kw_args: &[GastNode],
                vararg: &Option<String>,
